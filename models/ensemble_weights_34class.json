@@ -1,0 +1,57 @@
+{
+  "target_name": "34class",
+  "num_classes": 34,
+  "class_names": [
+    "Backdoor_Malware",
+    "BenignTraffic",
+    "BrowserHijacking",
+    "CommandInjection",
+    "DDoS-ACK_Fragmentation",
+    "DDoS-HTTP_Flood",
+    "DDoS-ICMP_Flood",
+    "DDoS-ICMP_Fragmentation",
+    "DDoS-PSHACK_Flood",
+    "DDoS-RSTFINFlood",
+    "DDoS-SYN_Flood",
+    "DDoS-SlowLoris",
+    "DDoS-SynonymousIP_Flood",
+    "DDoS-TCP_Flood",
+    "DDoS-UDP_Flood",
+    "DDoS-UDP_Fragmentation",
+    "DNS_Spoofing",
+    "DictionaryBruteForce",
+    "DoS-HTTP_Flood",
+    "DoS-SYN_Flood",
+    "DoS-TCP_Flood",
+    "DoS-UDP_Flood",
+    "MITM-ArpSpoofing",
+    "Mirai-greeth_flood",
+    "Mirai-greip_flood",
+    "Mirai-udpplain",
+    "Recon-HostDiscovery",
+    "Recon-OSScan",
+    "Recon-PingSweep",
+    "Recon-PortScan",
+    "SqlInjection",
+    "Uploading_Attack",
+    "VulnerabilityScan",
+    "XSS"
+  ],
+  "weights": {
+    "rf": 0.45,
+    "xgb": 0.55,
+    "dnn": 0.0
+  },
+  "telemetry": {
+    "rf_time_sec": 60.23,
+    "xgb_time_sec": 120.95,
+    "dnn_time_sec": 109.88,
+    "total_train_sec": 291.06,
+    "weights": {
+      "rf": 0.45,
+      "xgb": 0.55,
+      "dnn": 0.0
+    },
+    "val_acc_weighted": 0.9499
+  }
+}
