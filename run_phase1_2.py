@@ -124,6 +124,7 @@ def main() -> None:
     X_train, X_test, y34_train, y34_test, y8_train, y8_test = split(
         df_encoded, FEATURE_COLS
     )
+    y34_train_real = y34_train.copy()
     del df_encoded
 
     # Step 2.4 - Scale (fit on train only)
@@ -200,6 +201,9 @@ def main() -> None:
         selected_features, ranking_df, elapsed,
         smote_skipped=args.no_smote,
         smoke_results=smoke_results,
+        y34_train_real=y34_train_real,
+        y34_test=y34_test,
+        le_34=le_34,
     )
 
     print("\n" + "=" * 62)
@@ -292,6 +296,7 @@ def _write_summary_md(
     n_train_real, n_test_real, balance_stats,
     selected_features, ranking_df, elapsed, smote_skipped,
     smoke_results=None,
+    y34_train_real=None, y34_test=None, le_34=None,
 ) -> None:
     from config import (SAMPLE_PER_CLASS, N_FEATURES_TO_SELECT,
                         RANDOM_SEED, TEST_SIZE, SMOTE_TARGET_COUNT,
@@ -356,6 +361,40 @@ def _write_summary_md(
         "",
         "> **Imbalance observation**: Some attack classes have far fewer samples",
         "> than others. SMOTE corrects this for training (see Phase 2 below).",
+    ]
+
+    if y34_train_real is not None and y34_test is not None and le_34 is not None:
+        lines += [
+            "",
+            "### Class Support Breakdown (Real Rows: Train vs. Test)",
+            "> **Low Support Warning**: Attack classes with fewer than 100 test rows are flagged.",
+            "> Their performance metrics must be interpreted with caution due to low statistical support.",
+            "",
+            "| # | Fine-Grained Class | 8-Class Group | Train (Real) | Test (Real) | Total Real | Support Note |",
+            "|:---|:---|:---|:---:|:---:|:---:|:---|",
+        ]
+        low_support_classes = []
+        for i, cls in enumerate(le_34.classes_, 1):
+            cls_int = le_34.transform([cls])[0]
+            tr_cnt = int((y34_train_real == cls_int).sum())
+            te_cnt = int((y34_test == cls_int).sum())
+            tot_cnt = tr_cnt + te_cnt
+            grp = LABEL_TO_CLASS.get(cls, "UNKNOWN")
+            if te_cnt < 100:
+                note = "⚠️ **low support, interpret with caution**"
+                low_support_classes.append((cls, te_cnt))
+            else:
+                note = "Normal"
+            lines.append(f"| {i} | `{cls}` | {grp} | {tr_cnt:,} | {te_cnt:,} | {tot_cnt:,} | {note} |")
+
+        if low_support_classes:
+            lines += [
+                "",
+                f"> **Identified {len(low_support_classes)} low-support classes (<100 test rows)**: "
+                + ", ".join(f"`{c}` ({cnt} rows)" for c, cnt in low_support_classes),
+            ]
+
+    lines += [
         "",
         "---",
         "",
