@@ -188,7 +188,7 @@ def main() -> None:
     # ================================================================
     # SMOKE TEST
     # ================================================================
-    _run_smoke_test(train_out, test_out, selected_features, le_8)
+    smoke_results = _run_smoke_test(train_out, test_out, selected_features, le_8, le_34)
 
     # ================================================================
     # SUMMARY REPORT
@@ -199,6 +199,7 @@ def main() -> None:
         n_train_real, n_test_real, balance_stats,
         selected_features, ranking_df, elapsed,
         smote_skipped=args.no_smote,
+        smoke_results=smoke_results,
     )
 
     print("\n" + "=" * 62)
@@ -210,46 +211,77 @@ def main() -> None:
 # ================================================================
 # SMOKE TEST  (clearly labelled -- NOT the final result)
 # ================================================================
-def _run_smoke_test(train, test, feat_cols, le_8) -> None:
+def _run_smoke_test(train, test, feat_cols, le_8, le_34) -> dict:
     from sklearn.ensemble import RandomForestClassifier
     from sklearn.metrics import accuracy_score, classification_report
-    from config import SMOKE_TEST_TREES, RANDOM_SEED
+    from config import SMOKE_TEST_TREES, RANDOM_SEED, LABEL_34_COL, LABEL_8_COL
 
     print("\n" + "-" * 60)
     print("  [TEST]  SMOKE TEST  (preprocessing sanity check -- NOT final result)")
     print("-" * 60)
     print(f"  Quick RF ({SMOKE_TEST_TREES} trees) on {len(feat_cols)} features")
-    print("  Goal: confirm preprocessing produced sensible data.")
+    print("  Goal: confirm preprocessing produced sensible representations.")
 
-    from config import LABEL_34_COL, LABEL_8_COL
     X_tr = train[feat_cols].values
-    y_tr = train[LABEL_8_COL].values
     X_te = test[feat_cols].values
-    y_te = test[LABEL_8_COL].values
+    y8_tr = train[LABEL_8_COL].values
+    y8_te = test[LABEL_8_COL].values
+    y34_tr = train[LABEL_34_COL].values
+    y34_te = test[LABEL_34_COL].values
 
-    clf = RandomForestClassifier(
+    # ---- 8-class smoke test ----
+    print("\n  [1/2] Training 8-class baseline Random Forest ...")
+    clf_8 = RandomForestClassifier(
         n_estimators=SMOKE_TEST_TREES,
         max_depth=None,
         n_jobs=-1,
         random_state=RANDOM_SEED,
     )
-    clf.fit(X_tr, y_tr)
-    y_pred = clf.predict(X_te)
-    acc = accuracy_score(y_te, y_pred)
+    clf_8.fit(X_tr, y8_tr)
+    y8_pred = clf_8.predict(X_te)
+    acc_8 = accuracy_score(y8_te, y8_pred)
+    rep_8 = classification_report(
+        y8_te, y8_pred,
+        target_names=list(le_8.classes_),
+        output_dict=True,
+        zero_division=0,
+    )
 
-    print(f"\n  Smoke-test accuracy (8-class): {acc * 100:.2f}%")
-    print("  (Expect >90% if preprocessing is correct.)")
-    print()
-    print(classification_report(y_te, y_pred,
-                                 target_names=list(le_8.classes_),
-                                 zero_division=0))
+    print(f"\n  >> Smoke-test accuracy (8-class): {acc_8 * 100:.2f}%")
+    print("     (Expect >90% if preprocessing is correct.)\n")
+    print(classification_report(y8_te, y8_pred, target_names=list(le_8.classes_), zero_division=0))
+
+    # ---- 34-class smoke test ----
+    print("\n  [2/2] Training 34-class baseline Random Forest ...")
+    clf_34 = RandomForestClassifier(
+        n_estimators=SMOKE_TEST_TREES,
+        max_depth=None,
+        n_jobs=-1,
+        random_state=RANDOM_SEED,
+    )
+    clf_34.fit(X_tr, y34_tr)
+    y34_pred = clf_34.predict(X_te)
+    acc_34 = accuracy_score(y34_te, y34_pred)
+    rep_34 = classification_report(
+        y34_te, y34_pred,
+        target_names=list(le_34.classes_),
+        output_dict=True,
+        zero_division=0,
+    )
+
+    print(f"\n  >> Smoke-test accuracy (34-class): {acc_34 * 100:.2f}%\n")
     print("-" * 60)
     print("  WARNING  REMINDER: This is a SMOKE TEST only.")
     print("  The real classifier (Phase 3: RF + XGBoost + DNN ensemble)")
     print("  will be trained on the full dataset with proper evaluation.")
     print("-" * 60)
 
-    return acc
+    return {
+        "acc_8": acc_8,
+        "report_8": rep_8,
+        "acc_34": acc_34,
+        "report_34": rep_34,
+    }
 
 
 # ================================================================
@@ -259,6 +291,7 @@ def _write_summary_md(
     val_summary, clean_summary, train_out, test_out,
     n_train_real, n_test_real, balance_stats,
     selected_features, ranking_df, elapsed, smote_skipped,
+    smoke_results=None,
 ) -> None:
     from config import (SAMPLE_PER_CLASS, N_FEATURES_TO_SELECT,
                         RANDOM_SEED, TEST_SIZE, SMOTE_TARGET_COUNT,
@@ -398,6 +431,40 @@ def _write_summary_md(
         f"| test_phase2.parquet  | {test_out.shape}  | `data/processed/` |",
         "",
         "Columns in Parquet files: `[19 features] + label_34 + label_8`",
+    ]
+
+    if smoke_results is not None:
+        lines += [
+            "",
+            "---",
+            "",
+            "## Smoke test (not the final result)",
+            "> **Notice**: This baseline Random Forest test (100 trees) on the 19 selected features confirms",
+            "> preprocessing data integrity. The final detection engine (Phase 3: Random Forest + XGBoost + DNN",
+            "> ensemble) will be trained on the full dataset with proper tuning.",
+            "",
+            f"- **8-Class Smoke-Test Accuracy**: **{smoke_results['acc_8'] * 100:.2f}%**",
+            f"- **34-Class Smoke-Test Accuracy**: **{smoke_results['acc_34'] * 100:.2f}%**",
+            "",
+            "### 8-Class Classification Report",
+            "| Class | Precision | Recall | F1-Score | Support |",
+            "|:---|:---:|:---:|:---:|:---:|",
+        ]
+        rep8 = smoke_results.get("report_8", {})
+        for cls in CLASS_NAMES:
+            if cls in rep8:
+                m = rep8[cls]
+                lines.append(f"| {cls} | {m['precision']:.4f} | {m['recall']:.4f} | {m['f1-score']:.4f} | {int(m['support']):,} |")
+        if "accuracy" in rep8:
+            lines.append(f"| **Overall Accuracy** | | | **{rep8['accuracy']:.4f}** | {len(test_out):,} |")
+        if "macro avg" in rep8:
+            m = rep8["macro avg"]
+            lines.append(f"| **Macro Avg** | {m['precision']:.4f} | {m['recall']:.4f} | {m['f1-score']:.4f} | {int(m['support']):,} |")
+        if "weighted avg" in rep8:
+            m = rep8["weighted avg"]
+            lines.append(f"| **Weighted Avg** | {m['precision']:.4f} | {m['recall']:.4f} | {m['f1-score']:.4f} | {int(m['support']):,} |")
+
+    lines += [
         "",
         "---",
         "",
