@@ -300,7 +300,8 @@ def _write_summary_md(
 ) -> None:
     from config import (SAMPLE_PER_CLASS, N_FEATURES_TO_SELECT,
                         RANDOM_SEED, TEST_SIZE, SMOTE_TARGET_COUNT,
-                        LABEL_TO_CLASS, CLASS_NAMES, REPORTS_DIR)
+                        LABEL_TO_CLASS, CLASS_NAMES, REPORTS_DIR,
+                        DATA_RAW_DIR)
     import datetime
 
     out_path = REPORTS_DIR / "summary.md"
@@ -321,7 +322,7 @@ def _write_summary_md(
         "## Phase 1 - Data Ingestion",
         "",
         "### Dataset: CICIoT2023",
-        f"- Source files: `train.csv` + `test.csv` (raw CSVs in `data/raw/`)",
+        f"- Source files: `train.csv` + `test.csv` (raw CSVs located at `{DATA_RAW_DIR}`)",
         f"- Columns in raw CSV: **47** (46 numeric features + 1 label column)",
         f"- Sample per fine-grained class: **{SAMPLE_PER_CLASS if SAMPLE_PER_CLASS else 'ALL'}**",
         "",

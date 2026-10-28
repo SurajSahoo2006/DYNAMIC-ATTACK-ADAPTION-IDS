@@ -93,7 +93,7 @@ SMOKE_TEST_TREES = 100
 # Built from the REAL label scan of CICIoT2023 (not literature).
 # ------------------------------------------------------------------ 
 LABEL_TO_CLASS = {
-    # ---------- DDoS (9 sub-types) ----------
+    # ---------- DDoS (12 sub-types) ----------
     "DDoS-ACK_Fragmentation":    "DDoS",
     "DDoS-HTTP_Flood":           "DDoS",
     "DDoS-ICMP_Flood":           "DDoS",
@@ -111,13 +111,13 @@ LABEL_TO_CLASS = {
     "DoS-SYN_Flood":             "DoS",
     "DoS-TCP_Flood":             "DoS",
     "DoS-UDP_Flood":             "DoS",
-    # ---------- Recon (4 sub-types) ----------
+    # ---------- Recon (5 sub-types) ----------
     "Recon-HostDiscovery":       "Recon",
     "Recon-OSScan":              "Recon",
     "Recon-PingSweep":           "Recon",
     "Recon-PortScan":            "Recon",
     "VulnerabilityScan":         "Recon",
-    # ---------- Web-based (5 sub-types) ----------
+    # ---------- Web-based (6 sub-types) ----------
     "SqlInjection":              "Web-based",
     "CommandInjection":          "Web-based",
     "XSS":                       "Web-based",

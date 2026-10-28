@@ -109,30 +109,33 @@ def select_features(
     ranking = rfe.ranking_          # 1 = selected, higher = eliminated earlier
     support = rfe.support_          # True = in final set
 
+    # In scikit-learn RFE, rfe.estimator_.feature_importances_ corresponds to
+    # the selected features in their ORIGINAL column order (cols[support]).
+    selected_in_original_order = [c for c, s in zip(cols, support) if s]
+    rf_imp = rfe.estimator_.feature_importances_
+    importance_map = dict(zip(selected_in_original_order, rf_imp))
+
     ranking_df = pd.DataFrame({
         "feature": cols,
         "rfe_rank": ranking,
         "selected": support,
+        "rf_importance": [importance_map.get(c, float("nan")) for c in cols],
     }).sort_values("rfe_rank")
 
     selected = ranking_df[ranking_df["selected"]]["feature"].tolist()
 
-    # Save
+    # Save ranking with importance column and selected features list
     ranking_df.to_csv(RFE_RANKING_PATH, index=False)
     with open(SELECTED_FEATURES_PATH, "w") as f:
         json.dump(selected, f, indent=2)
 
-    # Feature importances: rfe.estimator_ was retrained on the 19 selected
-    # features only, so importances has shape (19,). Map them by position.
-    rf_imp = rfe.estimator_.feature_importances_  # length == n_features_to_select
-
     print(f"\n[RFE] Done.")
     print(f"[RFE] Ranking saved  --> {RFE_RANKING_PATH.name}")
     print(f"[RFE] Features saved --> {SELECTED_FEATURES_PATH.name}")
-    print(f"\n[RFE] Top {n_features} selected features:")
-    for rank_i, feat in enumerate(selected):
-        fi = rf_imp[rank_i] if rank_i < len(rf_imp) else 0.0
-        print(f"  {rank_i+1:>2}. {feat:<35} (RF importance ~= {fi:.4f})")
+    print(f"\n[RFE] Top {n_features} selected features (ranked):")
+    for rank_i, feat in enumerate(selected, 1):
+        fi = importance_map.get(feat, 0.0)
+        print(f"  {rank_i:>2}. {feat:<35} (RF importance ~= {fi:.4f})")
 
     _plot_rfe_ranking(ranking_df, n_features)
 
