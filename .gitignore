@@ -1,6 +1,13 @@
 # Data – never commit raw or processed datasets
 data/
 
+# Model binaries (large binary weights)
+models/*.joblib
+models/*.pt
+*.joblib
+*.pt
+
+
 # Python
 __pycache__/
 *.py[cod]

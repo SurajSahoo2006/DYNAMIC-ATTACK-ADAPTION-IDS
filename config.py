@@ -22,9 +22,10 @@ DATA_RAW_DIR = Path(r"D:\IROP MODEL\CICIOT23")
 DATA_PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
 ARTIFACTS_DIR      = PROJECT_ROOT / "artifacts"
 REPORTS_DIR        = PROJECT_ROOT / "reports"
+MODELS_DIR         = PROJECT_ROOT / "models"
 
 # Ensure output directories exist at import time
-for _d in [DATA_PROCESSED_DIR, ARTIFACTS_DIR, REPORTS_DIR]:
+for _d in [DATA_PROCESSED_DIR, ARTIFACTS_DIR, REPORTS_DIR, MODELS_DIR]:
     _d.mkdir(parents=True, exist_ok=True)
 
 # ------------------------------------------------------------------
@@ -145,3 +146,90 @@ CLASS_NAMES = ["Benign", "DDoS", "DoS", "Recon",
 LABEL_COL    = "label"
 LABEL_34_COL = "label_34"
 LABEL_8_COL  = "label_8"
+
+# ------------------------------------------------------------------
+# Phase 3: Model Paths & Deliverables
+# ------------------------------------------------------------------
+RF_8CLASS_PATH               = MODELS_DIR / "rf_8class.joblib"
+XGB_8CLASS_PATH              = MODELS_DIR / "xgb_8class.joblib"
+DNN_8CLASS_PATH              = MODELS_DIR / "dnn_8class.pt"
+ENSEMBLE_WEIGHTS_8CLASS_PATH = MODELS_DIR / "ensemble_weights_8class.json"
+
+RF_34CLASS_PATH               = MODELS_DIR / "rf_34class.joblib"
+XGB_34CLASS_PATH              = MODELS_DIR / "xgb_34class.joblib"
+DNN_34CLASS_PATH              = MODELS_DIR / "dnn_34class.pt"
+ENSEMBLE_WEIGHTS_34CLASS_PATH = MODELS_DIR / "ensemble_weights_34class.json"
+
+CONFUSION_MATRIX_8CLASS_PATH  = REPORTS_DIR / "confusion_matrix_8class.png"
+PHASE3_SUMMARY_PATH           = REPORTS_DIR / "phase3_summary.md"
+LLM_OUTPUTS_CSV               = REPORTS_DIR / "llm_demo_outputs.csv"
+
+# ------------------------------------------------------------------
+# Phase 3: Model Hyperparameters (tuned for 8 GB RAM / CPU only)
+# ------------------------------------------------------------------
+RF_N_ESTIMATORS    = 200
+RF_MAX_DEPTH       = 25
+RF_MIN_SAMPLES_LEAF = 2
+RF_N_JOBS          = 2
+
+XGB_N_ESTIMATORS   = 250
+XGB_MAX_DEPTH      = 6
+XGB_LEARNING_RATE  = 0.1
+XGB_EARLY_STOPPING = 15
+XGB_N_JOBS         = 2
+
+DNN_HIDDEN_1       = 128
+DNN_HIDDEN_2       = 64
+DNN_DROPOUT        = 0.3
+DNN_BATCH_SIZE     = 512
+DNN_LEARNING_RATE  = 0.001
+DNN_EPOCHS         = 35
+DNN_PATIENCE       = 8
+
+# ------------------------------------------------------------------
+# Phase 3: Severity Mapping Table & Helper
+# ------------------------------------------------------------------
+SEVERITY_LEVELS = ["Low", "Medium", "High", "Critical"]
+
+def get_flow_severity(attack_class: str, confidence: float) -> str:
+    """
+    Deterministic severity mapping based on attack class and ensemble confidence.
+    Follows project architectural specifications:
+      - Benign: Low (or Medium if confidence < 0.50)
+      - DDoS, Mirai: Critical (>= 0.85), High (>= 0.60), Medium (< 0.60)
+      - DoS, Web-based, BruteForce: High (>= 0.85), Medium (>= 0.60), Low (< 0.60)
+      - Spoofing, Recon: Medium (>= 0.85), Low (< 0.85)
+    """
+    ac = str(attack_class).strip()
+    conf = float(confidence)
+
+    if ac == "Benign":
+        return "Low" if conf >= 0.50 else "Medium"
+    elif ac in ("DDoS", "Mirai"):
+        if conf >= 0.85:
+            return "Critical"
+        elif conf >= 0.60:
+            return "High"
+        else:
+            return "Medium"
+    elif ac in ("DoS", "Web-based", "BruteForce"):
+        if conf >= 0.85:
+            return "High"
+        elif conf >= 0.60:
+            return "Medium"
+        else:
+            return "Low"
+    elif ac in ("Spoofing", "Recon"):
+        if conf >= 0.85:
+            return "Medium"
+        else:
+            return "Low"
+    return "Medium"
+
+# ------------------------------------------------------------------
+# Phase 3: LLM Semantic Orchestrator Settings
+# ------------------------------------------------------------------
+OLLAMA_BASE_URL      = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+OLLAMA_MODEL         = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
+LLM_DEMO_SAMPLE_SIZE = 40
+
