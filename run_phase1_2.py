@@ -134,8 +134,17 @@ def main() -> None:
     if args.no_smote:
         print("\n[BALANCE] SMOTE skipped (--no-smote flag).")
         X_train_b, y34_train_b = X_train_s, y34_train
+        balance_stats = None
     else:
-        X_train_b, y34_train_b = balance(X_train_s, y34_train)
+        max_train_count = int(y34_train.value_counts().max())
+        smote_target = min(max_train_count, config.SAMPLE_PER_CLASS) if config.SAMPLE_PER_CLASS else max_train_count
+        X_train_b, y34_train_b, balance_stats = balance(
+            X_train_s,
+            y34_train,
+            target_count=smote_target,
+            max_synthetic_multiplier=10,
+            label_encoder=le_34,
+        )
 
     # Step 2.6 - Feature Selection (RFE)
     selected_features, ranking_df = select_features(X_train_b, y34_train_b)

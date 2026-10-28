@@ -74,7 +74,7 @@ TEST_SIZE = 0.20   # 80 / 20 train-test split
 # SMOTE  - oversample minorities up to this cap
 # (avoids memory explosion on very large majority classes)
 # ------------------------------------------------------------------
-SMOTE_TARGET_COUNT = SAMPLE_PER_CLASS   # keep it proportionate
+SMOTE_TARGET_COUNT = None   # Dynamically computed in Phase 2 from largest train class
 
 # ------------------------------------------------------------------
 # RFE
