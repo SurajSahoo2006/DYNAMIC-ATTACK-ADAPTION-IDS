@@ -128,6 +128,8 @@ def main() -> None:
 
     # Step 2.4 - Scale (fit on train only)
     X_train_s, X_test_s, scaler = scale(X_train, X_test)
+    n_train_real = len(X_train_s)
+    n_test_real = len(X_test_s)
     del X_train, X_test
 
     # Step 2.5 - SMOTE (train only)
@@ -194,6 +196,7 @@ def main() -> None:
     elapsed = time.time() - t_start
     _write_summary_md(
         val_summary, clean_summary, train_out, test_out,
+        n_train_real, n_test_real, balance_stats,
         selected_features, ranking_df, elapsed,
         smote_skipped=args.no_smote,
     )
@@ -254,6 +257,7 @@ def _run_smoke_test(train, test, feat_cols, le_8) -> None:
 # ================================================================
 def _write_summary_md(
     val_summary, clean_summary, train_out, test_out,
+    n_train_real, n_test_real, balance_stats,
     selected_features, ranking_df, elapsed, smote_skipped,
 ) -> None:
     from config import (SAMPLE_PER_CLASS, N_FEATURES_TO_SELECT,
@@ -338,8 +342,9 @@ def _write_summary_md(
         "",
         "### Step 3 - Train / Test Split",
         f"- **Ratio**: {int((1-TEST_SIZE)*100)}/{int(TEST_SIZE*100)}  (stratified on `label_34`)",
-        f"- **Train rows**: {len(train_out):,}",
-        f"- **Test rows** : {len(test_out):,}",
+        f"- **Train rows before SMOTE (real)**: {n_train_real:,}",
+        f"- **Train rows after SMOTE (real + synthetic)**: {len(train_out):,}",
+        f"- **Test rows (never resampled)**: {n_test_real:,}",
         "- [OK] Zero index overlap confirmed (no data leakage)",
         "",
         "### Step 4 - StandardScaler",
@@ -350,12 +355,15 @@ def _write_summary_md(
         f"### Step 5 - SMOTE (class balancing)",
     ]
 
-    if smote_skipped:
+    if smote_skipped or balance_stats is None:
         lines.append("- **SKIPPED** (--no-smote flag used)")
     else:
         lines += [
             f"- Applied to **train set only** (test set unchanged)",
-            f"- Strategy: oversample minority classes up to {SMOTE_TARGET_COUNT:,} rows each",
+            f"- Target per class: **{balance_stats['target_count']:,}** (size of largest train class, bounded by SAMPLE_PER_CLASS)",
+            f"- Safety cap: maximum **{balance_stats['max_synthetic_multiplier']}x** synthetic rows per class",
+            f"- Real train rows: **{balance_stats['total_real']:,}**",
+            f"- Synthetic train rows created: **{balance_stats['total_synthetic']:,}** ({balance_stats['overall_synthetic_pct']:.1f}% synthetic)",
             f"- Train rows after SMOTE: **{len(train_out):,}**",
         ]
 
