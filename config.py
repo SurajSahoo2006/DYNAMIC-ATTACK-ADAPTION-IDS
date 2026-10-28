@@ -51,6 +51,7 @@ VALIDATION_CSV = DATA_RAW_DIR / "validation" / "validation.csv"
 # ------------------------------------------------------------------
 TRAIN_PARQUET = DATA_PROCESSED_DIR / "train_phase2.parquet"
 TEST_PARQUET  = DATA_PROCESSED_DIR / "test_phase2.parquet"
+VAL_PARQUET   = DATA_PROCESSED_DIR / "val_phase2.parquet"
 
 # ------------------------------------------------------------------
 # Artifact paths
