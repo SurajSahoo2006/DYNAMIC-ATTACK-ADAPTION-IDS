@@ -1,0 +1,47 @@
+feature,rfe_rank,selected
+flow_duration,1,True
+Header_Length,1,True
+Protocol Type,1,True
+Srate,1,True
+fin_flag_number,1,True
+ack_count,1,True
+syn_count,1,True
+syn_flag_number,1,True
+rst_count,1,True
+ICMP,1,True
+urg_count,1,True
+IAT,1,True
+AVG,1,True
+Max,1,True
+Min,1,True
+Tot sum,1,True
+Magnitue,1,True
+Variance,1,True
+Tot size,1,True
+fin_count,2,False
+Rate,3,False
+Number,4,False
+Std,5,False
+Covariance,6,False
+HTTP,7,False
+Weight,8,False
+Radius,9,False
+psh_flag_number,10,False
+Duration,11,False
+UDP,12,False
+TCP,13,False
+ack_flag_number,14,False
+rst_flag_number,15,False
+HTTPS,16,False
+SSH,17,False
+IPv,18,False
+LLC,19,False
+ARP,20,False
+DNS,21,False
+DHCP,22,False
+IRC,23,False
+SMTP,24,False
+Telnet,25,False
+cwr_flag_number,26,False
+ece_flag_number,27,False
+Drate,28,False

@@ -1,0 +1,21 @@
+[
+  "flow_duration",
+  "Header_Length",
+  "Protocol Type",
+  "Srate",
+  "fin_flag_number",
+  "ack_count",
+  "syn_count",
+  "syn_flag_number",
+  "rst_count",
+  "ICMP",
+  "urg_count",
+  "IAT",
+  "AVG",
+  "Max",
+  "Min",
+  "Tot sum",
+  "Magnitue",
+  "Variance",
+  "Tot size"
+]
