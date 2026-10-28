@@ -1,0 +1,9 @@
+{
+  "flows_processed": 40,
+  "json_validity_rate": 100.0,
+  "ollama_count": 0,
+  "fallback_count": 40,
+  "avg_latency_ms": 0.0,
+  "total_runtime_sec": 4.64,
+  "peak_ram_mb": 611.6
+}
