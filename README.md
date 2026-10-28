@@ -169,6 +169,9 @@ Full mapping is in `config.py → LABEL_TO_CLASS` and in `reports/summary.md`.
 ### 3. Reproducibility
 All random operations use `RANDOM_SEED = 42`. Results are fully reproducible.
 
+### 4. Note on SMOTE and flag features (limitation)
+Some features are 0/1 binary flags (such as TCP flags, HTTP/DNS protocol indicators) or protocol codes; standard SMOTE creates continuous in-between values for them during interpolation. Tree-based ensembles naturally partition such continuous representations, but specialized variants (e.g., SMOTE-NC or post-synthesis rounding) can be explored in future work.
+
 ---
 
 ## Data Leakage Prevention

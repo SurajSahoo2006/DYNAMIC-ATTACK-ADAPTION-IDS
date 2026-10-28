@@ -7,6 +7,7 @@ matplotlib>=3.8
 seaborn>=0.13
 joblib>=1.3
 tqdm>=4.66
+psutil>=5.9
 
 # Phase 1 optional extras (PCAP demo)
 # scapy>=2.5           # uncomment if you want the PCAP demo

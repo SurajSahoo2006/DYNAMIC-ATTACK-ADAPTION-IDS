@@ -82,6 +82,17 @@ log = logging.getLogger(__name__)
 
 def main() -> None:
     t_start = time.time()
+    try:
+        import psutil
+        import os
+        process = psutil.Process(os.getpid())
+        def get_mem_mb():
+            return process.memory_info().rss / (1024 * 1024)
+    except Exception:
+        def get_mem_mb():
+            return 0.0
+
+    peak_mem_mb = get_mem_mb()
 
     print("\n" + "=" * 62)
     print("   DYNAMIC ATTACK ADAPTATION -- IDS PIPELINE")
@@ -103,6 +114,7 @@ def main() -> None:
     df_raw = load_ciciot2023()
 
     # Step 1.2 - Validate
+    peak_mem_mb = max(peak_mem_mb, get_mem_mb())
     val_summary = run_validation_report(df_raw)
 
     # ================================================================
@@ -195,6 +207,7 @@ def main() -> None:
     # SUMMARY REPORT
     # ================================================================
     elapsed = time.time() - t_start
+    peak_mem_mb = max(peak_mem_mb, get_mem_mb())
     _write_summary_md(
         val_summary, clean_summary, train_out, test_out,
         n_train_real, n_test_real, balance_stats,
@@ -204,11 +217,14 @@ def main() -> None:
         y34_train_real=y34_train_real,
         y34_test=y34_test,
         le_34=le_34,
+        peak_mem_mb=peak_mem_mb,
     )
 
+    peak_mem_mb = max(peak_mem_mb, get_mem_mb())
     print("\n" + "=" * 62)
     print("   ALL DONE")
-    print(f"   Total time: {elapsed:.1f} s")
+    print(f"   Total time  : {elapsed:.1f} s")
+    print(f"   Peak memory : {peak_mem_mb:.1f} MB ({peak_mem_mb / 1024:.2f} GB)")
     print("=" * 62 + "\n")
 
 
@@ -297,6 +313,7 @@ def _write_summary_md(
     selected_features, ranking_df, elapsed, smote_skipped,
     smoke_results=None,
     y34_train_real=None, y34_test=None, le_34=None,
+    peak_mem_mb=0.0,
 ) -> None:
     from config import (SAMPLE_PER_CLASS, N_FEATURES_TO_SELECT,
                         RANDOM_SEED, TEST_SIZE, SMOTE_TARGET_COUNT,
@@ -315,6 +332,7 @@ def _write_summary_md(
         "",
         f"> Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  ",
         f"> Runtime: {elapsed:.1f} s  ",
+        f"> Peak memory (RSS): {peak_mem_mb:.1f} MB ({peak_mem_mb / 1024:.2f} GB)  ",
         f"> Random seed: {RANDOM_SEED}",
         "",
         "---",
@@ -438,6 +456,7 @@ def _write_summary_md(
             f"- Real train rows: **{balance_stats['total_real']:,}**",
             f"- Synthetic train rows created: **{balance_stats['total_synthetic']:,}** ({balance_stats['overall_synthetic_pct']:.1f}% synthetic)",
             f"- Train rows after SMOTE: **{len(train_out):,}**",
+            "- Note on flag features: Some features are 0/1 flags or protocol codes; SMOTE creates in-between values for them.",
         ]
 
     lines += [
@@ -526,6 +545,7 @@ def _write_summary_md(
         "4. PCAP demo (`ingest/pcap_demo.py`) is standalone; run manually if needed.",
         "5. Benchmark datasets (UNSW-NB15, NSL-KDD, Bot-IoT) are Phase 3+ stubs.",
         f"6. '115 --> 19' in slides should be corrected to '**46 --> 19**' for CICIoT2023.",
+        "7. Note on SMOTE and flag features: Some features are 0/1 flags or protocol codes; SMOTE creates in-between values for them.",
     ]
 
     with open(out_path, "w", encoding="utf-8") as f:
