@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 from typing import Optional
 
+import joblib
 import numpy as np
 import pandas as pd
 
@@ -39,27 +40,56 @@ def get_selected_features() -> list[str]:
     return _FEATURE_LIST
 
 
-def get_or_load_model(target: str = "8class") -> EnsembleClassifier:
-    """Loads and caches the trained ensemble model."""
+def get_or_load_model(target: str = "8class", model_type: str = "b2") -> EnsembleClassifier:
+    """Loads and caches the trained ensemble model (default: B2 balanced without SMOTE)."""
     global _LOADED_MODELS
-    if target not in _LOADED_MODELS:
-        _LOADED_MODELS[target] = EnsembleClassifier.load(MODELS_DIR, target_name=target)
-    return _LOADED_MODELS[target]
+    cache_key = f"{target}_{model_type}"
+    if cache_key not in _LOADED_MODELS:
+        suffix = f"_{target}_baseline" if model_type == "baseline" else f"_{target}"
+        weights_path = MODELS_DIR / f"ensemble_weights{suffix}.json"
+        if not weights_path.exists():
+            weights_path = MODELS_DIR / f"ensemble_weights_{target}.json"
+        with open(weights_path, "r", encoding="utf-8") as f:
+            meta = json.load(f)
+
+        instance = EnsembleClassifier(
+            target_name=meta["target_name"],
+            num_classes=meta["num_classes"],
+            class_names=meta["class_names"],
+        )
+        instance.weights = meta["weights"]
+        instance.training_telemetry = meta.get("telemetry", {})
+
+        rf_path = MODELS_DIR / f"rf{suffix}.joblib"
+        if not rf_path.exists():
+            rf_path = MODELS_DIR / f"rf_{target}.joblib"
+        instance.rf_model = joblib.load(rf_path)
+
+        xgb_path = MODELS_DIR / f"xgb{suffix}.joblib"
+        if not xgb_path.exists():
+            xgb_path = MODELS_DIR / f"xgb_{target}.joblib"
+        instance.xgb_model = joblib.load(xgb_path)
+
+        _LOADED_MODELS[cache_key] = instance
+
+    return _LOADED_MODELS[cache_key]
 
 
 def predict_flow(
     df_19_scaled: pd.DataFrame,
     target: str = "8class",
     mode: str = "weighted",
+    model_type: str = "b2",
 ) -> pd.DataFrame:
     """
-    Run ensemble inference on scaled network flows.
+    Run ensemble inference on scaled network flows using B2 model by default.
 
     Parameters
     ----------
     df_19_scaled : pd.DataFrame containing the 19 selected scaled features
     target       : '8class' or '34class'
     mode         : 'weighted' or 'soft'
+    model_type   : 'b2' (optimized without SMOTE) or 'baseline'
 
     Returns
     -------
@@ -75,7 +105,7 @@ def predict_flow(
         raise ValueError(f"Input DataFrame is missing required features: {missing}")
 
     X_in = df_19_scaled[features]
-    model = get_or_load_model(target)
+    model = get_or_load_model(target, model_type=model_type)
 
     preds, conf = model.predict(X_in, mode=mode)
     class_names = model.class_names
@@ -99,15 +129,16 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Run lightweight ensemble inference")
     parser.add_argument("--target", choices=["8class", "34class"], default="8class")
+    parser.add_argument("--model-type", choices=["b2", "baseline"], default="b2", help="Model variant to use (default: b2)")
     parser.add_argument("--samples", type=int, default=5, help="Number of test samples to infer")
     args = parser.parse_args()
 
-    print(f"[PREDICT] Loading test parquet: {TEST_PARQUET} ...")
+    print(f"[PREDICT] Loading test parquet: {TEST_PARQUET} (Model: {args.model_type}) ...")
     df_test = pd.read_parquet(TEST_PARQUET)
     sample_df = df_test.head(args.samples)
 
     features = get_selected_features()
-    preds_df = predict_flow(sample_df[features], target=args.target)
+    preds_df = predict_flow(sample_df[features], target=args.target, model_type=args.model_type)
 
     print("\nInference Results:")
     for idx, row in preds_df.iterrows():

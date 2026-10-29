@@ -1,0 +1,31 @@
+{
+  "target_name": "8class",
+  "num_classes": 8,
+  "class_names": [
+    "Benign",
+    "BruteForce",
+    "DDoS",
+    "DoS",
+    "Mirai",
+    "Recon",
+    "Spoofing",
+    "Web-based"
+  ],
+  "weights": {
+    "rf": 0.2,
+    "xgb": 0.8,
+    "dnn": 0.0
+  },
+  "telemetry": {
+    "rf_time_sec": 24.81,
+    "xgb_time_sec": 22.41,
+    "dnn_time_sec": 110.68,
+    "total_train_sec": 157.9,
+    "weights": {
+      "rf": 0.2,
+      "xgb": 0.8,
+      "dnn": 0.0
+    },
+    "val_acc_weighted": 0.9639
+  }
+}

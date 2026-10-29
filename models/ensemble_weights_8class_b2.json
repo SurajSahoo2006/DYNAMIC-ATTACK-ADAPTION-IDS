@@ -1,0 +1,24 @@
+{
+  "target_name": "8class",
+  "model_type": "b2_balanced_no_smote",
+  "num_classes": 8,
+  "class_names": [
+    "Benign",
+    "BruteForce",
+    "DDoS",
+    "DoS",
+    "Mirai",
+    "Recon",
+    "Spoofing",
+    "Web-based"
+  ],
+  "weights": {
+    "rf": 0.6,
+    "xgb": 0.4,
+    "dnn": 0.0
+  },
+  "telemetry": {
+    "val_acc_weighted": 0.9645,
+    "test_acc": 0.9536
+  }
+}
