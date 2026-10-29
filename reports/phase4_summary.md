@@ -264,7 +264,7 @@ Alerts are written as JSON Lines in a flattened, schema-uniform structure:
 
 ### Threat Model & Anchor Mechanics
 - **Mid-Stream Modification**: Detected by verifying that `recompute_hash(entry) == entry['entry_hash']` and `entry['prev_hash'] == previous_entry['entry_hash']`.
-- **Tail Deletion / Truncation**: A naive hash chain cannot detect tail deletion (truncating the last $N$ lines still leaves a valid self-consistent chain). To prevent this, the latest hash is recorded in an external anchor file: [`logs/alerts_tail_hash.txt`](file:///d:/IROP%20MODEL/DYNAMIC-ATTACK-ADAPTION-IDS/logs/alerts_tail_hash.txt). If the log's terminal hash does not match the external anchor, truncation is flagged immediately.
+- **Tail Deletion / Truncation**: A naive hash chain cannot detect tail deletion (truncating the last $N$ lines still leaves a valid self-consistent chain). To prevent this, the latest hash is recorded in an external anchor file: [`logs/alerts_tail_hash.txt`](logs/alerts_tail_hash.txt). If the log's terminal hash does not match the external anchor, truncation is flagged immediately.
 - **HMAC Consideration**: If an adversary possesses local filesystem write permissions to both `alerts.jsonl` and `alerts_tail_hash.txt`, they could rewrite the entire log and recompute all hashes. To defend against this higher threat model, HMAC-SHA256 with a secret key held in a Hardware Security Module (HSM), TPM, or remote syslog server would be required so that attackers cannot forge valid MAC tags.
 
 ### Verification Audit Results

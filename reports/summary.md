@@ -10,7 +10,7 @@
 ## Phase 1 - Data Ingestion
 
 ### Dataset: CICIoT2023
-- Source files: `train.csv` + `test.csv` (raw CSVs located at `D:\IROP MODEL\CICIOT23`)
+- Source files: `train.csv` + `test.csv` (raw CSVs located at `data/raw`)
 - Columns in raw CSV: **47** (46 numeric features + 1 label column)
 - Sample per fine-grained class: **5000**
 

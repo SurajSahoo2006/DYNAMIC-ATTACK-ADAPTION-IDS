@@ -145,6 +145,9 @@ pip install -r requirements.txt
 ```
 *Dependencies include `shap` (0.52.0) and `adversarial-robustness-toolbox` (1.20.1).*
 
+> [!NOTE]
+> Raw CICIoT2023 CSV datasets (`train.csv`, `test.csv`, `validation.csv`) are not tracked in the git repository due to size. Place raw CSVs in `data/raw/` or set the environment variable `CIC_DATA_RAW_DIR` to your raw data path.
+
 ### 2. Ollama Local LLM Setup
 
 The LLM Semantic Orchestrator uses local [Ollama](https://ollama.com) running `llama3.2:3b`:
