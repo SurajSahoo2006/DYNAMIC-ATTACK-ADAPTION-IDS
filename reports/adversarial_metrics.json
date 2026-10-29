@@ -1,0 +1,83 @@
+{
+  "fgsm_results": [
+    {
+      "epsilon": 0.01,
+      "l2_perturbation": 0.0316,
+      "dnn_clean_acc": 0.148,
+      "dnn_adversarial_acc": 0.15,
+      "ensemble_clean_acc": 0.956,
+      "ensemble_adversarial_acc": 0.618,
+      "transfer_asr": 0.364,
+      "runtime_sec": 0.14
+    },
+    {
+      "epsilon": 0.05,
+      "l2_perturbation": 0.1561,
+      "dnn_clean_acc": 0.148,
+      "dnn_adversarial_acc": 0.146,
+      "ensemble_clean_acc": 0.956,
+      "ensemble_adversarial_acc": 0.66,
+      "transfer_asr": 0.3264,
+      "runtime_sec": 0.1
+    },
+    {
+      "epsilon": 0.1,
+      "l2_perturbation": 0.3076,
+      "dnn_clean_acc": 0.148,
+      "dnn_adversarial_acc": 0.144,
+      "ensemble_clean_acc": 0.956,
+      "ensemble_adversarial_acc": 0.572,
+      "transfer_asr": 0.4184,
+      "runtime_sec": 0.1
+    },
+    {
+      "epsilon": 0.2,
+      "l2_perturbation": 0.6079,
+      "dnn_clean_acc": 0.148,
+      "dnn_adversarial_acc": 0.142,
+      "ensemble_clean_acc": 0.956,
+      "ensemble_adversarial_acc": 0.568,
+      "transfer_asr": 0.4163,
+      "runtime_sec": 0.09
+    },
+    {
+      "epsilon": 0.3,
+      "l2_perturbation": 0.9067,
+      "dnn_clean_acc": 0.148,
+      "dnn_adversarial_acc": 0.158,
+      "ensemble_clean_acc": 0.956,
+      "ensemble_adversarial_acc": 0.496,
+      "transfer_asr": 0.4958,
+      "runtime_sec": 0.1
+    }
+  ],
+  "hopskipjump": {
+    "samples": 100,
+    "clean_accuracy": 0.95,
+    "adversarial_accuracy": 0.35,
+    "attack_success_rate": 0.6632,
+    "mean_l2_perturbation": 0.3244,
+    "runtime_sec": 256.08
+  },
+  "zoo": {
+    "samples": 40,
+    "clean_accuracy": 0.875,
+    "adversarial_accuracy": 0.7,
+    "attack_success_rate": 0.2286,
+    "mean_l2_perturbation": 0.0181,
+    "runtime_sec": 59.72
+  },
+  "defense_experiment": {
+    "training_samples_clean": 3000,
+    "training_samples_adv": 3000,
+    "baseline_clean_acc": 0.956,
+    "baseline_adv_acc_eps010": 0.572,
+    "retrained_clean_acc": 0.916,
+    "retrained_adv_acc_eps010": 0.908,
+    "clean_acc_delta": -0.04,
+    "adv_acc_gain": 0.336,
+    "runtime_sec": 1.61
+  },
+  "runtime_total_sec": 319.48,
+  "peak_ram_mb": 676.0
+}
