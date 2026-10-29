@@ -1,0 +1,117 @@
+{
+  "description": "Stage 0 MARL cache generation and validation split",
+  "timestamp": "2026-10-29 17:31:32",
+  "runtime_seconds": 6.1,
+  "peak_ram_mb": 609.96,
+  "cache_split_seed": 42,
+  "class_names": [
+    "Benign",
+    "BruteForce",
+    "DDoS",
+    "DoS",
+    "Mirai",
+    "Recon",
+    "Spoofing",
+    "Web-based"
+  ],
+  "row_counts": {
+    "validation_total": 106766,
+    "rl_train": 74736,
+    "rl_val": 32030,
+    "test": 26292
+  },
+  "split_ratios": {
+    "rl_train": 0.7,
+    "rl_val": 0.3
+  },
+  "accuracies": {
+    "val_total": 0.964549,
+    "rl_train": 0.964167,
+    "rl_val": 0.965439,
+    "test": 0.954169
+  },
+  "class_distribution_true": {
+    "rl_train": {
+      "DDoS": 35465,
+      "DoS": 11712,
+      "Mirai": 10432,
+      "Spoofing": 6697,
+      "Recon": 6302,
+      "Benign": 3457,
+      "Web-based": 471,
+      "BruteForce": 200
+    },
+    "rl_val": {
+      "DDoS": 15276,
+      "DoS": 5054,
+      "Mirai": 4388,
+      "Spoofing": 2836,
+      "Recon": 2667,
+      "Benign": 1539,
+      "Web-based": 182,
+      "BruteForce": 88
+    },
+    "test": {
+      "DDoS": 11338,
+      "Recon": 4002,
+      "DoS": 3971,
+      "Mirai": 2960,
+      "Spoofing": 1991,
+      "Benign": 1000,
+      "Web-based": 672,
+      "BruteForce": 358
+    }
+  },
+  "class_distribution_pred": {
+    "rl_train": {
+      "DDoS": 35444,
+      "DoS": 11716,
+      "Mirai": 10430,
+      "Spoofing": 5996,
+      "Recon": 5579,
+      "Benign": 3752,
+      "Web-based": 1296,
+      "BruteForce": 523
+    },
+    "rl_val": {
+      "DDoS": 15266,
+      "DoS": 5055,
+      "Mirai": 4388,
+      "Spoofing": 2562,
+      "Recon": 2390,
+      "Benign": 1656,
+      "Web-based": 499,
+      "BruteForce": 214
+    },
+    "test": {
+      "DDoS": 11338,
+      "DoS": 3969,
+      "Recon": 3608,
+      "Mirai": 2959,
+      "Spoofing": 1814,
+      "Benign": 1208,
+      "Web-based": 937,
+      "BruteForce": 459
+    }
+  },
+  "severity_distribution": {
+    "rl_train": {
+      "Critical": 45165,
+      "High": 12308,
+      "Medium": 8827,
+      "Low": 8436
+    },
+    "rl_val": {
+      "Critical": 19373,
+      "High": 5274,
+      "Medium": 3716,
+      "Low": 3667
+    },
+    "test": {
+      "Critical": 13821,
+      "High": 4659,
+      "Medium": 4394,
+      "Low": 3418
+    }
+  }
+}
