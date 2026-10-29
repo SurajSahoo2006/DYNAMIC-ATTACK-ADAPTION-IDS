@@ -16,10 +16,10 @@ requests>=2.28
 # scapy>=2.5           # uncomment if you want the PCAP demo
 # pyshark>=0.6         # uncomment for live capture (needs tshark installed)
 
-# Phase 3+ (not needed now)
-# xgboost>=2.0
-# tensorflow>=2.15
-# shap>=0.44
+# Phase 4 (XAI & Adversarial Robustness)
+shap>=0.44
+adversarial-robustness-toolbox>=1.16
+
+# Phase 5+ Future Modules
 # ray[rllib]>=2.9
-# adversarial-robustness-toolbox>=1.16
 # elasticsearch>=8.0
