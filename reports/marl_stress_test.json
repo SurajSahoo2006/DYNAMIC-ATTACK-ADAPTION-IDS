@@ -1,15 +1,15 @@
 {
   "metadata": {
     "description": "Stage 6 Adversarial Stress Test with Constrained FGSM Evasion",
-    "timestamp": "2026-10-29 18:13:58",
+    "timestamp": "2026-10-29 18:27:24",
     "epsilon": 0.1,
     "sample_size": 500,
     "clean_classifier_acc": 0.956,
     "adversarial_classifier_acc": 0.51,
     "episodes": 500,
     "reward_setting": "balanced",
-    "runtime_seconds": 107.88,
-    "peak_ram_mb": 696.59
+    "runtime_seconds": 104.71,
+    "peak_ram_mb": 696.06
   },
   "baselines": {
     "random": {

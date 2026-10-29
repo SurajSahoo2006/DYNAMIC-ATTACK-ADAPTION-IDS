@@ -9,16 +9,16 @@
 
 [TEST 2] Content Modification Tamper Test (Altered record 15):
   Tamper Detected: YES (PASS)
-  Verifier Output: [TAMPER DETECTED] Content modification at Line 16 (Alert ALT-461D5673B44C):
-  Recorded entry_hash:   b3c1f18f3f3b073f9a55d318a00a5d4b9fc7744a9bcacbed34f60e22465b5851
-  Recomputed entry_hash: 4221339f8149a8d483ceb076fc43851a8292f66b7e24601dab8c2bd69dc7a773
+  Verifier Output: [TAMPER DETECTED] Content modification at Line 16 (Alert ALT-1F758E02D4F0):
+  Recorded entry_hash:   ddefd6d596ddce3e8851fb7180885c4f72e8ed6327043e141a4dd7b9fe3ca1f3
+  Recomputed entry_hash: 02e20f8beb14a00627c00f638b6e860f1ef4dc6532e67a33bcd9874319f3066d
   Payload was altered or forged after hashing.
 
 [TEST 3] Tail Truncation Tamper Test (Dropped last record without updating anchor):
   Truncation Detected: YES (PASS)
   Verifier Output: [TRUNCATION/REWRITE DETECTED] Log tail hash does not match external anchor (alerts_phase5_tail_hash.txt):
-  External anchored tail hash: d0aaae152b232cee9be57c47580211c3d2b7dd3e9e7933168845e247ab59857c
-  Found log file tail hash:     ed191f1b52044415d7499a75979d307b8aaa1a22129b53989f9f70f03639e779
+  External anchored tail hash: bea0d8669687541888d61de2aac941f33565aec4eb24d5de49d10295e1986e4b
+  Found log file tail hash:     4ce397bcea45d3526bea28e8be2c77879cf5cc07e602688d4686d54834211928
   Tail records were deleted, truncated, or forged.
 
 ============================================================================

@@ -2,9 +2,9 @@
   "metadata": {
     "description": "Stage 3 Heuristic and Oracle Baselines Benchmark",
     "episodes_per_setting": 200,
-    "timestamp": "2026-10-29 17:35:02",
-    "runtime_seconds": 15.43,
-    "peak_ram_mb": 121.5
+    "timestamp": "2026-10-29 18:25:19",
+    "runtime_seconds": 7.68,
+    "peak_ram_mb": 122.0
   },
   "splits": {
     "rl_val": {

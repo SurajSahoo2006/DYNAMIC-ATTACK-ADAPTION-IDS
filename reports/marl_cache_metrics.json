@@ -1,8 +1,8 @@
 {
   "description": "Stage 0 MARL cache generation and validation split",
-  "timestamp": "2026-10-29 17:31:32",
-  "runtime_seconds": 6.1,
-  "peak_ram_mb": 609.96,
+  "timestamp": "2026-10-29 18:25:15",
+  "runtime_seconds": 5.54,
+  "peak_ram_mb": 607.26,
   "cache_split_seed": 42,
   "class_names": [
     "Benign",

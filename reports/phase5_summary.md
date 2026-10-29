@@ -1,6 +1,6 @@
 # Phase 5 Summary Report: Multi-Agent Tactical Defense & Operational Dashboard
 
-**Generated:** 2026-10-29 18:09:47 UTC  
+**Generated:** 2026-10-29 18:25:30 UTC  
 **Repository Branch:** `phase5-marl-dashboard`  
 **Target Architecture:** Multi-Agent PPO (MAPPO) Cooperative Response + Elastic Common Schema + Forensic Dashboard  
 
@@ -148,13 +148,13 @@ All Phase 5 workloads executed on a local Windows laptop CPU (8 GB physical RAM)
 
 | Pipeline Stage | Task Description | Runtime (s) | Peak Process RSS (MB) |
 | :--- | :--- | :--- | :--- |
-| Stage 0 | Data Cache & Split Generation | 6.10 s | 609.96 MB |
+| Stage 0 | Data Cache & Split Generation | 5.54 s | 607.26 MB |
 | Stage 2 | Environment Unit Tests (`pytest`) | 1.58 s | 95.40 MB |
-| Stage 3 | Heuristic & Oracle Baselines | 15.43 s | 121.50 MB |
+| Stage 3 | Heuristic & Oracle Baselines | 7.68 s | 122.00 MB |
 | Stage 4 | MAPPO Pilot Benchmark | 42.08 s | 368.33 MB |
 | Stage 4 | MAPPO 5-Seed Training | 1797.96 s | 410.41 MB |
-| Stage 5 | Single-Pass Test Cache Evaluation | 105.67 s | 359.85 MB |
-| Stage 6 | Adversarial Perturbation Stress Test | 107.88 s | 696.59 MB |
+| Stage 5 | Single-Pass Test Cache Evaluation | 103.85 s | 359.44 MB |
+| Stage 6 | Adversarial Perturbation Stress Test | 104.71 s | 696.06 MB |
 | Stage 7 | Alert Generation, ECS Export & Dashboard | 4.80 s | 135.20 MB |
 
 ## 11. Limitations
