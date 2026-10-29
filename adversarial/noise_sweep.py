@@ -94,11 +94,12 @@ def run_noise_sweep(n_samples: int = 500, seed: int = RANDOM_SEED) -> Dict[str, 
     # Sweep noise levels
     noise_targets = [0.0001, 0.001, 0.01, 0.03, 0.10, 0.30]
     sweep_results = []
+    unconstrained_results = []
 
-    print("\n[2] Noise Magnitude Sweep Results:")
-    print("  " + "-" * 72)
-    print("  Target L2 | Real L2  | Accuracy (%) | Correct / Total | 95% Wilson CI")
-    print("  " + "-" * 72)
+    print("\n[2] Noise Magnitude Sweep Results (Constrained vs Unconstrained Control):")
+    print("  " + "-" * 90)
+    print("  Target L2 | Real L2  | Constrained Acc (CI 95%)          | Unconstrained Acc (CI 95%)")
+    print("  " + "-" * 90)
 
     for target_l2 in noise_targets:
         # Generate Gaussian noise constrained only to modifiable features
@@ -117,7 +118,20 @@ def run_noise_sweep(n_samples: int = 500, seed: int = RANDOM_SEED) -> Dict[str, 
         acc_pert = k_corr / len(y_clean)
         ci_l, ci_u = wilson_ci(k_corr, len(y_clean))
 
-        print(f"  {target_l2:<9.4f} | {real_l2:<8.6f} | {acc_pert*100:>10.2f}% | {k_corr:>5} / {len(y_clean):<5} | [{ci_l*100:.2f}%, {ci_u*100:.2f}%]")
+        # Unconstrained Gaussian noise control (all 19 features perturbed, no unscale/clip/round/rescale)
+        v_unconst = rng.standard_normal(size=X_clean.shape).astype(np.float32)
+        v_unconst_norm = np.linalg.norm(v_unconst, axis=1, keepdims=True) + 1e-12
+        X_unconst = X_clean + v_unconst * (target_l2 / v_unconst_norm)
+
+        prob_unconst = ensemble.predict_probabilities(pd.DataFrame(X_unconst, columns=selected_features))["weighted"]
+        preds_unconst = np.argmax(prob_unconst, axis=1)
+        k_unconst = int(np.sum(preds_unconst == y_clean))
+        acc_unconst = k_unconst / len(y_clean)
+        ci_unconst_l, ci_unconst_u = wilson_ci(k_unconst, len(y_clean))
+
+        c_str = f"{k_corr:>3}/{len(y_clean)} ({acc_pert*100:>5.1f}% [{ci_l*100:>4.1f}%, {ci_u*100:>4.1f}%])"
+        u_str = f"{k_unconst:>3}/{len(y_clean)} ({acc_unconst*100:>5.1f}% [{ci_unconst_l*100:>4.1f}%, {ci_unconst_u*100:>4.1f}%])"
+        print(f"  {target_l2:<9.4f} | {real_l2:<8.6f} | {c_str:<33} | {u_str}")
 
         sweep_results.append({
             "target_l2": target_l2,
@@ -129,11 +143,23 @@ def run_noise_sweep(n_samples: int = 500, seed: int = RANDOM_SEED) -> Dict[str, 
             "ci_95_upper": round(ci_u, 4),
         })
 
-    print("  " + "-" * 72)
+        unconstrained_results.append({
+            "target_l2": target_l2,
+            "correct_count": k_unconst,
+            "total_count": len(y_clean),
+            "accuracy": round(acc_unconst, 4),
+            "ci_95_lower": round(ci_unconst_l, 4),
+            "ci_95_upper": round(ci_unconst_u, 4),
+        })
 
-    # Threshold Audit: Why does accuracy drop sharply between 0.001 and 0.01?
-    print("\n[3] Tree Split Threshold Density Audit around Mass Points:")
+    print("  " + "-" * 90)
+
+    # Threshold Audit: Association between mass points and tree split thresholds
     rf_model = ensemble.rf_model
+    n_trees = len(rf_model.estimators_)
+    max_depth = rf_model.max_depth
+    min_leaf = getattr(rf_model, "min_samples_leaf", 1)
+    print(f"\n[3] Deployed B2 Random Forest Split Threshold Density Audit ({n_trees} trees, max_depth {max_depth}, min_samples_leaf {min_leaf}):")
 
     audit_features = [
         ("Variance", -1.0422, "Packet size variance ratio (mass at 0.0)"),
@@ -173,6 +199,11 @@ def run_noise_sweep(n_samples: int = 500, seed: int = RANDOM_SEED) -> Dict[str, 
 
     summary = {
         "sample_size": len(y_clean),
+        "deployed_b2_rf": {
+            "n_trees": n_trees,
+            "max_depth": max_depth,
+            "min_samples_leaf": min_leaf,
+        },
         "clean_baseline": {
             "correct_count": k_clean,
             "total_count": len(y_clean),
@@ -180,15 +211,15 @@ def run_noise_sweep(n_samples: int = 500, seed: int = RANDOM_SEED) -> Dict[str, 
             "ci_95": [round(ci_clean_l, 4), round(ci_clean_u, 4)],
         },
         "noise_sweep": sweep_results,
+        "unconstrained_noise_sweep": unconstrained_results,
         "tree_threshold_analysis": threshold_analysis,
-        "scientific_diagnosis": (
-            "The accuracy drop at small random noise (L2 ~ 0.01) is NOT a pipeline artifact "
-            "(raw perturbed and pipeline-constrained perturbations produce identical curves). "
-            "It is an inherent structural property of axis-aligned decision trees trained on IoT network telemetry: "
-            "over 20-35% of network flows sit exactly on constant mass points (e.g., flow_duration = 0, Variance = 0). "
-            "Because decision trees place sharp step thresholds directly adjacent to these mass points "
-            "(over 45,000 splits within 0.05 of flow_duration = -0.0662), even tiny isotropic random perturbations "
-            "of magnitude 0.01 push thousands of samples across leaf decision boundaries simultaneously."
+        "empirical_notes": (
+            "The accuracy drop at small random noise (L2 ~ 0.01) is observed under both domain-constrained "
+            "and unconstrained isotropic Gaussian perturbations (471/500 at 0.0001 down to 372/500 constrained vs 371/500 unconstrained at 0.01). "
+            "This empirical behavior is consistent with an association between discrete feature concentration "
+            "(45.26% of test flows sit on flow_duration = -0.0662) and tree threshold clustering (26,914 splits within +/-0.01 "
+            "and 45,308 within +/-0.05 across the 200 trees of the deployed B2 Random Forest). While this split density aligns with "
+            "sensitivity to small shifts, this association does not prove sole causation."
         ),
     }
 
