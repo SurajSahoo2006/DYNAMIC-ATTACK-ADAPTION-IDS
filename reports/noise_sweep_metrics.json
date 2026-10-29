@@ -1,0 +1,119 @@
+{
+  "sample_size": 500,
+  "clean_baseline": {
+    "correct_count": 478,
+    "total_count": 500,
+    "accuracy": 0.956,
+    "ci_95": [
+      0.9343,
+      0.9708
+    ]
+  },
+  "noise_sweep": [
+    {
+      "target_l2": 0.0001,
+      "real_mean_l2": 9.5e-05,
+      "correct_count": 471,
+      "total_count": 500,
+      "accuracy": 0.942,
+      "ci_95_lower": 0.9179,
+      "ci_95_upper": 0.9593
+    },
+    {
+      "target_l2": 0.001,
+      "real_mean_l2": 0.00095,
+      "correct_count": 453,
+      "total_count": 500,
+      "accuracy": 0.906,
+      "ci_95_lower": 0.8772,
+      "ci_95_upper": 0.9286
+    },
+    {
+      "target_l2": 0.01,
+      "real_mean_l2": 0.009286,
+      "correct_count": 372,
+      "total_count": 500,
+      "accuracy": 0.744,
+      "ci_95_lower": 0.704,
+      "ci_95_upper": 0.7803
+    },
+    {
+      "target_l2": 0.03,
+      "real_mean_l2": 0.027614,
+      "correct_count": 358,
+      "total_count": 500,
+      "accuracy": 0.716,
+      "ci_95_lower": 0.6749,
+      "ci_95_upper": 0.7538
+    },
+    {
+      "target_l2": 0.1,
+      "real_mean_l2": 0.089441,
+      "correct_count": 329,
+      "total_count": 500,
+      "accuracy": 0.658,
+      "ci_95_lower": 0.6154,
+      "ci_95_upper": 0.6982
+    },
+    {
+      "target_l2": 0.3,
+      "real_mean_l2": 0.256391,
+      "correct_count": 298,
+      "total_count": 500,
+      "accuracy": 0.596,
+      "ci_95_lower": 0.5524,
+      "ci_95_upper": 0.6381
+    }
+  ],
+  "tree_threshold_analysis": [
+    {
+      "feature": "Variance",
+      "description": "Packet size variance ratio (mass at 0.0)",
+      "scaled_mass_value": -1.0422,
+      "percent_test_flows_at_mass": 35.15,
+      "rf_splits_within_0_01": 0,
+      "rf_splits_within_0_05": 127
+    },
+    {
+      "feature": "flow_duration",
+      "description": "Flow duration (mass at 0.0 / single packet)",
+      "scaled_mass_value": -0.0662,
+      "percent_test_flows_at_mass": 45.26,
+      "rf_splits_within_0_01": 26914,
+      "rf_splits_within_0_05": 45308
+    },
+    {
+      "feature": "Covariance",
+      "description": "Packet covariance (mass at 0.0)",
+      "scaled_mass_value": -0.2702,
+      "percent_test_flows_at_mass": 46.03,
+      "rf_splits_within_0_01": 22879,
+      "rf_splits_within_0_05": 31808
+    },
+    {
+      "feature": "Min",
+      "description": "Minimum packet size (mass at 42/54 bytes)",
+      "scaled_mass_value": -0.5033,
+      "percent_test_flows_at_mass": 30.0,
+      "rf_splits_within_0_01": 6302,
+      "rf_splits_within_0_05": 24626
+    },
+    {
+      "feature": "Tot size",
+      "description": "Total packet size (mass at small packet)",
+      "scaled_mass_value": -0.6566,
+      "percent_test_flows_at_mass": 20.32,
+      "rf_splits_within_0_01": 1245,
+      "rf_splits_within_0_05": 5959
+    },
+    {
+      "feature": "AVG",
+      "description": "Average packet size (mass at small packet)",
+      "scaled_mass_value": -0.6563,
+      "percent_test_flows_at_mass": 20.6,
+      "rf_splits_within_0_01": 1406,
+      "rf_splits_within_0_05": 6940
+    }
+  ],
+  "scientific_diagnosis": "The accuracy drop at small random noise (L2 ~ 0.01) is NOT a pipeline artifact (raw perturbed and pipeline-constrained perturbations produce identical curves). It is an inherent structural property of axis-aligned decision trees trained on IoT network telemetry: over 20-35% of network flows sit exactly on constant mass points (e.g., flow_duration = 0, Variance = 0). Because decision trees place sharp step thresholds directly adjacent to these mass points (over 45,000 splits within 0.05 of flow_duration = -0.0662), even tiny isotropic random perturbations of magnitude 0.01 push thousands of samples across leaf decision boundaries simultaneously."
+}
