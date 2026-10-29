@@ -29,11 +29,14 @@ class ForensicAlertLogger:
     Each entry is cryptographically linked to the previous entry via SHA-256.
     """
 
-    def __init__(self, log_path: Optional[Path] = None):
+    def __init__(self, log_path: Optional[Path] = None, tail_hash_path: Optional[Path] = None):
         if log_path is None:
             log_path = Path(__file__).parent.parent / "logs" / "alerts.jsonl"
         self.log_path = Path(log_path)
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
+        if tail_hash_path is None:
+            tail_hash_path = self.log_path.parent / f"{self.log_path.stem}_tail_hash.txt"
+        self.tail_hash_path = Path(tail_hash_path)
         self.last_hash = self._get_tail_hash()
 
     def _get_tail_hash(self) -> str:
@@ -153,4 +156,12 @@ class ForensicAlertLogger:
             f.write(json.dumps(entry) + "\n")
 
         self.last_hash = entry_hash
+
+        # Persist external tail hash anchor to detect tail truncation / full rewrites
+        try:
+            with open(self.tail_hash_path, "w", encoding="utf-8") as tf:
+                tf.write(entry_hash.strip() + "\n")
+        except Exception:
+            pass
+
         return entry

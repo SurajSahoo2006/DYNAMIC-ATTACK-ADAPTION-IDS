@@ -101,8 +101,8 @@ def generate_forensic_alerts_log():
     print(f"Details: {msg}")
     assert valid, "Pristine log verification must pass!"
 
-    # 4. Test verification on tampered copy
-    print("\n--- Test 2: Verifying Tampered Alert Log Copy ---")
+    # 4. Test verification on tampered copy (mid-file content modification)
+    print("\n--- Test 2: Verifying Tampered Alert Log Copy (Mid-file modification) ---")
     tampered_file = logs_dir / "alerts_tampered_test.jsonl"
     shutil.copyfile(alerts_file, tampered_file)
 
@@ -119,15 +119,30 @@ def generate_forensic_alerts_log():
     with open(tampered_file, "w", encoding="utf-8") as f:
         f.writelines(lines)
 
-    valid_tamper, count_tamper, msg_tamper = verify_alert_log(tampered_file)
+    valid_tamper, count_tamper, msg_tamper = verify_alert_log(tampered_file, enforce_anchor=False)
     print(f"Validation Result on Tampered File: {'PASS (Undetected)' if valid_tamper else 'CORRECTLY DETECTED TAMPER'}")
     print(f"Details:\n{msg_tamper}")
     assert not valid_tamper, "Tampered log must be detected and rejected!"
 
+    # 5. Test verification on truncated copy (tail deletion detection via external anchor)
+    print("\n--- Test 3: Verifying Truncated Alert Log Copy (Tail deletion attack) ---")
+    truncated_file = logs_dir / "alerts_truncated_test.jsonl"
+    with open(alerts_file, "r", encoding="utf-8") as f:
+        pristine_lines = f.readlines()
+    with open(truncated_file, "w", encoding="utf-8") as f:
+        f.writelines(pristine_lines[:35])  # Delete last 10 records from pristine log
+
+    # Point audit to genuine external anchor (which holds the hash of all 45 records)
+    tail_anchor = logs_dir / f"{alerts_file.stem}_tail_hash.txt"
+    valid_trunc, count_trunc, msg_trunc = verify_alert_log(truncated_file, tail_hash_path=tail_anchor, enforce_anchor=True)
+    print(f"Validation Result on Truncated File: {'PASS (Undetected)' if valid_trunc else 'CORRECTLY DETECTED TRUNCATION'}")
+    print(f"Details:\n{msg_trunc}")
+    assert not valid_trunc, "Truncated log must be detected via external anchor!"
+
     return {
         "pristine_verified_count": count,
         "tamper_detected": not valid_tamper,
-        "tamper_detection_message": msg_tamper,
+        "truncation_detected": not valid_trunc,
     }
 
 

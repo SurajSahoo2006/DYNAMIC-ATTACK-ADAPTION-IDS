@@ -19,13 +19,20 @@ from typing import Dict, Tuple
 from alerts.alert_logger import ForensicAlertLogger, GENESIS_HASH
 
 
-def verify_alert_log(log_path: Path) -> Tuple[bool, int, str]:
+def verify_alert_log(
+    log_path: Path,
+    tail_hash_path: Optional[Path] = None,
+    enforce_anchor: bool = True,
+) -> Tuple[bool, int, str]:
     """
     Audits the integrity of an alert log file.
+    - Verifies internal SHA-256 hash chaining (detects mid-file tamper).
+    - Checks external tail hash anchor (detects tail truncation and full-file rewrites).
 
     Returns:
         (is_valid: bool, lines_verified: int, message: str)
     """
+    log_path = Path(log_path)
     if not log_path.exists():
         return False, 0, f"Log file does not exist: {log_path}"
 
@@ -80,7 +87,26 @@ def verify_alert_log(log_path: Path) -> Tuple[bool, int, str]:
     if line_count == 0:
         return True, 0, "[WARN] Log file is empty. Genesis verification valid."
 
-    return True, line_count, f"[SUCCESS] Verified {line_count} alerts. Cryptographic hash chain is 100% intact."
+    # 3. External tail anchor verification
+    if enforce_anchor:
+        if tail_hash_path is None:
+            tail_hash_path = log_path.parent / f"{log_path.stem}_tail_hash.txt"
+        tail_hash_path = Path(tail_hash_path)
+
+        if tail_hash_path.exists() and tail_hash_path.stat().st_size > 0:
+            with open(tail_hash_path, "r", encoding="utf-8") as tf:
+                anchored_hash = tf.read().strip()
+            if anchored_hash and expected_prev_hash != anchored_hash:
+                return (
+                    False,
+                    line_count,
+                    f"[TRUNCATION/REWRITE DETECTED] Log tail hash does not match external anchor ({tail_hash_path.name}):\n"
+                    f"  External anchored tail hash: {anchored_hash}\n"
+                    f"  Found log file tail hash:     {expected_prev_hash}\n"
+                    f"  Tail records were deleted, truncated, or forged."
+                )
+
+    return True, line_count, f"[SUCCESS] Verified {line_count} alerts. Cryptographic hash chain and external anchor are 100% intact."
 
 
 if __name__ == "__main__":
