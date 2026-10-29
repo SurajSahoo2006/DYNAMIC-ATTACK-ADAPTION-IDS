@@ -1,0 +1,103 @@
+{
+  "reward_setting": "balanced",
+  "seed": 123,
+  "total_steps": 200000,
+  "runtime_seconds": 344.65,
+  "peak_ram_mb": 405.22,
+  "best_val_return": 1.025,
+  "final_val_return": -0.155,
+  "learning_curve": [
+    {
+      "step": 20000,
+      "elapsed_sec": 35.67,
+      "rl_val_return": -27.885,
+      "rl_val_attacks_contained_pct": 100.0,
+      "rl_val_benigns_disrupted_pct": 100.0,
+      "actor_loss": -0.0077,
+      "critic_loss": 5.0474
+    },
+    {
+      "step": 40000,
+      "elapsed_sec": 69.47,
+      "rl_val_return": -24.525,
+      "rl_val_attacks_contained_pct": 100.0,
+      "rl_val_benigns_disrupted_pct": 100.0,
+      "actor_loss": -0.0014,
+      "critic_loss": 0.5112
+    },
+    {
+      "step": 60000,
+      "elapsed_sec": 103.18,
+      "rl_val_return": -22.18,
+      "rl_val_attacks_contained_pct": 99.44,
+      "rl_val_benigns_disrupted_pct": 99.69,
+      "actor_loss": -0.0023,
+      "critic_loss": 0.1933
+    },
+    {
+      "step": 80000,
+      "elapsed_sec": 136.67,
+      "rl_val_return": -7.375,
+      "rl_val_attacks_contained_pct": 93.3,
+      "rl_val_benigns_disrupted_pct": 3.12,
+      "actor_loss": -0.0009,
+      "critic_loss": 3.1374
+    },
+    {
+      "step": 100000,
+      "elapsed_sec": 170.77,
+      "rl_val_return": -1.39,
+      "rl_val_attacks_contained_pct": 92.74,
+      "rl_val_benigns_disrupted_pct": 8.57,
+      "actor_loss": -0.0013,
+      "critic_loss": 0.459
+    },
+    {
+      "step": 120000,
+      "elapsed_sec": 205.12,
+      "rl_val_return": -0.12,
+      "rl_val_attacks_contained_pct": 95.81,
+      "rl_val_benigns_disrupted_pct": 8.1,
+      "actor_loss": -0.0011,
+      "critic_loss": 4.2394
+    },
+    {
+      "step": 140000,
+      "elapsed_sec": 239.9,
+      "rl_val_return": -0.925,
+      "rl_val_attacks_contained_pct": 97.77,
+      "rl_val_benigns_disrupted_pct": 7.17,
+      "actor_loss": -0.0053,
+      "critic_loss": 0.1522
+    },
+    {
+      "step": 160000,
+      "elapsed_sec": 274.65,
+      "rl_val_return": 1.025,
+      "rl_val_attacks_contained_pct": 99.16,
+      "rl_val_benigns_disrupted_pct": 9.19,
+      "actor_loss": -0.0066,
+      "critic_loss": 12.8825
+    },
+    {
+      "step": 180000,
+      "elapsed_sec": 309.74,
+      "rl_val_return": -1.43,
+      "rl_val_attacks_contained_pct": 95.53,
+      "rl_val_benigns_disrupted_pct": 7.79,
+      "actor_loss": -0.0033,
+      "critic_loss": 1.4388
+    },
+    {
+      "step": 200000,
+      "elapsed_sec": 344.65,
+      "rl_val_return": -0.155,
+      "rl_val_attacks_contained_pct": 96.93,
+      "rl_val_benigns_disrupted_pct": 7.17,
+      "actor_loss": -0.0011,
+      "critic_loss": 0.2957
+    }
+  ],
+  "best_checkpoint": "D:\\IROP MODEL\\DYNAMIC-ATTACK-ADAPTION-IDS\\models\\marl\\mappo_balanced_seed123_best.pt",
+  "final_checkpoint": "D:\\IROP MODEL\\DYNAMIC-ATTACK-ADAPTION-IDS\\models\\marl\\mappo_balanced_seed123_final.pt"
+}
