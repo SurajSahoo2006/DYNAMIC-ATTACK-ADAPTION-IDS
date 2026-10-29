@@ -107,6 +107,21 @@ SEVERITY_BASE_DAMAGE: Dict[str, float] = {
     "Critical": 10.0,
 }
 
+
+def get_true_class_severity(true_class: str) -> str:
+    """
+    Maps ground-truth class to severity using the canonical severity table:
+      - Benign: "Benign" (damage = 0.0)
+      - DDoS, Mirai: "Critical"
+      - DoS, Web-based, BruteForce: "High"
+      - Spoofing, Recon: "Medium"
+    Matches get_flow_severity(true_class, confidence=1.0).
+    """
+    tc = str(true_class).strip()
+    if tc == "Benign":
+        return "Benign"
+    return get_flow_severity(tc, 1.0)
+
 # Multiplier for residual damage that breaches containment posture
 CONTAINMENT_DAMAGE_MULTIPLIER: Dict[str, float] = {
     "none": 1.0,         # 100% damage penetrates

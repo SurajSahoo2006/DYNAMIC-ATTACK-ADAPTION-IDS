@@ -35,6 +35,7 @@ from config_marl import (
     SEVERITY_BASE_DAMAGE,
     TRIAGE_DELAY_PENALTY,
     TRIAGE_FLAG_DISCOUNT,
+    get_true_class_severity,
 )
 from marl.env import TacticalDefenseEnv
 
@@ -118,11 +119,12 @@ def test_hand_computed_rewards():
     # -------------------------------------------------------------------------
     env_sec = TacticalDefenseEnv(cache_mode="rl_val", reward_setting="security-first", seed=42)
     env_sec.reset(seed=42)
-    # Find an attack flow with Critical severity
-    crit_indices = [idx for idx in env_sec.class_indices[env_sec.campaign_family] if env_sec.severities[idx] == "Critical"]
+    # Find an attack flow with true severity Critical (e.g. DDoS or Mirai)
+    crit_indices = [idx for idx in env_sec.class_indices.get("DDoS", env_sec.class_indices[env_sec.campaign_family]) if get_true_class_severity(env_sec.true_labels[idx]) == "Critical"]
     target_idx = crit_indices[0] if crit_indices else env_sec.class_indices[env_sec.campaign_family][0]
     env_sec.episode_flow_indices[0] = target_idx
-    expected_base_dmg = SEVERITY_BASE_DAMAGE[env_sec.severities[target_idx]]
+    expected_true_sev = get_true_class_severity(env_sec.true_labels[target_idx])
+    expected_base_dmg = SEVERITY_BASE_DAMAGE[expected_true_sev]
     expected_dmg = expected_base_dmg * CONTAINMENT_DAMAGE_MULTIPLIER["block"]
     expected_dmg_term = -2.0 * expected_dmg
     expected_action_cost = TRIAGE_DELAY_PENALTY["flag_for_review"] + CONTAINMENT_ACTION_COST["block"] + (ESCALATION_ACTION_COST["notify_analyst"] * 0.5)
@@ -215,3 +217,37 @@ def test_split_boundary_isolation():
     # Verify test env length matches test cache
     env_test = TacticalDefenseEnv(cache_mode="test", seed=42)
     assert len(env_test.df) == 26292
+
+
+def test_damage_invariant_to_predicted_class_mutation():
+    """
+    Verify that for the same true attack flow, mutating the cached predicted class
+    or predicted severity does NOT change the ground-truth damage term.
+    """
+    env1 = TacticalDefenseEnv(cache_mode="rl_val", reward_setting="balanced", seed=42)
+    env1.reset(seed=42)
+
+    ddos_indices = env1.class_indices.get("DDoS", env1.class_indices[env1.campaign_family])
+    target_idx = ddos_indices[0]
+    true_label = env1.true_labels[target_idx]
+    assert true_label != "Benign"
+
+    env1.episode_flow_indices[0] = target_idx
+    _, r1, _, info1 = env1.step((0, 0, 0))  # none, none, none -> damage leaks 100%
+
+    # Second env with mutated cached prediction
+    env2 = TacticalDefenseEnv(cache_mode="rl_val", reward_setting="balanced", seed=42)
+    env2.reset(seed=42)
+    env2.episode_flow_indices[0] = target_idx
+    env2.severities[target_idx] = "Low"
+    env2.pred_indices[target_idx] = 0
+    _, r2, _, info2 = env2.step((0, 0, 0))
+
+    # Damage must be strictly identical regardless of predicted class
+    assert info1["damage"] == info2["damage"], (
+        f"Damage changed when predicted class was mutated! "
+        f"Original damage={info1['damage']}, Mutated damage={info2['damage']}"
+    )
+    assert r1 == pytest.approx(r2, abs=1e-5)
+    assert info1["true_severity"] == info2["true_severity"]
+    assert info1["pred_severity"] != info2["pred_severity"]

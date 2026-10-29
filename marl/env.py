@@ -23,7 +23,7 @@ Reward Formula (Module Docstring & Report Specification):
 At step t with weights (w_D, w_C, w_cost, w_B) from the active reward setting:
 
 If true class is an attack flow:
-  damage_term = - w_D * SEVERITY_BASE_DAMAGE[severity] * CONTAINMENT_DAMAGE_MULTIPLIER[active_posture]
+  damage_term = - w_D * SEVERITY_BASE_DAMAGE[true_severity] * CONTAINMENT_DAMAGE_MULTIPLIER[active_posture]
   collateral_term = 0.0
   bonus_term = + w_B * CONTAINED_AND_NOTIFIED_BONUS
                if (active_posture != 'none' and escalation_action != 'none') else 0.0
@@ -90,6 +90,7 @@ from config_marl import (
     TRIAGE_ACTIONS,
     TRIAGE_DELAY_PENALTY,
     TRIAGE_FLAG_DISCOUNT,
+    get_true_class_severity,
 )
 
 
@@ -173,11 +174,11 @@ class TacticalDefenseEnv:
 
         # Precompute class index arrays for fast campaign flow retrieval
         self.prob_cols = [c for c in self.df.columns if c.startswith("prob_")]
-        self.prob_matrix = self.df[self.prob_cols].to_numpy(dtype=np.float32)
-        self.pred_indices = self.df["pred_class_idx"].to_numpy(dtype=np.int32)
-        self.confidences = self.df["confidence"].to_numpy(dtype=np.float32)
-        self.severities = self.df["severity"].to_numpy()
-        self.true_labels = self.df["true_label"].to_numpy()
+        self.prob_matrix = self.df[self.prob_cols].to_numpy(dtype=np.float32).copy()
+        self.pred_indices = self.df["pred_class_idx"].to_numpy(dtype=np.int32).copy()
+        self.confidences = self.df["confidence"].to_numpy(dtype=np.float32).copy()
+        self.severities = self.df["severity"].to_numpy().copy()
+        self.true_labels = self.df["true_label"].to_numpy().copy()
 
         self.class_indices: Dict[str, np.ndarray] = {}
         for cname in np.unique(self.true_labels):
@@ -301,7 +302,8 @@ class TacticalDefenseEnv:
         flow_idx = self.episode_flow_indices[self.current_step]
         true_label = self.true_labels[flow_idx]
         is_attack = (true_label != "Benign")
-        severity = self.severities[flow_idx]
+        pred_severity = self.severities[flow_idx]
+        true_severity = get_true_class_severity(true_label)
         pred_idx = self.pred_indices[flow_idx]
 
         # Update rolling predicted class history
@@ -345,7 +347,7 @@ class TacticalDefenseEnv:
         delay_cost = TRIAGE_DELAY_PENALTY[triage_act_str]
 
         if is_attack:
-            base_dmg = SEVERITY_BASE_DAMAGE.get(severity, 3.0)
+            base_dmg = SEVERITY_BASE_DAMAGE.get(true_severity, 0.0)
             leak_multiplier = CONTAINMENT_DAMAGE_MULTIPLIER[effective_posture]
             damage = base_dmg * leak_multiplier
             damage_term = - (w_d * damage)
@@ -376,8 +378,10 @@ class TacticalDefenseEnv:
         info = {
             "step": self.current_step,
             "true_label": true_label,
+            "true_severity": true_severity,
             "is_attack": is_attack,
-            "severity": severity,
+            "severity": pred_severity,
+            "pred_severity": pred_severity,
             "pred_idx": int(pred_idx),
             "effective_posture": effective_posture,
             "triage_action": triage_act_str,
