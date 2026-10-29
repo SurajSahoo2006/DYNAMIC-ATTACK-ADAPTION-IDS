@@ -5,7 +5,7 @@
 > **Dataset**: CICIoT2023 (19 RFE-selected features)  
 > **Hardware Environment**: Local Windows Laptop, 8 GB RAM, CPU-only (No GPU)  
 > **Total Phase 3 Runtime**: 488.3 s (8.14 minutes)  
-> **Measured Peak RAM (RSS)**: **1,402.4 MB (1.37 GB)**  *(Strict hardware ceiling: 6.0 GB)*
+> **Measured Peak RAM (RSS)**: **1,402.4 MB (1.37 GB)** during ensemble training; **564.9 MB (0.55 GB)** during LLM triage. *(Strict hardware ceiling: 6.0 GB)*
 
 ---
 
@@ -16,31 +16,32 @@ Phase 3 implements two central components of the "Dynamic Attack Adaptation" IDS
    - Multi-model soft voting and validation-weighted voting across 19 features.
    - Evaluated on both the **Primary Target** (8-class: Benign + 7 attack families) and **Secondary Target** (34 fine-grained classes).
    - Zero-leakage validation protocol: Validation set loaded strictly from `validation.csv` (106,766 real rows) with no SMOTE oversampling, used exclusively for early stopping and ensemble weight tuning.
+   - **Ensemble Composition Reality**: In validation weight optimization, the PyTorch DNN received a weight of **0.00**, meaning the active ensemble is effectively **Random Forest + XGBoost**.
 2. **LLM Semantic Orchestrator**:
-   - Positioned between Feature Selection and Classifier triage.
-   - Strictly enforces the architectural invariant: **The Ensemble determines the attack class, and a fixed configuration table determines severity.** The LLM never hallucinates or overrides classifications.
-   - Translates telemetry and predictions into executive natural language explanations and actionable operator mitigations.
-   - Built with local Ollama integration and an integrated deterministic rule-based fallback for 100% offline availability.
+   - Positioned downstream **AFTER** the Ensemble Classifier (not between feature selection and the classifier).
+   - Strictly enforces the architectural invariant: **The Ensemble determines the attack class, and a fixed configuration table determines severity.** The LLM never hallucinates or overrides classifications. If the model outputs differing fields, they are automatically overwritten.
+   - Translates telemetry and predictions into concise natural language explanations and actionable operator mitigations using local Ollama (`llama3.2:3b`).
+   - Integrated deterministic rule-based fallback ensures 100% offline availability if Ollama is unreachable.
 
 ---
 
 ## 2. Actual Results vs. Presentation Expectations
 
-| Metric | Presentation Expected | Phase 3 Actual (Primary: 8-Class) | Phase 3 Actual (Secondary: 34-Class) | Note / Analysis |
+| Metric | Presentation Expected | Phase 3 Actual (Primary: 8-Class) | Phase 3 Actual (Secondary: 34-Class B2) | Note / Analysis |
 |:---|:---:|:---:|:---:|:---|
-| **Ensemble Accuracy** | **98.72%** | **95.53%** | **93.19%** | Evaluated on pure untouched test data without synthetic row leakage |
-| **Ensemble Macro F1** | ~96.50% | **87.66%** | **85.40%** | Real minority classes (Web-based, BruteForce) penalize unweighted macro average |
-| **Inference Latency** | < 1.0 ms / flow | **0.0447 ms / flow** | **0.1024 ms / flow** | **22,376 flows/sec** (8-class) on local CPU |
+| **Ensemble Accuracy** | **98.72%** | **95.53%** | **93.43%** | Evaluated on pure untouched test data without synthetic row leakage |
+| **Ensemble Macro F1** | ~96.50% | **87.66%** | **85.97%** | Real minority classes (Web-based, BruteForce) penalize unweighted macro average |
+| **Inference Latency** | < 1.0 ms / flow | **0.0447 ms / flow** | **0.0450 ms / flow** | **22,200+ flows/sec** on local CPU |
 | **Input Features** | 19 features | **19 features** | **19 features** | RFE-reduced from 46 numeric columns |
-| **Training RAM** | < 6.0 GB | **1.37 GB peak** | **1.37 GB peak** | Ran comfortably within 8 GB laptop RAM |
+| **Training Peak RAM** | < 6.0 GB | **1.37 GB peak** | **1.37 GB peak** | Ran comfortably within 8 GB laptop RAM |
 
 ### Why Real Accuracy is 95.53% vs. Slide Target of 98.72%
 1. **Untouched Test Split (Zero Leakage)**: Our test split (`26,292` rows) contains **0% synthetic data** and preserves the natural imbalance of the real network capture. Literature figures reporting >98.5% frequently evaluate on resampled test sets where SMOTE duplicates simplify classification.
 2. **Feature Reduction (46 -> 19 features)**: Reducing feature dimensionality by 58.7% preserves high throughput (0.04 ms/flow) with minimal performance degradation.
-3. **Web-based & BruteForce Imbalance**: Severe under-representation of Web-based attacks (672 test rows, F1 66.59%) and BruteForce (358 test rows, F1 75.15%) dampens the macro average, while high-volume volumetric attacks achieve near-perfect scores:
-   - **Mirai**: **100.00% F1** (2,960 samples)
-   - **DDoS**: **99.91% F1** (11,338 samples)
-   - **DoS**: **99.89% F1** (3,971 samples)
+3. **Web-based & BruteForce Imbalance**: Severe under-representation of Web-based attacks (672 test flows, F1 66.59%) and BruteForce (358 test flows, F1 75.15%) dampens the macro average, while high-volume volumetric attacks achieve near-perfect scores:
+   - **Mirai**: **100.00% F1** (2,960 flows)
+   - **DDoS**: **99.91% F1** (11,338 flows)
+   - **DoS**: **99.89% F1** (3,971 flows)
 
 ---
 
@@ -56,9 +57,9 @@ Phase 3 implements two central components of the "Dynamic Attack Adaptation" IDS
 | **Ensemble (Soft Voting - Uniform)** | 95.15% | 88.05% | 87.99% | 86.99% | — | 1.18 s |
 | **Ensemble (Weighted Voting)** | **95.53%** | **87.63%** | **88.49%** | **87.66%** | **157.90 s** | **1.175 s (0.045 ms/flow)** |
 
-> **Validation Weight Tuning**: Optimal simplex weights selected on the 106,766 validation rows:  
+> **Validation Weight Tuning & DNN Reality**: Optimal simplex weights selected on the 106,766 validation rows yielded:  
 > **$w_{\text{RF}} = 0.20, \quad w_{\text{XGB}} = 0.80, \quad w_{\text{DNN}} = 0.00$**  
-> (DNN given 0 weight because tree-based gradient boosting dominates tabular flow statistics; XGBoost + RF ensemble yielded highest test accuracy).
+> Plainly stated: **The PyTorch DNN received weight 0.00, meaning the active ensemble is effectively Random Forest + XGBoost.** Tree-based gradient boosting dominates tabular flow statistics; adding the DNN degraded validation cross-entropy, so the optimizer zeroed it out.
 
 ### Per-Class Detailed Breakdown (Weighted Ensemble)
 
@@ -77,7 +78,7 @@ Phase 3 implements two central components of the "Dynamic Attack Adaptation" IDS
 
 ---
 
-## 4. Secondary Target: 34-Class Fine-Grained Performance
+## 4. Secondary Target: 34-Class Fine-Grained Performance & Rare Class Study
 
 ### Overall Model Comparison (Test Set: 26,292 rows)
 
@@ -90,106 +91,148 @@ Phase 3 implements two central components of the "Dynamic Attack Adaptation" IDS
 | **Ensemble (Initial Weighted Baseline)** | 93.19% | 84.87% | 86.74% | 85.40% | 291.06 s | 2.691 s (0.102 ms/flow) |
 | **Ensemble (Method B2: Balanced Weights, No SMOTE)** | **93.43%** | **85.34%** | **87.21%** | **85.97%** | **146.40 s** | **1.180 s (0.045 ms/flow)** |
 
-> **Validation Weights (Method B2)**: **$w_{\text{RF}} = 0.60, \quad w_{\text{XGB}} = 0.40, \quad w_{\text{DNN}} = 0.00$** tuned on 106,766 pure validation rows.
+> **Validation Weights (Method B2)**: **$w_{\text{RF}} = 0.60, \quad w_{\text{XGB}} = 0.40, \quad w_{\text{DNN}} = 0.00$** tuned on 106,766 pure validation rows. The DNN again received weight 0.00.
 
 ### Rare Class Optimization Study (Baseline vs. Optimized B2)
 
 A rigorous experimental study was conducted across 5 candidate architectures (evaluating SMOTE vs. un-SMOTEd training, balanced weighting, 46 raw features, and hierarchical specialists; see `reports/rare_class_experiments.md`). 
 
-Method **B2** (training on 100% real un-SMOTEd rows with RF `class_weight='balanced'` and XGBoost sample weighting on the 19 RFE features) yielded the best compliant performance:
+Method **B2** (training on 100% real un-SMOTEd rows with RF `class_weight='balanced'` and XGBoost sample weighting on the 19 RFE features) was adopted as the production classifier:
 
-| Rare Class Name | True Test Support | Initial Baseline F1 | Optimized B2 F1 | Gain | Status / Note |
+| Rare Class Name | True Test Support | Initial Baseline F1 | Optimized B2 F1 | Delta | Status / Note |
 |:---|:---:|:---:|:---:|:---:|:---|
-| **`Backdoor_Malware`** | 95 | 51.48% | **57.02%** | **+5.54%** | ⚠️ low support, interpret with caution |
-| **`Recon-PingSweep`** | 59 | 53.33% | **56.31%** | **+2.98%** | ⚠️ low support, interpret with caution |
-| **`Uploading_Attack`** | 34 | 51.61% | **46.04%** | -5.57% | ⚠️ low support, interpret with caution (Recall rose to 58.8%, Precision 37.7%) |
+| **`Backdoor_Malware`** | 95 flows | 51.48% | **57.02%** | **+5.54%** | ⚠️ low support, interpret with caution |
+| **`Recon-PingSweep`** | 59 flows | 53.33% | **56.31%** | **+2.98%** | ⚠️ low support, interpret with caution |
+| **`Uploading_Attack`** | 34 flows | 51.61% | **46.04%** | **-5.57%** | ⚠️ low support, interpret with caution (Recall rose to 58.8%, Precision fell to 37.7%) |
+
+> **Up-Front Trade-off Notice**: Method B2 **lowered `Uploading_Attack` F1 from 51.6% to 46.0%** while raising the other two rare classes. These are single-run results on 34–95 test flows, so small differences between candidate experiments may be sample noise.
 
 #### Can F1 > 85% be Reached Legitimately on These Classes?
-**No.** An exhaustive scan of all 7.84 million rows across the entire raw CICIoT2023 dataset confirms that `Uploading_Attack` only has **208 rows total** in the entire benchmark, `Recon-PingSweep` has **347 rows**, and `Backdoor_Malware` has **574 rows**. 
-Because 1 test row represents 1.0% to 2.9% of total recall, and because HTTP-layer attacks (`Uploading_Attack` vs. `XSS`/`CommandInjection`) share virtually identical statistical flow profiles, reaching >85% F1 on these 3 individual labels without data leakage is mathematically impossible on this benchmark. This fundamental scarcity is precisely what motivates the pipeline's **Cowrie Honeypot Enrichment** layer.
-
+**Not reached with this data; likely limited by very few real rows.**
+1. **Extreme Benchmark Scarcity**: An exhaustive scan across all 7.84 million rows of the CICIoT2023 dataset confirms that `Uploading_Attack` has only **208 rows total** in the entire benchmark (34 in the test split), `Recon-PingSweep` has **347 rows total** (59 in test), and `Backdoor_Malware` has **574 rows total** (95 in test). With only 34 test flows, a single misclassified flow swings recall by 2.94%.
+2. **Intra-Family Feature Overlap (Hypotheses)**: In statistical network flow space, `Uploading_Attack` flows closely mimic sibling HTTP attacks (`XSS`, `CommandInjection`, `SqlInjection`) because all are HTTP POST transactions. Similarly, `Recon-PingSweep` probe flows overlap heavily with other sweep tools like `Recon-OSScan`.
+3. **Cowrie Honeypot Enrichment (Future Work)**: Enriching flows with payload logs from a Cowrie SSH/Telnet honeypot is identified as essential future work to resolve intra-family ambiguity, as the current network dataset loader processes purely statistical flow headers without raw log payloads.
 
 ---
 
 ## 5. LLM Semantic Orchestrator Evaluation
 
-The orchestrator was executed on a balanced sample of 40 test flows (5 flows per 8-class category). All outputs were verified against the strict JSON specification and saved to `reports/llm_demo_outputs.csv`.
+The orchestrator was executed locally using Ollama (`llama3.2:3b`) on 40 test flows chosen randomly with fixed seed 42 (5 flows per 8-class category, guaranteeing representation of `Backdoor_Malware`, `Recon-PingSweep`, and `Uploading_Attack`).
 
 ### Operational Telemetry
 
-| Telemetry Metric | Measured Value | Requirement / Benchmark |
+| Telemetry Metric | Measured Value | Benchmark / Constraint |
 |:---|:---:|:---|
-| **Total Test Flows Evaluated** | 40 flows | 40 flows (5 per class) |
-| **Strict JSON Schema Validity** | **100.0% (40/40)** | 100.0% required |
-| **Ensemble Class Consistency** | **100.0% (40/40)** | 100.0% (LLM never overrides ensemble) |
-| **Severity Consistency** | **100.0% (40/40)** | 100.0% (mapped strictly via config table) |
-| **Execution Source** | 100% Rule-based Fallback | Local Ollama offline; deterministic fallback active |
-| **Average Triage Latency** | < 0.01 ms / flow | Near-instantaneous lookup |
-| **Total Demo Runtime** | 4.64 s (including model inference) | < 10.0 s |
-| **Peak Demo RAM** | 611.6 MB (0.60 GB) | < 6.0 GB laptop boundary |
+| **Total Test Flows Evaluated** | 40 flows | 40 flows (5 per class, seed 42) |
+| **Real Ollama Output Count** | **40 / 40 (100.0%)** | Full local LLM execution |
+| **Rule-Based Fallback Count** | **0 / 40 (0.0%)** | 0 fallbacks required |
+| **Strict JSON Schema Validity (Ollama rows)** | **100.0% (40/40)** | 100.0% valid JSON |
+| **Model Overrode Fields Count** | **0** | LLM perfectly respected ensemble predictions |
+| **Average Seconds per Flow (Ollama)** | **12.03 s / flow** | Local CPU-only inference (`llama3.2:3b`) |
+| **Total Triage Generation Time** | 481.17 s (8.02 min) | CPU execution across 40 flows |
+| **Peak Orchestrator RAM** | **564.9 MB (0.55 GB)** | < 6.0 GB laptop boundary |
 
-### Sample Semantic Triage Outputs
+### Real LLM Semantic Triage Outputs (Source: `ollama`, Model: `llama3.2:3b`)
+
+Below are 5 real outputs generated by the local Ollama LLM from `reports/llm_demo_outputs.csv`:
 
 ```json
 [
   {
-    "flow_index": 0,
+    "flow_index": 12992,
     "true_class": "DDoS",
     "ensemble_predicted_class": "DDoS",
-    "confidence": 1.0,
+    "confidence": 0.9976,
     "severity": "Critical",
-    "explanation": "Distributed Denial of Service (DDoS) flood detected. Volumetric packet influx and abnormal flag fragmentation indicating multi-source bandwidth exhaustion attack.",
-    "recommended_action": "Engage upstream BGP Anycast traffic scrubbing, apply edge router ACL rate-limiting on suspicious UDP/SYN floods, and block offending external subnet ranges."
+    "explanation": "The network flow indicates a Distributed Denial of Service (DDoS) attack, characterized by a prolonged flow duration and high packet size, suggesting a large-scale traffic flood.",
+    "recommended_action": "Implement rate limiting and IP blocking measures to restrict the flow of traffic from the identified IP address to prevent further damage.",
+    "source": "ollama"
   },
   {
-    "flow_index": 10,
+    "flow_index": 4380,
     "true_class": "Mirai",
     "ensemble_predicted_class": "Mirai",
     "confidence": 1.0,
     "severity": "Critical",
-    "explanation": "Mirai IoT botnet signature detected. Typical telemetry includes GRE/UDP flood surges, bursty payload patterns, and automated scanning for default credential vulnerabilities.",
-    "recommended_action": "Immediately isolate suspected IoT device into a quarantined management VLAN, terminate unauthorized Telnet/SSH sessions on ports 23/2323, and force firmware credential reset."
+    "explanation": "This network flow is classified as a Mirai attack, a type of distributed denial-of-service (DDoS) attack that uses compromised IoT devices to flood a target network with traffic, causing it to become unavailable.",
+    "recommended_action": "Network operators should immediately isolate the affected network segment and block all incoming traffic from the source IP address to prevent further damage.",
+    "source": "ollama"
   },
   {
-    "flow_index": 50,
+    "flow_index": 1896,
     "true_class": "BruteForce",
     "ensemble_predicted_class": "BruteForce",
-    "confidence": 0.8721,
+    "confidence": 0.9597,
     "severity": "High",
-    "explanation": "Authentication brute-force attack detected (systematic dictionary guessing or credential stuffing) targeting authentication endpoints in rapid sequential attempts.",
-    "recommended_action": "Temporarily lock targeted account identities, enforce progressive exponential backoff and CAPTCHA rate limiting on login endpoints, and mandate Multi-Factor Authentication (MFA)."
+    "explanation": "The network flow indicates a BruteForce attack, where an attacker is attempting to guess a password by rapidly sending a large number of login requests within a short duration.",
+    "recommended_action": "Implement rate limiting on login protocols to restrict the number of login attempts within a short time frame to prevent further brute-force attacks.",
+    "source": "ollama"
   },
   {
-    "flow_index": 7,
+    "flow_index": 11497,
     "true_class": "Benign",
     "ensemble_predicted_class": "Benign",
-    "confidence": 0.5332,
+    "confidence": 0.9693,
     "severity": "Low",
-    "explanation": "Normal routine network communication exhibiting standard protocol handshakes, baseline packet sizes, and expected inter-arrival timing without anomalous flood surges.",
-    "recommended_action": "Maintain passive network monitoring. No host isolation required; archive flow telemetry for ongoing baseline traffic profiling."
+    "explanation": "This network flow is classified as benign due to its low duration and lack of suspicious activity, indicating a normal network connection.",
+    "recommended_action": "Monitor the network connection to ensure it remains stable and does not exhibit any unusual behavior.",
+    "source": "ollama"
+  },
+  {
+    "flow_index": 25600,
+    "true_class": "Web-based (Uploading_Attack)",
+    "ensemble_predicted_class": "Web-based",
+    "confidence": 0.8704,
+    "severity": "High",
+    "explanation": "This network flow indicates a high-confidence web-based attack, likely involving a malicious web request or response, given the high model confidence and key network telemetry suggesting a prolonged and large HTTP request.",
+    "recommended_action": "Network operators should immediately block the affected IP address or subnet and investigate the source of the malicious traffic to prevent further attacks.",
+    "source": "ollama"
   }
 ]
 ```
 
 ---
 
-## 6. Hardware & Memory Audit (8 GB RAM Constraint)
+## 6. DNN Performance Investigation (Step 5 Analysis)
 
-All operations were executed on a local Windows machine without GPU acceleration or cloud compute:
-- **Phase 1 & 2 Peak RAM**: 298.9 MB
-- **Phase 3 Ensemble Peak RAM**: **1,402.4 MB (1.37 GB)** during 34-class gradient boosting histogram construction.
-- **Phase 3 LLM Orchestrator Peak RAM**: **611.6 MB (0.60 GB)**.
-- **Safety Margin**: Remained well below the 6.0 GB ceiling (leaving > 6.6 GB free for system tasks).
+The PyTorch Deep Neural Network (MLP: 19 -> 128 -> 64 -> 8/34) achieved 76.8% accuracy on 8 classes and 64.9% on 34 classes, resulting in an optimal validation ensemble weight of $w_{\text{DNN}} = 0.00$. An investigation (`models/investigate_dnn.py`) analyzed the underlying causes:
+
+### Diagnosis
+1. **Severe Tabular Feature Outliers**: Although features were standardized via `StandardScaler`, 1,002 test cells exhibit $|z| > 10$, with maximum z-scores reaching **$z = 89.75$** (e.g., extreme flow durations and packet rate bursts). Heavy-tailed distributions destabilize gradient backpropagation in dense linear layers.
+2. **Inductive Bias of Feedforward Networks**: Unlike tree splits (Random Forest and XGBoost) which are invariant to monotonic feature scale and naturally segment axis-aligned tabular thresholds, dense layers attempt to draw hyperplanes through extreme outlier spaces.
+
+### Experimental Fixes Tested
+
+| Configuration | Test Accuracy | Macro F1 | Observation |
+|:---|:---:|:---:|:---|
+| **Baseline DNN** (Dropout 0.30, Adam lr=0.001) | 78.93% | 56.55% | Baseline checkpoint from Phase 3 |
+| **Test B** (Dropout reduced to 0.10) | **79.61%** | **60.88%** | Slight improvement; less underfitting |
+| **Test C** (Balanced `CrossEntropyLoss`) | 66.20% | 60.68% | Minority recall rose, but overall accuracy plunged |
+| **Test D** (lr=0.002, CosineAnnealing, Grad Clip 1.0) | 66.50% | 60.80% | Unstable convergence under heavy-tailed features |
+
+**Conclusion**: Across all architectural and loss interventions, feedforward neural nets top out under 80% accuracy on this 19-feature tabular dataset. Assigning the DNN a weight of 0.00 in the production ensemble is empirically justified and optimal.
 
 ---
 
-## 7. Deliverables & Artifact Index
+## 7. Hardware & Memory Audit (8 GB RAM Constraint)
+
+All operations were executed on a local Windows machine without GPU acceleration:
+- **Phase 1 & 2 Peak RAM**: 298.9 MB
+- **Phase 3 Ensemble Peak RAM**: **1,402.4 MB (1.37 GB)** during XGBoost histogram construction.
+- **Phase 3 LLM Orchestrator Peak RAM**: **564.9 MB (0.55 GB)** during local CPU inference.
+- **Safety Margin**: Remained far below the 6.0 GB ceiling (leaving > 4.5 GB free for operating system and background tasks).
+
+---
+
+## 8. Deliverables & Artifact Index
 
 | Artifact File | Path | Description |
 |:---|:---|:---|
 | **Confusion Matrix (8-Class)** | `reports/confusion_matrix_8class.png` | Normalized test set confusion matrix plot |
 | **Phase 3 Metrics** | `reports/phase3_metrics.json` | Machine-readable metrics for all models and classes |
-| **LLM Demo Outputs** | `reports/llm_demo_outputs.csv` | 40-flow triage results with explanations and mitigations |
-| **Inference Script** | `predict.py` | Standalone CLI and Python module for ensemble inference |
-| **Trained Models** | `models/` | Serialized RF, XGBoost, PyTorch DNN, and weights JSON |
-| **Leak-Free Validation** | `data/processed/val_phase2.parquet` | Cached clean validation data (106,766 rows) |
+| **LLM Demo Outputs** | `reports/llm_demo_outputs.csv` | 40-flow triage results with real Ollama explanations and mitigations |
+| **LLM Metrics** | `reports/llm_metrics.json` | Execution telemetry (Ollama count, latency, RAM) |
+| **Rare Class Diagnosis** | `reports/rare_class_confusions.md` | Confusion slice analysis for Backdoor, PingSweep, Uploading |
+| **Rare Class Experiments** | `reports/rare_class_experiments.md` | Full experimental evaluation of 5 rare class candidates |
+| **Inference Script** | `predict.py` | Standalone CLI and Python module for ensemble inference (default: B2) |
+| **Trained Models** | `models/` | Serialized B2 and baseline RF, XGBoost, PyTorch DNN, and weights JSON |
