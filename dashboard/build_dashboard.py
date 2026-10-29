@@ -163,7 +163,17 @@ def generate_chart_returns(eval_data: Dict) -> str:
     ci_low = []
     ci_high = []
 
-    for b in ["random", "always_none", "max_containment", "severity_rule", "oracle"]:
+    baseline_order = [
+        "random",
+        "always_none",
+        "max_containment",
+        "severity_rule",
+        "severity_rule_budget_aware",
+        "label_aware_rule",
+        "label_aware_rule_budget_aware",
+    ]
+
+    for b in baseline_order:
         if b in set_data.get("baselines", {}):
             b_info = set_data["baselines"][b]
             methods.append(b)
@@ -180,10 +190,11 @@ def generate_chart_returns(eval_data: Dict) -> str:
         ci_low.append(m - m_info["return_ci_lower"])
         ci_high.append(m_info["return_ci_upper"] - m)
 
-    fig, ax = plt.subplots(figsize=(9, 4.2))
+    fig, ax = plt.subplots(figsize=(10, 4.4))
     x = np.arange(len(methods))
     yerr = [ci_low, ci_high]
-    bar_colors = ["#7f7f7f", "#bcbd22", "#d62728", "#1f77b4", "#2ca02c", "#ff7f0e"][: len(methods)]
+    palette = ["#7f7f7f", "#bcbd22", "#d62728", "#1f77b4", "#17becf", "#9467bd", "#2ca02c", "#ff7f0e"]
+    bar_colors = (palette * ((len(methods) // len(palette)) + 1))[: len(methods)]
 
     ax.bar(x, returns, yerr=yerr, capsize=4, color=bar_colors, edgecolor="black", alpha=0.85)
     ax.set_ylabel("Mean Return (T=50)")
