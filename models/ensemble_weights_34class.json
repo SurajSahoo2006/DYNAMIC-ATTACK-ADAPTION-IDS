@@ -38,20 +38,15 @@
     "XSS"
   ],
   "weights": {
-    "rf": 0.45,
-    "xgb": 0.55,
+    "rf": 0.6,
+    "xgb": 0.4,
     "dnn": 0.0
   },
   "telemetry": {
-    "rf_time_sec": 60.23,
-    "xgb_time_sec": 120.95,
-    "dnn_time_sec": 109.88,
-    "total_train_sec": 291.06,
-    "weights": {
-      "rf": 0.45,
-      "xgb": 0.55,
-      "dnn": 0.0
-    },
-    "val_acc_weighted": 0.9499
+    "optimization_strategy": "B2: Balanced Class Weighting without SMOTE (19 features)",
+    "val_acc_weighted": 0.9502,
+    "val_macro_f1": 0.817,
+    "test_acc": 0.9343,
+    "test_macro_f1": 0.8597
   }
 }

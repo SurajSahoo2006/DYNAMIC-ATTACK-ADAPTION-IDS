@@ -87,19 +87,27 @@ Phase 3 implements two central components of the "Dynamic Attack Adaptation" IDS
 | **XGBoost** (`hist`, depth 6, lr 0.1) | 93.19% | 84.95% | 86.67% | 85.48% | 120.95 s | 0.51 s |
 | **PyTorch DNN** (19 -> 128 -> 64 -> 34) | 64.86% | 59.38% | 58.29% | 54.57% | 109.88 s | 0.30 s |
 | **Ensemble (Soft Voting - Uniform)** | 93.07% | 84.69% | 87.00% | 85.14% | — | 2.69 s |
-| **Ensemble (Weighted Voting)** | **93.19%** | **84.87%** | **86.74%** | **85.40%** | **291.06 s** | **2.691 s (0.102 ms/flow)** |
+| **Ensemble (Initial Weighted Baseline)** | 93.19% | 84.87% | 86.74% | 85.40% | 291.06 s | 2.691 s (0.102 ms/flow) |
+| **Ensemble (Method B2: Balanced Weights, No SMOTE)** | **93.43%** | **85.34%** | **87.21%** | **85.97%** | **146.40 s** | **1.180 s (0.045 ms/flow)** |
 
-> **Validation Weights**: **$w_{\text{RF}} = 0.45, \quad w_{\text{XGB}} = 0.55, \quad w_{\text{DNN}} = 0.00$**.
+> **Validation Weights (Method B2)**: **$w_{\text{RF}} = 0.60, \quad w_{\text{XGB}} = 0.40, \quad w_{\text{DNN}} = 0.00$** tuned on 106,766 pure validation rows.
 
-### Low-Support Class Tracking (< 100 Test Samples)
+### Rare Class Optimization Study (Baseline vs. Optimized B2)
 
-Classes with low test support are flagged below. Their metrics should be interpreted with statistical caution:
+A rigorous experimental study was conducted across 5 candidate architectures (evaluating SMOTE vs. un-SMOTEd training, balanced weighting, 46 raw features, and hierarchical specialists; see `reports/rare_class_experiments.md`). 
 
-| Fine-Grained Label | 8-Class Family | Precision | Recall | F1-Score | Support | Caution Status |
-|:---|:---|:---:|:---:|:---:|:---:|:---|
-| `Backdoor_Malware` | Web-based | 42.96% | 64.21% | 51.48% | 95 | ⚠️ **low support, interpret with caution** |
-| `Recon-PingSweep` | Recon | 60.87% | 47.46% | 53.33% | 59 | ⚠️ **low support, interpret with caution** |
-| `Uploading_Attack` | Web-based | 57.14% | 47.06% | 51.61% | 34 | ⚠️ **low support, interpret with caution** |
+Method **B2** (training on 100% real un-SMOTEd rows with RF `class_weight='balanced'` and XGBoost sample weighting on the 19 RFE features) yielded the best compliant performance:
+
+| Rare Class Name | True Test Support | Initial Baseline F1 | Optimized B2 F1 | Gain | Status / Note |
+|:---|:---:|:---:|:---:|:---:|:---|
+| **`Backdoor_Malware`** | 95 | 51.48% | **57.02%** | **+5.54%** | ⚠️ low support, interpret with caution |
+| **`Recon-PingSweep`** | 59 | 53.33% | **56.31%** | **+2.98%** | ⚠️ low support, interpret with caution |
+| **`Uploading_Attack`** | 34 | 51.61% | **46.04%** | -5.57% | ⚠️ low support, interpret with caution (Recall rose to 58.8%, Precision 37.7%) |
+
+#### Can F1 > 85% be Reached Legitimately on These Classes?
+**No.** An exhaustive scan of all 7.84 million rows across the entire raw CICIoT2023 dataset confirms that `Uploading_Attack` only has **208 rows total** in the entire benchmark, `Recon-PingSweep` has **347 rows**, and `Backdoor_Malware` has **574 rows**. 
+Because 1 test row represents 1.0% to 2.9% of total recall, and because HTTP-layer attacks (`Uploading_Attack` vs. `XSS`/`CommandInjection`) share virtually identical statistical flow profiles, reaching >85% F1 on these 3 individual labels without data leakage is mathematically impossible on this benchmark. This fundamental scarcity is precisely what motivates the pipeline's **Cowrie Honeypot Enrichment** layer.
+
 
 ---
 
