@@ -1,0 +1,26 @@
+============================================================================
+  PHASE 5 FORENSIC LOG CRYPTOGRAPHIC VERIFICATION SUITE
+============================================================================
+
+[TEST 1] Pristine Log Verification (alerts_phase5.jsonl):
+  Status: PASS
+  Records Verified: 45
+  Verifier Output: [SUCCESS] Verified 45 alerts. Cryptographic hash chain and external anchor are 100% intact.
+
+[TEST 2] Content Modification Tamper Test (Altered record 15):
+  Tamper Detected: YES (PASS)
+  Verifier Output: [TAMPER DETECTED] Content modification at Line 16 (Alert ALT-461D5673B44C):
+  Recorded entry_hash:   b3c1f18f3f3b073f9a55d318a00a5d4b9fc7744a9bcacbed34f60e22465b5851
+  Recomputed entry_hash: 4221339f8149a8d483ceb076fc43851a8292f66b7e24601dab8c2bd69dc7a773
+  Payload was altered or forged after hashing.
+
+[TEST 3] Tail Truncation Tamper Test (Dropped last record without updating anchor):
+  Truncation Detected: YES (PASS)
+  Verifier Output: [TRUNCATION/REWRITE DETECTED] Log tail hash does not match external anchor (alerts_phase5_tail_hash.txt):
+  External anchored tail hash: d0aaae152b232cee9be57c47580211c3d2b7dd3e9e7933168845e247ab59857c
+  Found log file tail hash:     ed191f1b52044415d7499a75979d307b8aaa1a22129b53989f9f70f03639e779
+  Tail records were deleted, truncated, or forged.
+
+============================================================================
+  VERIFICATION RESULT: 3/3 TESTS PASSED
+============================================================================

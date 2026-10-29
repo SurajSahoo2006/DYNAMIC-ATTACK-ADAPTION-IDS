@@ -1,0 +1,45 @@
+# =============================================================================
+# OPTIONAL DOCKER COMPOSE FILE - NOT RUN BY THIS PROJECT
+# =============================================================================
+# WARNING: Requires at least 4 GB of free RAM to run Elasticsearch and Kibana.
+# On resource-constrained hardware (e.g. 8 GB total system RAM), running these
+# containers will lead to memory exhaustion. This compose specification is
+# provided strictly for deployment reference in production SOC environments.
+# =============================================================================
+
+version: '3.8'
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: ids_phase5_elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms1g -Xmx2g"
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    networks:
+      - ids_net
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: ids_phase5_kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    networks:
+      - ids_net
+
+volumes:
+  es_data:
+    driver: local
+
+networks:
+  ids_net:
+    driver: bridge
