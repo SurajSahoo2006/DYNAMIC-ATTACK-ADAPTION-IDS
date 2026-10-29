@@ -13,8 +13,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from alerts.alert_logger import ForensicAlertLogger, GENESIS_HASH
 
@@ -117,10 +120,17 @@ if __name__ == "__main__":
         default=str(Path(__file__).parent.parent / "logs" / "alerts.jsonl"),
         help="Path to alerts.jsonl file",
     )
+    parser.add_argument(
+        "--anchor",
+        type=str,
+        default=None,
+        help="Path to external tail anchor hash file (optional, defaults to <stem>_tail_hash.txt)",
+    )
     args = parser.parse_args()
 
     target_file = Path(args.file)
-    valid, count, msg = verify_alert_log(target_file)
+    anchor_file = Path(args.anchor) if args.anchor else None
+    valid, count, msg = verify_alert_log(target_file, tail_hash_path=anchor_file)
     print("=" * 65)
     print("  FORENSIC ALERT LOG INTEGRITY AUDIT")
     print("=" * 65)
