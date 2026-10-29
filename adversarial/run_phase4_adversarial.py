@@ -322,11 +322,11 @@ def run_stage_fgsm(fgsm_samples: int = 500) -> Dict[str, Any]:
 
 
 # ======================================================================
-# STAGE 2: HopSkipJump Decision-Based Attack (Multi-Budget)
+# STAGE 2: HopSkipJump Decision-Based Attack (Multi-Budget on SAME 100 flows)
 # ======================================================================
-def run_stage_hsj(hsj1_samples: int = 100, hsj2_samples: int = 50, reuse_b1: bool = True) -> Dict[str, Any]:
+def run_stage_hsj(hsj_samples: int = 100) -> Dict[str, Any]:
     print("\n" + "=" * 80)
-    print(f"  STAGE 2: HOPSKIPJUMP DECISION-BASED ATTACK (Budget 1: 100 flows | Budget 2: {hsj2_samples} flows)")
+    print(f"  STAGE 2: HOPSKIPJUMP DECISION-BASED ATTACK (SAME {hsj_samples} flows for both budgets)")
     print("=" * 80)
     t_stage_start = time.time()
     _, _, selected_features, _, _, enforcer, df_test, ensemble = load_shared_environment()
@@ -337,7 +337,7 @@ def run_stage_hsj(hsj1_samples: int = 100, hsj2_samples: int = 50, reuse_b1: boo
     )
 
     # Fixed 100 flows test set
-    df_hsj = sample_stratified_subset(df_test, n_samples=hsj1_samples, seed=RANDOM_SEED + 10)
+    df_hsj = sample_stratified_subset(df_test, n_samples=hsj_samples, seed=RANDOM_SEED + 10)
     X_hsj_clean = df_hsj[selected_features].to_numpy(dtype=np.float32)
     y_hsj_clean = df_hsj["label_8"].to_numpy(dtype=np.int64)
 
@@ -347,137 +347,90 @@ def run_stage_hsj(hsj1_samples: int = 100, hsj2_samples: int = 50, reuse_b1: boo
     acc_hsj_clean = float(accuracy_score(y_hsj_clean, preds_hsj_clean))
     ci_hsj_cl, ci_hsj_cu = wilson_ci(k_hsj_clean, len(y_hsj_clean))
 
-    print(f"  Clean Accuracy on HSJ test set (100 flows): {format_count_and_ci(k_hsj_clean, len(y_hsj_clean))}")
+    print(f"  Clean Accuracy on HSJ test set ({hsj_samples} flows): {format_count_and_ci(k_hsj_clean, len(y_hsj_clean))}")
 
     hsj_results = {}
     chunk_size = 10
+    m_clean = (preds_hsj_clean == y_hsj_clean)
+    n_corr_clean = int(np.sum(m_clean))
 
-    # Budget 1: Low Budget (3 iters, 10 evals) on 100 flows
-    if reuse_b1:
-        print("  Budget 1: Keeping verified measured benchmark on 100 flows (88.57s) ...")
-        hsj_results["Budget 1 (Low: 3 iters, 10 evals)"] = {
-            "samples": 100,
-            "max_iter": 3,
-            "max_eval": 10,
-            "clean_accuracy": round(acc_hsj_clean, 4),
-            "clean_count": f"{k_hsj_clean}/{len(y_hsj_clean)}",
-            "clean_ci_95": [round(ci_hsj_cl, 4), round(ci_hsj_cu, 4)],
-            "adversarial_accuracy": 0.29,
-            "adversarial_count": "29/100",
-            "adversarial_ci_95": [0.2101, 0.3848],
-            "attack_success_rate": 0.7204,
-            "attack_success_count": "67/93",
-            "asr_ci_95": [0.6216, 0.8011],
-            "mean_l2_perturbation": 0.4537,
-            "runtime_sec": 88.57,
-        }
-        print(f"    Perturbed Acc:  29/100 ( 29.0% [21.0%, 38.5%])")
-        print(f"    Attack Success Rate:  67/93  ( 72.0% [62.2%, 80.1%]) | Mean L2: 0.4537 (88.57s)")
-    else:
-        print(f"\n  Running Budget 1 (Low: 3 iters, 10 evals) on {hsj1_samples} flows in chunks of 10 ...")
-        t_b1 = time.time()
-        attack_hsj1 = HopSkipJump(
-            classifier=classifier_ensemble, targeted=False, max_iter=3, max_eval=10, init_eval=5, verbose=False
+    budgets = [
+        ("Budget 1 (Low: 3 iters, 10 evals)", 3, 10, 5),
+        ("Budget 2 (High: 6 iters, 20 evals)", 6, 20, 8),
+    ]
+
+    for budget_name, max_iter, max_eval, init_eval in budgets:
+        print(f"\n  Running {budget_name} on {hsj_samples} flows in chunks of 10 ...")
+        t_b = time.time()
+        attack_hsj = HopSkipJump(
+            classifier=classifier_ensemble, targeted=False, max_iter=max_iter, max_eval=max_eval, init_eval=init_eval, verbose=False
         )
-        chunk_size = 10
         adv_chunks = []
         for i in range(0, len(X_hsj_clean), chunk_size):
             chunk = X_hsj_clean[i : i + chunk_size]
-            adv_chunks.append(attack_hsj1.generate(x=chunk))
-            log_progress("HSJ-B1", min(i + chunk_size, len(X_hsj_clean)), len(X_hsj_clean), t_b1)
-        X_hsj1_raw = np.vstack(adv_chunks)
-        X_hsj1_constrained = enforcer.enforce_constraints(X_hsj1_raw, X_hsj_clean)
-        t_hsj1_total = time.time() - t_b1
+            adv_chunks.append(attack_hsj.generate(x=chunk))
+            log_progress(f"HSJ-I{max_iter}", min(i + chunk_size, len(X_hsj_clean)), len(X_hsj_clean), t_b)
+        X_raw = np.vstack(adv_chunks)
+        X_constrained = enforcer.enforce_constraints(X_raw, X_hsj_clean)
+        t_total = time.time() - t_b
 
-        l2_b1 = float(np.mean(np.linalg.norm(X_hsj1_constrained - X_hsj_clean, axis=1)))
-        preds_b1 = np.argmax(fast_predict(X_hsj1_constrained), axis=1)
-        k_b1 = int(np.sum(preds_b1 == y_hsj_clean))
-        acc_b1 = float(accuracy_score(y_hsj_clean, preds_b1))
-        ci_b1_l, ci_b1_u = wilson_ci(k_b1, len(y_hsj_clean))
+        # Raw (unconstrained) evaluation
+        l2_raw = float(np.mean(np.linalg.norm(X_raw - X_hsj_clean, axis=1)))
+        preds_raw = np.argmax(fast_predict(X_raw), axis=1)
+        k_raw = int(np.sum(preds_raw == y_hsj_clean))
+        acc_raw = float(accuracy_score(y_hsj_clean, preds_raw))
+        n_evaded_raw = int(np.sum(preds_raw[m_clean] != y_hsj_clean[m_clean]))
+        asr_raw = float(n_evaded_raw / n_corr_clean) if n_corr_clean > 0 else 0.0
 
-        m_b1 = (preds_hsj_clean == y_hsj_clean)
-        n_corr_b1 = int(np.sum(m_b1))
-        n_evaded_b1 = int(np.sum(preds_b1[m_b1] != y_hsj_clean[m_b1]))
-        asr_b1 = float(n_evaded_b1 / n_corr_b1) if n_corr_b1 > 0 else 0.0
-        ci_asr_b1_l, ci_asr_b1_u = wilson_ci(n_evaded_b1, n_corr_b1)
+        # Constrained evaluation
+        l2_constrained = float(np.mean(np.linalg.norm(X_constrained - X_hsj_clean, axis=1)))
+        preds_constrained = np.argmax(fast_predict(X_constrained), axis=1)
+        k_constrained = int(np.sum(preds_constrained == y_hsj_clean))
+        acc_constrained = float(accuracy_score(y_hsj_clean, preds_constrained))
+        ci_c_l, ci_c_u = wilson_ci(k_constrained, len(y_hsj_clean))
+        n_evaded_constrained = int(np.sum(preds_constrained[m_clean] != y_hsj_clean[m_clean]))
+        asr_constrained = float(n_evaded_constrained / n_corr_clean) if n_corr_clean > 0 else 0.0
+        ci_asr_l, ci_asr_u = wilson_ci(n_evaded_constrained, n_corr_clean)
 
-        print(f"  Budget 1 Results:")
-        print(f"    Perturbed Acc: {format_count_and_ci(k_b1, len(y_hsj_clean))}")
-        print(f"    Attack Success Rate: {format_count_and_ci(n_evaded_b1, n_corr_b1)} | Mean L2: {l2_b1:.4f} ({t_hsj1_total:.2f}s)")
+        # Constraint reversal effect: attack succeeded raw, but domain constraints restored correct label
+        n_reversed = int(np.sum((preds_raw[m_clean] != y_hsj_clean[m_clean]) & (preds_constrained[m_clean] == y_hsj_clean[m_clean])))
+        pct_reversed = float(n_reversed / n_evaded_raw) if n_evaded_raw > 0 else 0.0
 
-        hsj_results["Budget 1 (Low: 3 iters, 10 evals)"] = {
-            "samples": hsj1_samples,
-            "max_iter": 3,
-            "max_eval": 10,
+        print(f"  {budget_name} Results on same {hsj_samples} flows:")
+        print(f"    Raw (Unconstrained): Acc={k_raw}/{len(y_hsj_clean)} ({acc_raw*100:.1f}%) | ASR={n_evaded_raw}/{n_corr_clean} ({asr_raw*100:.1f}%) | Mean L2: {l2_raw:.4f}")
+        print(f"    Constrained:         Acc={format_count_and_ci(k_constrained, len(y_hsj_clean))}")
+        print(f"    Constrained ASR:     {format_count_and_ci(n_evaded_constrained, n_corr_clean)} | Mean L2: {l2_constrained:.4f} ({t_total:.2f}s)")
+        print(f"    Constraint Effect:   {n_reversed}/{n_evaded_raw} ({pct_reversed*100:.1f}%) evasions reversed by protocol/range bounds")
+
+        hsj_results[budget_name] = {
+            "samples": hsj_samples,
+            "max_iter": max_iter,
+            "max_eval": max_eval,
             "clean_accuracy": round(acc_hsj_clean, 4),
             "clean_count": f"{k_hsj_clean}/{len(y_hsj_clean)}",
             "clean_ci_95": [round(ci_hsj_cl, 4), round(ci_hsj_cu, 4)],
-            "adversarial_accuracy": round(acc_b1, 4),
-            "adversarial_count": f"{k_b1}/{len(y_hsj_clean)}",
-            "adversarial_ci_95": [round(ci_b1_l, 4), round(ci_b1_u, 4)],
-            "attack_success_rate": round(asr_b1, 4),
-            "attack_success_count": f"{n_evaded_b1}/{n_corr_b1}",
-            "asr_ci_95": [round(ci_asr_b1_l, 4), round(ci_asr_b1_u, 4)],
-            "mean_l2_perturbation": round(l2_b1, 4),
-            "runtime_sec": round(t_hsj1_total, 2),
+            "raw_adversarial_accuracy": round(acc_raw, 4),
+            "raw_adversarial_count": f"{k_raw}/{len(y_hsj_clean)}",
+            "raw_asr": round(asr_raw, 4),
+            "raw_asr_count": f"{n_evaded_raw}/{n_corr_clean}",
+            "raw_mean_l2": round(l2_raw, 4),
+            "adversarial_accuracy": round(acc_constrained, 4),
+            "adversarial_count": f"{k_constrained}/{len(y_hsj_clean)}",
+            "adversarial_ci_95": [round(ci_c_l, 4), round(ci_c_u, 4)],
+            "attack_success_rate": round(asr_constrained, 4),
+            "attack_success_count": f"{n_evaded_constrained}/{n_corr_clean}",
+            "asr_ci_95": [round(ci_asr_l, 4), round(ci_asr_u, 4)],
+            "mean_l2_perturbation": round(l2_constrained, 4),
+            "constraint_reversed_count": f"{n_reversed}/{n_evaded_raw}",
+            "constraint_reversed_share": round(pct_reversed, 4),
+            "runtime_sec": round(t_total, 2),
         }
 
-    # Budget 2: High Budget (6 iters, 20 evals) on 50 flows subset
-    X_hsj2_clean = X_hsj_clean[:hsj2_samples]
-    y_hsj2_clean = y_hsj_clean[:hsj2_samples]
-    preds_hsj2_clean = preds_hsj_clean[:hsj2_samples]
-    k_hsj2_clean = int(np.sum(preds_hsj2_clean == y_hsj2_clean))
-    acc_hsj2_clean = float(accuracy_score(y_hsj2_clean, preds_hsj2_clean))
-    ci_hsj2_cl, ci_hsj2_cu = wilson_ci(k_hsj2_clean, len(y_hsj2_clean))
-
-    print(f"\n  Running Budget 2 (High: 6 iters, 20 evals) on {hsj2_samples} flows in chunks of 10 ...")
-    t_b2 = time.time()
-    attack_hsj2 = HopSkipJump(
-        classifier=classifier_ensemble, targeted=False, max_iter=6, max_eval=20, init_eval=8, verbose=False
-    )
-    adv_chunks2 = []
-    for i in range(0, len(X_hsj2_clean), chunk_size):
-        chunk = X_hsj2_clean[i : i + chunk_size]
-        adv_chunks2.append(attack_hsj2.generate(x=chunk))
-        log_progress("HSJ-B2", min(i + chunk_size, len(X_hsj2_clean)), len(X_hsj2_clean), t_b2)
-    X_hsj2_raw = np.vstack(adv_chunks2)
-    X_hsj2_constrained = enforcer.enforce_constraints(X_hsj2_raw, X_hsj2_clean)
-    t_hsj2_total = time.time() - t_b2
-
-    l2_b2 = float(np.mean(np.linalg.norm(X_hsj2_constrained - X_hsj2_clean, axis=1)))
-    preds_b2 = np.argmax(fast_predict(X_hsj2_constrained), axis=1)
-    k_b2 = int(np.sum(preds_b2 == y_hsj2_clean))
-    acc_b2 = float(accuracy_score(y_hsj2_clean, preds_b2))
-    ci_b2_l, ci_b2_u = wilson_ci(k_b2, len(y_hsj2_clean))
-
-    m_b2 = (preds_hsj2_clean == y_hsj2_clean)
-    n_corr_b2 = int(np.sum(m_b2))
-    n_evaded_b2 = int(np.sum(preds_b2[m_b2] != y_hsj2_clean[m_b2]))
-    asr_b2 = float(n_evaded_b2 / n_corr_b2) if n_corr_b2 > 0 else 0.0
-    ci_asr_b2_l, ci_asr_b2_u = wilson_ci(n_evaded_b2, n_corr_b2)
-
-    print(f"  Budget 2 Results ({hsj2_samples} flows):")
-    print(f"    Perturbed Acc: {format_count_and_ci(k_b2, len(y_hsj2_clean))}")
-    print(f"    Attack Success Rate: {format_count_and_ci(n_evaded_b2, n_corr_b2)} | Mean L2: {l2_b2:.4f} ({t_hsj2_total:.2f}s)")
-
-    hsj_results["Budget 2 (High: 6 iters, 20 evals)"] = {
-        "samples": hsj2_samples,
-        "max_iter": 6,
-        "max_eval": 20,
-        "clean_accuracy": round(acc_hsj2_clean, 4),
-        "clean_count": f"{k_hsj2_clean}/{len(y_hsj2_clean)}",
-        "clean_ci_95": [round(ci_hsj2_cl, 4), round(ci_hsj2_cu, 4)],
-        "adversarial_accuracy": round(acc_b2, 4),
-        "adversarial_count": f"{k_b2}/{len(y_hsj2_clean)}",
-        "adversarial_ci_95": [round(ci_b2_l, 4), round(ci_b2_u, 4)],
-        "attack_success_rate": round(asr_b2, 4),
-        "attack_success_count": f"{n_evaded_b2}/{n_corr_b2}",
-        "asr_ci_95": [round(ci_asr_b2_l, 4), round(ci_asr_b2_u, 4)],
-        "mean_l2_perturbation": round(l2_b2, 4),
-        "runtime_sec": round(t_hsj2_total, 2),
-    }
-
     out_file = REPORTS_DIR / "adversarial_hsj.json"
+    with open(out_file, "w", encoding="utf-8") as f:
+        json.dump(hsj_results, f, indent=2)
+    print(f"  [STAGE DONE] HopSkipJump metrics saved --> {out_file.name} (Total: {time.time() - t_stage_start:.2f}s)")
+    return hsj_results
     with open(out_file, "w", encoding="utf-8") as f:
         json.dump(hsj_results, f, indent=2)
     print(f"  [STAGE DONE] HopSkipJump metrics saved --> {out_file.name} (Total: {time.time() - t_stage_start:.2f}s)")
@@ -714,21 +667,22 @@ def run_stage_defense(test_samples: int = 500, hsj_defense_samples: int = 50) ->
             "fgsm_eps010": {"count": f"{k_fg}/{len(y_te)}", "acc": round(k_fg / len(y_te), 4), "ci_95": [round(c, 4) for c in wilson_ci(k_fg, len(y_te))]},
             "random_noise": {"count": f"{k_rn}/{len(y_te)}", "acc": round(k_rn / len(y_te), 4), "ci_95": [round(c, 4) for c in wilson_ci(k_rn, len(y_te))]},
             "heldout_fgsm_eps020": {"count": f"{k_fg2}/{len(y_te)}", "acc": round(k_fg2 / len(y_te), 4), "ci_95": [round(c, 4) for c in wilson_ci(k_fg2, len(y_te))]},
-            "hopskipjump_50": {"count": f"{k_hs}/{len(y_te_hsj_sub)}", "acc": round(k_hs / len(y_te_hsj_sub), 4), "ci_95": [round(c, 4) for c in wilson_ci(k_hs, len(y_te_hsj_sub))]},
+            f"hopskipjump_{hsj_defense_samples}": {"count": f"{k_hs}/{len(y_te_hsj_sub)}", "acc": round(k_hs / len(y_te_hsj_sub), 4), "ci_95": [round(c, 4) for c in wilson_ci(k_hs, len(y_te_hsj_sub))]},
         }
 
     t_def = time.time() - t_stage_start
+    hs_key = f"hopskipjump_{hsj_defense_samples}"
     print(f"\n  Defense 4-Arm Evaluation Matrix (completed in {t_def:.2f}s):")
-    print("  " + "-" * 98)
-    print("  Model Arm                        | Clean (500) | FGSM 0.10 (500) | Rand Noise (500) | HSJ (50 flows)")
-    print("  " + "-" * 98)
+    print("  " + "-" * 100)
+    print(f"  Model Arm                        | Clean (500) | FGSM 0.10 (500) | Rand Noise (500) | HSJ ({hsj_defense_samples} flows)")
+    print("  " + "-" * 100)
     for arm_name, m in arms_results.items():
         cl_str = f"{m['clean']['acc'] * 100:.1f}% [{m['clean']['ci_95'][0] * 100:.1f}%, {m['clean']['ci_95'][1] * 100:.1f}%]"
         fg_str = f"{m['fgsm_eps010']['acc'] * 100:.1f}% [{m['fgsm_eps010']['ci_95'][0] * 100:.1f}%, {m['fgsm_eps010']['ci_95'][1] * 100:.1f}%]"
         rn_str = f"{m['random_noise']['acc'] * 100:.1f}% [{m['random_noise']['ci_95'][0] * 100:.1f}%, {m['random_noise']['ci_95'][1] * 100:.1f}%]"
-        hs_str = f"{m['hopskipjump_50']['acc'] * 100:.1f}% [{m['hopskipjump_50']['ci_95'][0] * 100:.1f}%, {m['hopskipjump_50']['ci_95'][1] * 100:.1f}%]"
+        hs_str = f"{m[hs_key]['acc'] * 100:.1f}% [{m[hs_key]['ci_95'][0] * 100:.1f}%, {m[hs_key]['ci_95'][1] * 100:.1f}%]"
         print(f"  {arm_name:<32} | {cl_str:<12} | {fg_str:<15} | {rn_str:<16} | {hs_str}")
-    print("  " + "-" * 98)
+    print("  " + "-" * 100)
 
     print("\n  Arm D Generalization Audit on Held-Out Attack Conditions:")
     for arm_name, m in arms_results.items():
@@ -830,12 +784,10 @@ if __name__ == "__main__":
         help="Stage to execute: fgsm | hsj | zoo | defense | combine | all",
     )
     parser.add_argument("--fgsm-samples", type=int, default=500, help="Test flows for FGSM transfer")
-    parser.add_argument("--hsj1-samples", type=int, default=100, help="Test flows for HopSkipJump Budget 1")
-    parser.add_argument("--hsj2-samples", type=int, default=50, help="Test flows for HopSkipJump Budget 2")
-    parser.add_argument("--rerun-b1", action="store_true", help="Recompute HSJ Budget 1 instead of using verified 100-flow benchmark")
+    parser.add_argument("--hsj-samples", type=int, default=100, help="Test flows for HopSkipJump (both budgets on same set)")
     parser.add_argument("--zoo-samples", type=int, default=40, help="Test flows for ZOO")
     parser.add_argument("--defense-samples", type=int, default=500, help="Test flows for defense matrix")
-    parser.add_argument("--defense-hsj-samples", type=int, default=50, help="Test flows per arm for HSJ in defense")
+    parser.add_argument("--defense-hsj-samples", type=int, default=100, help="Test flows per arm for HSJ in defense")
     args = parser.parse_args()
 
     proc = psutil.Process(os.getpid())
@@ -845,7 +797,7 @@ if __name__ == "__main__":
         run_stage_fgsm(fgsm_samples=args.fgsm_samples)
 
     if args.stage in ["hsj", "all"]:
-        run_stage_hsj(hsj1_samples=args.hsj1_samples, hsj2_samples=args.hsj2_samples, reuse_b1=not args.rerun_b1)
+        run_stage_hsj(hsj_samples=args.hsj_samples)
 
     if args.stage in ["zoo", "all"]:
         run_stage_zoo(zoo_samples=args.zoo_samples)
