@@ -22,6 +22,7 @@ Phase 3 implements two central components of the "Dynamic Attack Adaptation" IDS
    - Strictly enforces the architectural invariant: **The Ensemble determines the attack class, and a fixed configuration table determines severity.** The LLM never hallucinates or overrides classifications. If the model outputs differing fields, they are automatically overwritten.
    - Translates telemetry and predictions into concise natural language explanations and actionable operator mitigations using local Ollama (`llama3.2:3b`).
    - Integrated deterministic rule-based fallback ensures 100% offline availability if Ollama is unreachable.
+   - **Plain Statement on Generated Text**: All LLM text consists of **unverified machine-generated explanations** intended solely for operator advisory assistance. Ground truth attack classification is determined exclusively by the ensemble model.
 
 ---
 
@@ -119,18 +120,60 @@ Method **B2** (training on 100% real un-SMOTEd rows with RF `class_weight='balan
 
 The orchestrator was executed locally using Ollama (`llama3.2:3b`) on 40 test flows chosen randomly with fixed seed 42 (5 flows per 8-class category, guaranteeing representation of `Backdoor_Malware`, `Recon-PingSweep`, and `Uploading_Attack`).
 
+> **Plain Statement on Generated Text**: All LLM natural language explanations and recommended actions are **unverified generated explanations** produced by a local language model. They serve as an assistive triage aid for security analysts and must not be treated as formal mathematical verification or certified truth. The ensemble prediction and severity table remain the definitive authoritative layers.
+
 ### Operational Telemetry
 
 | Telemetry Metric | Measured Value | Benchmark / Constraint |
 |:---|:---:|:---|
 | **Total Test Flows Evaluated** | 40 flows | 40 flows (5 per class, seed 42) |
+| **Low-Confidence Flows (< 0.60)** | **8 / 40 (20.0%)** | Prompted with explicit uncertainty instructions |
+| **Medium-Confidence Flows (0.60–0.85)** | **3 / 40 (7.5%)** | Standard triage prompt with `medium` band |
+| **High-Confidence Flows (≥ 0.85)** | **29 / 40 (72.5%)** | Standard triage prompt with `high` band |
 | **Real Ollama Output Count** | **40 / 40 (100.0%)** | Full local LLM execution |
 | **Rule-Based Fallback Count** | **0 / 40 (0.0%)** | 0 fallbacks required |
 | **Strict JSON Schema Validity (Ollama rows)** | **100.0% (40/40)** | 100.0% valid JSON |
 | **Model Overrode Fields Count** | **0** | LLM perfectly respected ensemble predictions |
-| **Average Seconds per Flow (Ollama)** | **12.03 s / flow** | Local CPU-only inference (`llama3.2:3b`) |
-| **Total Triage Generation Time** | 481.17 s (8.02 min) | CPU execution across 40 flows |
-| **Peak Orchestrator RAM** | **564.9 MB (0.55 GB)** | < 6.0 GB laptop boundary |
+| **Average Seconds per Flow (Ollama)** | **11.19 s / flow** | Local CPU-only inference (`llama3.2:3b`) |
+| **Total Triage Generation Time** | 447.47 s (7.46 min) | CPU execution across 40 flows |
+| **Peak Orchestrator RAM** | **356.1 MB (0.35 GB)** | < 6.0 GB laptop boundary |
+
+---
+
+### Low-Confidence Uncertainty Prompts: Real Before / After Examples
+
+When ensemble confidence is below 0.60, the prompt injects the `low` confidence band and an explicit warning instruction:
+> *"CRITICAL: The classifier is NOT confident. Say the result is uncertain and may be a false positive. Do not describe the attack as certain."*  
+> Furthermore, the model is strictly forbidden from naming or inventing feature values not provided in the prompt telemetry.
+
+Below are 2 real before/after examples from the exact same test flows:
+
+#### Example 1: Flow #20802
+* **Ground Truth**: `Benign` (`BenignTraffic`)
+* **Ensemble Prediction**: `BruteForce`
+* **Confidence**: **28.98%** (Band: `low`) | **Severity**: `Low`
+* **BEFORE (Standard Prompt)**:
+  * *Explanation*: `"The network flow indicates a BruteForce attack, where an attacker is attempting to guess a password by rapidly sending a large number of login requests within a short duration."`
+  * *Action*: `"Network operators should implement rate limiting on login protocols to prevent further brute-force attempts and reduce the attack's impact."`
+  * *Analysis*: Treated the misclassified low-confidence alert as absolute fact, recommending disruptive rate-limiting against legitimate traffic.
+* **AFTER (Uncertainty Prompt + Facts Constraint)**:
+  * *Explanation*: `"The network flow was classified as a BruteForce attack due to a prolonged duration and high packet size, indicating a potential attempt to exhaust network resources."`
+  * *Action*: `"Network operators should investigate this event further to ensure it is not a false positive and take appropriate action to secure the network."`
+  * *Analysis*: Correctly framed as a "potential attempt", emphasizing human verification to prevent false positive disruption.
+
+#### Example 2: Flow #26107
+* **Ground Truth**: `Recon` (`Recon-PingSweep`)
+* **Ensemble Prediction**: `Recon`
+* **Confidence**: **38.46%** (Band: `low`) | **Severity**: `Low`
+* **BEFORE (Standard Prompt)**:
+  * *Explanation*: `"The network flow indicates a reconnaissance activity, likely involving a scanning or probing of network resources, given the low confidence level and low severity."`
+  * *Action*: `"Network operators should monitor the network for any further suspicious activity and consider implementing rate limiting on the affected protocol to prevent potential future attacks."`
+* **AFTER (Uncertainty Prompt + Facts Constraint)**:
+  * *Explanation*: `"The network flow indicates a low-level reconnaissance activity, possibly involving a brief connection or probe, but the confidence level is low, suggesting uncertainty in the classification."`
+  * *Action*: `"Network operators should verify the classification and monitor the network for potential signs of malicious activity, as the low confidence level may indicate a false positive."`
+  * *Analysis*: Explicitly communicates classifier uncertainty and advises operators to verify the classification for potential false alarms.
+
+---
 
 ### Real LLM Semantic Triage Outputs (Source: `ollama`, Model: `llama3.2:3b`)
 
@@ -143,9 +186,10 @@ Below are 5 real outputs generated by the local Ollama LLM from `reports/llm_dem
     "true_class": "DDoS",
     "ensemble_predicted_class": "DDoS",
     "confidence": 0.9976,
+    "confidence_band": "high",
     "severity": "Critical",
-    "explanation": "The network flow indicates a Distributed Denial of Service (DDoS) attack, characterized by a prolonged flow duration and high packet size, suggesting a large-scale traffic flood.",
-    "recommended_action": "Implement rate limiting and IP blocking measures to restrict the flow of traffic from the identified IP address to prevent further damage.",
+    "explanation": "The network flow indicates a Distributed Denial of Service (DDoS) attack, characterized by a high packet volume and prolonged flow duration, suggesting an intentional flooding attack.",
+    "recommended_action": "Network operators should implement rate limiting and IP blocking on incoming traffic to mitigate the impact of the attack.",
     "source": "ollama"
   },
   {
@@ -153,9 +197,10 @@ Below are 5 real outputs generated by the local Ollama LLM from `reports/llm_dem
     "true_class": "Mirai",
     "ensemble_predicted_class": "Mirai",
     "confidence": 1.0,
+    "confidence_band": "high",
     "severity": "Critical",
-    "explanation": "This network flow is classified as a Mirai attack, a type of distributed denial-of-service (DDoS) attack that uses compromised IoT devices to flood a target network with traffic, causing it to become unavailable.",
-    "recommended_action": "Network operators should immediately isolate the affected network segment and block all incoming traffic from the source IP address to prevent further damage.",
+    "explanation": "This network flow is classified as a Mirai botnet attack, which typically involves brute-forcing default credentials on IoT devices and flooding the target with high-volume traffic to cause service disruption.",
+    "recommended_action": "Network operators should immediately isolate the affected IoT devices, block incoming traffic from suspicious IP addresses, and conduct a thorough security audit of their network.",
     "source": "ollama"
   },
   {
@@ -163,9 +208,10 @@ Below are 5 real outputs generated by the local Ollama LLM from `reports/llm_dem
     "true_class": "BruteForce",
     "ensemble_predicted_class": "BruteForce",
     "confidence": 0.9597,
+    "confidence_band": "high",
     "severity": "High",
-    "explanation": "The network flow indicates a BruteForce attack, where an attacker is attempting to guess a password by rapidly sending a large number of login requests within a short duration.",
-    "recommended_action": "Implement rate limiting on login protocols to restrict the number of login attempts within a short time frame to prevent further brute-force attacks.",
+    "explanation": "The network flow indicates a BruteForce attack, where an attacker is attempting to guess a password by rapidly sending multiple login attempts within a short duration.",
+    "recommended_action": "Implement rate limiting on login protocols and increase account lockout thresholds to prevent further unauthorized access attempts.",
     "source": "ollama"
   },
   {
@@ -173,9 +219,10 @@ Below are 5 real outputs generated by the local Ollama LLM from `reports/llm_dem
     "true_class": "Benign",
     "ensemble_predicted_class": "Benign",
     "confidence": 0.9693,
+    "confidence_band": "high",
     "severity": "Low",
-    "explanation": "This network flow is classified as benign due to its low duration and lack of suspicious activity, indicating a normal network connection.",
-    "recommended_action": "Monitor the network connection to ensure it remains stable and does not exhibit any unusual behavior.",
+    "explanation": "The network flow is classified as benign due to its low duration and lack of suspicious activity, indicating a normal network traffic pattern.",
+    "recommended_action": "Monitor the network flow for any changes in behavior that may indicate a potential security threat.",
     "source": "ollama"
   },
   {
@@ -183,9 +230,10 @@ Below are 5 real outputs generated by the local Ollama LLM from `reports/llm_dem
     "true_class": "Web-based (Uploading_Attack)",
     "ensemble_predicted_class": "Web-based",
     "confidence": 0.8704,
+    "confidence_band": "high",
     "severity": "High",
-    "explanation": "This network flow indicates a high-confidence web-based attack, likely involving a malicious web request or response, given the high model confidence and key network telemetry suggesting a prolonged and large HTTP request.",
-    "recommended_action": "Network operators should immediately block the affected IP address or subnet and investigate the source of the malicious traffic to prevent further attacks.",
+    "explanation": "This network flow indicates a high-confidence web-based attack, characterized by a prolonged duration and large packet size, suggesting an attempt to exploit web vulnerabilities or upload malicious content.",
+    "recommended_action": "Network operators should immediately block the affected IP address or range and investigate the source of the traffic to prevent further exploitation.",
     "source": "ollama"
   }
 ]
@@ -219,7 +267,7 @@ The PyTorch Deep Neural Network (MLP: 19 -> 128 -> 64 -> 8/34) achieved 76.8% ac
 All operations were executed on a local Windows machine without GPU acceleration:
 - **Phase 1 & 2 Peak RAM**: 298.9 MB
 - **Phase 3 Ensemble Peak RAM**: **1,402.4 MB (1.37 GB)** during XGBoost histogram construction.
-- **Phase 3 LLM Orchestrator Peak RAM**: **564.9 MB (0.55 GB)** during local CPU inference.
+- **Phase 3 LLM Orchestrator Peak RAM**: **356.1 MB (0.35 GB)** during local CPU inference.
 - **Safety Margin**: Remained far below the 6.0 GB ceiling (leaving > 4.5 GB free for operating system and background tasks).
 
 ---
