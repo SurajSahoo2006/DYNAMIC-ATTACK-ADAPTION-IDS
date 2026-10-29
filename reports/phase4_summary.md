@@ -131,23 +131,23 @@ The constraint enforcement pipeline (`unscale -> clip -> round -> rescale`) was 
 - **B2 Ensemble Accuracy**: Raw clean = **95.60% (478/500)** | Pipeline-passed = **95.60% (478/500)**.
 
 ### Random Noise Sweep & Decision Boundary Fragility Audit
-To investigate why tree ensemble accuracy degrades even under small random perturbations, a fine-grained Gaussian noise sweep was executed on 500 stratified test flows:
+To investigate why tree ensemble accuracy degrades even under small random perturbations, a fine-grained Gaussian noise sweep was executed on 500 stratified test flows, comparing domain-constrained perturbations against an unconstrained isotropic Gaussian control:
 
-| Noise Target $L_2$ | Measured Mean $L_2$ | Correct Flows | Accuracy (95% Wilson CI) | Absolute Drop from Clean |
-|:---:|:---:|:---:|:---:|:---:|
-| **Clean Baseline** | 0.0000 | 478 / 500 | **95.6%** [93.4%, 97.1%] | 0.0% |
-| **$L_2 = 0.0001$** | 0.0003 | 471 / 500 | **94.2%** [91.8%, 95.9%] | -1.4% |
-| **$L_2 = 0.0010$** | 0.0031 | 453 / 500 | **90.6%** [87.7%, 92.9%] | -5.0% |
-| **$L_2 = 0.0100$** | 0.0307 | 372 / 500 | **74.4%** [70.4%, 78.0%] | -21.2% |
-| **$L_2 = 0.0300$** | 0.0899 | 358 / 500 | **71.6%** [67.5%, 75.4%] | -24.0% |
-| **$L_2 = 0.1000$** | 0.2868 | 329 / 500 | **65.8%** [61.5%, 69.8%] | -29.8% |
-| **$L_2 = 0.3000$** | 0.7788 | 298 / 500 | **59.6%** [55.2%, 63.8%] | -36.0% |
+| Noise Target $ | Measured Mean $ | Constrained Correct Flows | Constrained Accuracy (95% CI) | Unconstrained Correct Flows | Unconstrained Accuracy (95% CI) |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Clean Baseline** | 0.0000 | 478 / 500 | **95.6%** [93.4%, 97.1%] | 478 / 500 | **95.6%** [93.4%, 97.1%] |
+| ** = 0.0001$** | 0.0001 | 471 / 500 | **94.2%** [91.8%, 95.9%] | 475 / 500 | **95.0%** [92.7%, 96.6%] |
+| ** = 0.0010$** | 0.0009 | 452 / 500 | **90.4%** [87.5%, 92.7%] | 459 / 500 | **91.8%** [89.1%, 93.9%] |
+| ** = 0.0100$** | 0.0093 | 382 / 500 | **76.4%** [72.5%, 79.9%] | 388 / 500 | **77.6%** [73.7%, 81.0%] |
+| ** = 0.0300$** | 0.0278 | 330 / 500 | **66.0%** [61.7%, 70.0%] | 337 / 500 | **67.4%** [63.2%, 71.4%] |
+| ** = 0.1000$** | 0.0902 | 329 / 500 | **65.8%** [61.5%, 69.8%] | 327 / 500 | **65.4%** [61.1%, 69.4%] |
+| ** = 0.3000$** | 0.2568 | 305 / 500 | **61.0%** [56.7%, 65.2%] | 260 / 500 | **52.0%** [47.6%, 56.4%] |
 
 #### Tree Split Threshold Audit (Why the Accuracy Cliff Exists)
-Auditing the Random Forest component (100 trees, max depth 20) revealed:
-1. **High Point-Mass Concentration**: **45.3% of test flows** have `flow_duration = -0.06623` (scaled value corresponding to 0.00 duration, single-packet flows). Similar mass points exist at 0 for `Covariance` and `Variance`.
-2. **Dense Tree Split Clustering**: The Random Forest has **26,914 split thresholds within $\pm 0.01$** and **45,308 split thresholds within $\pm 0.05$** of `flow_duration = -0.06623`.
-3. **Fragility Finding**: Because nearly half the dataset sits exactly on point masses adjacent to thousands of split thresholds, even isotropic noise with standard deviation 0.005 pushes thousands of single-packet flows across multiple tree thresholds simultaneously. Raw noise without domain constraints produced identical degradation, confirming that this sensitivity is an inherent mathematical property of step-function tree boundaries around discrete point masses, not an artifact of the constraint pipeline.
+Auditing the Random Forest component actually loaded from the deployed B2 model (200 trees, max_depth 25, min_samples_leaf 2):
+1. **High Point-Mass Concentration**: **45.26% of test flows** (11,901 of 26,292 flows) sit at low_duration = -0.0662 (scaled value corresponding to 0.00 duration, single-packet flows). Similar mass points exist at 0 for Covariance (46.03% of flows) and Variance (35.15% of flows).
+2. **Dense Tree Split Clustering**: The deployed Random Forest has **26914** split thresholds within $\pm 0.01$ and **45308** split thresholds within $\pm 0.05$ of low_duration = -0.0662. (For comparison, the retrained defense arm forest with 100 trees and max depth 20 contained 13,842 splits within $\pm 0.01$ and 23,190 splits within $\pm 0.05$).
+3. **Fragility Finding & Association**: Because nearly half the dataset sits exactly on point masses adjacent to thousands of split thresholds, even tiny isotropic shifts push thousands of single-packet flows across multiple tree split boundaries simultaneously. Unconstrained isotropic Gaussian noise produced degradation similar to constrained noise (e.g., 388/500 vs 382/500 at  = 0.01$). This empirical behavior is consistent with an association between discrete feature concentration and tree threshold clustering; this split density aligns with sensitivity to small shifts, though this association is consistent with fragility and does not prove sole causation.
 
 ### FGSM Transfer Evasion vs. Random-Noise Control (500 Test Flows)
 White-box gradients were computed on the PyTorch DNN surrogate (77.60% clean baseline) and evaluated for black-box transfer against the B2 Ensemble. An isotropic Gaussian noise control matching the sample-wise $L_2$ magnitude was evaluated in parallel:

@@ -90,9 +90,11 @@ def check_json_alignments(summary_md: str) -> List[str]:
     if ground_file.exists():
         with open(ground_file, "r", encoding="utf-8") as f:
             ground_data = json.load(f)
-        p4_unmatched = ground_data["phase4_shap"]["unmatched_numbers_count"]
-        p3_unmatched = ground_data["phase3_static"]["unmatched_numbers_count"]
-        p4_flagged = len(ground_data["phase4_shap"]["flagged_flows"])
+        p4_data = ground_data.get("phase4_dynamic_shap", {})
+        p3_data = ground_data.get("phase3_static_telemetry", {})
+        p4_unmatched = p4_data.get("total_unmatched_numbers", 0)
+        p3_unmatched = p3_data.get("total_unmatched_numbers", 0)
+        p4_flagged = p4_data.get("flagged_flows_count", 0)
         check_presence(f"{p4_unmatched} / 40", f"Phase 4 ungrounded numbers ({p4_unmatched}/40)")
         check_presence(f"{p3_unmatched} / 40", f"Phase 3 ungrounded numbers ({p3_unmatched}/40)")
 
