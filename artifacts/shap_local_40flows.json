@@ -1,0 +1,1522 @@
+{
+  "20802": {
+    "flow_index": 20802,
+    "true_class": "Benign",
+    "predicted_class": "BruteForce",
+    "predicted_confidence": 0.2898,
+    "top_shap_features": [
+      {
+        "feature": "Tot size",
+        "shap_value": -0.621,
+        "direction": "decreases_risk",
+        "unscaled_value": 645.2
+      },
+      {
+        "feature": "syn_count",
+        "shap_value": 0.4345,
+        "direction": "increases_risk",
+        "unscaled_value": 1.4
+      },
+      {
+        "feature": "flow_duration",
+        "shap_value": 0.3978,
+        "direction": "increases_risk",
+        "unscaled_value": 146.495
+      },
+      {
+        "feature": "IAT",
+        "shap_value": 0.2885,
+        "direction": "increases_risk",
+        "unscaled_value": 0.0
+      },
+      {
+        "feature": "rst_count",
+        "shap_value": 0.2595,
+        "direction": "increases_risk",
+        "unscaled_value": 347.9
+      }
+    ]
+  },
+  "11497": {
+    "flow_index": 11497,
+    "true_class": "Benign",
+    "predicted_class": "Benign",
+    "predicted_confidence": 0.9693,
+    "top_shap_features": [
+      {
+        "feature": "IAT",
+        "shap_value": 4.4783,
+        "direction": "increases_risk",
+        "unscaled_value": 166526032.0
+      },
+      {
+        "feature": "flow_duration",
+        "shap_value": 1.0679,
+        "direction": "increases_risk",
+        "unscaled_value": 17.484
+      },
+      {
+        "feature": "rst_count",
+        "shap_value": 1.0134,
+        "direction": "increases_risk",
+        "unscaled_value": 662.5
+      },
+      {
+        "feature": "urg_count",
+        "shap_value": 0.4142,
+        "direction": "increases_risk",
+        "unscaled_value": 91.4
+      },
+      {
+        "feature": "syn_count",
+        "shap_value": -0.2653,
+        "direction": "decreases_risk",
+        "unscaled_value": 1.6
+      }
+    ]
+  },
+  "17753": {
+    "flow_index": 17753,
+    "true_class": "Benign",
+    "predicted_class": "Benign",
+    "predicted_confidence": 0.6345,
+    "top_shap_features": [
+      {
+        "feature": "rst_count",
+        "shap_value": 1.3187,
+        "direction": "increases_risk",
+        "unscaled_value": 726.5
+      },
+      {
+        "feature": "flow_duration",
+        "shap_value": 0.7257,
+        "direction": "increases_risk",
+        "unscaled_value": 9.803
+      },
+      {
+        "feature": "urg_count",
+        "shap_value": 0.2582,
+        "direction": "increases_risk",
+        "unscaled_value": 27.7
+      },
+      {
+        "feature": "Max",
+        "shap_value": -0.2077,
+        "direction": "decreases_risk",
+        "unscaled_value": 1853.5
+      },
+      {
+        "feature": "Protocol Type",
+        "shap_value": -0.1959,
+        "direction": "decreases_risk",
+        "unscaled_value": 6.0
+      }
+    ]
+  },
+  "1854": {
+    "flow_index": 1854,
+    "true_class": "Benign",
+    "predicted_class": "Benign",
+    "predicted_confidence": 0.9959,
+    "top_shap_features": [
+      {
+        "feature": "IAT",
+        "shap_value": 4.5155,
+        "direction": "increases_risk",
+        "unscaled_value": 166525088.0
+      },
+      {
+        "feature": "rst_count",
+        "shap_value": 0.987,
+        "direction": "increases_risk",
+        "unscaled_value": 583.2
+      },
+      {
+        "feature": "flow_duration",
+        "shap_value": 0.7443,
+        "direction": "increases_risk",
+        "unscaled_value": 11.829
+      },
+      {
+        "feature": "urg_count",
+        "shap_value": 0.2745,
+        "direction": "increases_risk",
+        "unscaled_value": 24.6
+      },
+      {
+        "feature": "syn_count",
+        "shap_value": 0.1693,
+        "direction": "increases_risk",
+        "unscaled_value": 0.0
+      }
+    ]
+  },
+  "11364": {
+    "flow_index": 11364,
+    "true_class": "Benign",
+    "predicted_class": "Benign",
+    "predicted_confidence": 0.9042,
+    "top_shap_features": [
+      {
+        "feature": "IAT",
+        "shap_value": 4.5504,
+        "direction": "increases_risk",
+        "unscaled_value": 166522800.0
+      },
+      {
+        "feature": "rst_count",
+        "shap_value": 0.7489,
+        "direction": "increases_risk",
+        "unscaled_value": 342.7
+      },
+      {
+        "feature": "syn_count",
+        "shap_value": 0.2472,
+        "direction": "increases_risk",
+        "unscaled_value": 0.4
+      },
+      {
+        "feature": "Protocol Type",
+        "shap_value": 0.1408,
+        "direction": "increases_risk",
+        "unscaled_value": 9.8
+      },
+      {
+        "feature": "Covariance",
+        "shap_value": 0.1304,
+        "direction": "increases_risk",
+        "unscaled_value": 1021473.062
+      }
+    ]
+  },
+  "25398": {
+    "flow_index": 25398,
+    "true_class": "BruteForce",
+    "predicted_class": "BruteForce",
+    "predicted_confidence": 0.6347,
+    "top_shap_features": [
+      {
+        "feature": "IAT",
+        "shap_value": 4.5922,
+        "direction": "increases_risk",
+        "unscaled_value": 166601280.0
+      },
+      {
+        "feature": "syn_count",
+        "shap_value": -0.3943,
+        "direction": "decreases_risk",
+        "unscaled_value": 0.0
+      },
+      {
+        "feature": "Min",
+        "shap_value": 0.3809,
+        "direction": "increases_risk",
+        "unscaled_value": 50.0
+      },
+      {
+        "feature": "Covariance",
+        "shap_value": -0.3763,
+        "direction": "decreases_risk",
+        "unscaled_value": 18.312
+      },
+      {
+        "feature": "flow_duration",
+        "shap_value": 0.3247,
+        "direction": "increases_risk",
+        "unscaled_value": 165.807
+      }
+    ]
+  },
+  "1896": {
+    "flow_index": 1896,
+    "true_class": "BruteForce",
+    "predicted_class": "BruteForce",
+    "predicted_confidence": 0.9597,
+    "top_shap_features": [
+      {
+        "feature": "IAT",
+        "shap_value": 4.4976,
+        "direction": "increases_risk",
+        "unscaled_value": 166601440.0
+      },
+      {
+        "feature": "Variance",
+        "shap_value": 0.2603,
+        "direction": "increases_risk",
+        "unscaled_value": 1.0
+      },
+      {
+        "feature": "Header_Length",
+        "shap_value": 0.2425,
+        "direction": "increases_risk",
+        "unscaled_value": 14806.312
+      },
+      {
+        "feature": "flow_duration",
+        "shap_value": 0.2241,
+        "direction": "increases_risk",
+        "unscaled_value": 60.082
+      },
+      {
+        "feature": "syn_count",
+        "shap_value": 0.2102,
+        "direction": "increases_risk",
+        "unscaled_value": 1.1
+      }
+    ]
+  },
+  "12981": {
+    "flow_index": 12981,
+    "true_class": "BruteForce",
+    "predicted_class": "BruteForce",
+    "predicted_confidence": 0.7895,
+    "top_shap_features": [
+      {
+        "feature": "IAT",
+        "shap_value": 4.8169,
+        "direction": "increases_risk",
+        "unscaled_value": 166601440.0
+      },
+      {
+        "feature": "Header_Length",
+        "shap_value": 0.372,
+        "direction": "increases_risk",
+        "unscaled_value": 10594.281
+      },
+      {
+        "feature": "syn_count",
+        "shap_value": -0.3473,
+        "direction": "decreases_risk",
+        "unscaled_value": 0.0
+      },
+      {
+        "feature": "flow_duration",
+        "shap_value": 0.3442,
+        "direction": "increases_risk",
+        "unscaled_value": 146.105
+      },
+      {
+        "feature": "Variance",
+        "shap_value": 0.2255,
+        "direction": "increases_risk",
+        "unscaled_value": 1.0
+      }
+    ]
+  },
+  "20091": {
+    "flow_index": 20091,
+    "true_class": "BruteForce",
+    "predicted_class": "BruteForce",
+    "predicted_confidence": 0.7829,
+    "top_shap_features": [
+      {
+        "feature": "urg_count",
+        "shap_value": 1.353,
+        "direction": "increases_risk",
+        "unscaled_value": 508.9
+      },
+      {
+        "feature": "flow_duration",
+        "shap_value": 0.4484,
+        "direction": "increases_risk",
+        "unscaled_value": 21.741
+      },
+      {
+        "feature": "syn_count",
+        "shap_value": -0.4406,
+        "direction": "decreases_risk",
+        "unscaled_value": 0.0
+      },
+      {
+        "feature": "Covariance",
+        "shap_value": 0.4283,
+        "direction": "increases_risk",
+        "unscaled_value": 341.375
+      },
+      {
+        "feature": "Header_Length",
+        "shap_value": 0.4078,
+        "direction": "increases_risk",
+        "unscaled_value": 87819.594
+      }
+    ]
+  },
+  "19273": {
+    "flow_index": 19273,
+    "true_class": "BruteForce",
+    "predicted_class": "BruteForce",
+    "predicted_confidence": 0.9406,
+    "top_shap_features": [
+      {
+        "feature": "IAT",
+        "shap_value": 4.8245,
+        "direction": "increases_risk",
+        "unscaled_value": 166601392.0
+      },
+      {
+        "feature": "Tot size",
+        "shap_value": -0.5312,
+        "direction": "decreases_risk",
+        "unscaled_value": 706.7
+      },
+      {
+        "feature": "urg_count",
+        "shap_value": 0.3444,
+        "direction": "increases_risk",
+        "unscaled_value": 6.0
+      },
+      {
+        "feature": "Magnitue",
+        "shap_value": 0.2925,
+        "direction": "increases_risk",
+        "unscaled_value": 44.353
+      },
+      {
+        "feature": "Header_Length",
+        "shap_value": 0.2896,
+        "direction": "increases_risk",
+        "unscaled_value": 10953.312
+      }
+    ]
+  },
+  "12992": {
+    "flow_index": 12992,
+    "true_class": "DDoS",
+    "predicted_class": "DDoS",
+    "predicted_confidence": 0.9976,
+    "top_shap_features": [
+      {
+        "feature": "IAT",
+        "shap_value": 6.4502,
+        "direction": "increases_risk",
+        "unscaled_value": 83371056.0
+      },
+      {
+        "feature": "Variance",
+        "shap_value": 1.732,
+        "direction": "increases_risk",
+        "unscaled_value": 0.95
+      },
+      {
+        "feature": "Covariance",
+        "shap_value": 0.5962,
+        "direction": "increases_risk",
+        "unscaled_value": 313125.844
+      },
+      {
+        "feature": "rst_count",
+        "shap_value": 0.5887,
+        "direction": "increases_risk",
+        "unscaled_value": 0.0
+      },
+      {
+        "feature": "Max",
+        "shap_value": 0.4547,
+        "direction": "increases_risk",
+        "unscaled_value": 1444.88
+      }
+    ]
+  },
+  "21987": {
+    "flow_index": 21987,
+    "true_class": "DDoS",
+    "predicted_class": "DDoS",
+    "predicted_confidence": 0.9977,
+    "top_shap_features": [
+      {
+        "feature": "IAT",
+        "shap_value": 8.1942,
+        "direction": "increases_risk",
+        "unscaled_value": 83362352.0
+      },
+      {
+        "feature": "rst_count",
+        "shap_value": 0.3745,
+        "direction": "increases_risk",
+        "unscaled_value": 0.0
+      },
+      {
+        "feature": "Tot sum",
+        "shap_value": 0.3734,
+        "direction": "increases_risk",
+        "unscaled_value": 584.6
+      },
+      {
+        "feature": "Protocol Type",
+        "shap_value": 0.3615,
+        "direction": "increases_risk",
+        "unscaled_value": 6.11
+      },
+      {
+        "feature": "syn_count",
+        "shap_value": 0.2469,
+        "direction": "increases_risk",
+        "unscaled_value": 1.89
+      }
+    ]
+  },
+  "11653": {
+    "flow_index": 11653,
+    "true_class": "DDoS",
+    "predicted_class": "DDoS",
+    "predicted_confidence": 1.0,
+    "top_shap_features": [
+      {
+        "feature": "IAT",
+        "shap_value": 6.6526,
+        "direction": "increases_risk",
+        "unscaled_value": 83370336.0
+      },
+      {
+        "feature": "Variance",
+        "shap_value": 1.7623,
+        "direction": "increases_risk",
+        "unscaled_value": 0.95
+      },
+      {
+        "feature": "rst_count",
+        "shap_value": 0.5998,
+        "direction": "increases_risk",
+        "unscaled_value": 0.01
+      },
+      {
+        "feature": "Covariance",
+        "shap_value": 0.5837,
+        "direction": "increases_risk",
+        "unscaled_value": 317257.75
+      },
+      {
+        "feature": "Max",
+        "shap_value": 0.4437,
+        "direction": "increases_risk",
+        "unscaled_value": 1490.96
+      }
+    ]
+  },
+  "9571": {
+    "flow_index": 9571,
+    "true_class": "DDoS",
+    "predicted_class": "DDoS",
+    "predicted_confidence": 1.0,
+    "top_shap_features": [
+      {
+        "feature": "IAT",
+        "shap_value": 6.5564,
+        "direction": "increases_risk",
+        "unscaled_value": 83371000.0
+      },
+      {
+        "feature": "Variance",
+        "shap_value": 1.7713,
+        "direction": "increases_risk",
+        "unscaled_value": 0.95
+      },
+      {
+        "feature": "rst_count",
+        "shap_value": 0.5959,
+        "direction": "increases_risk",
+        "unscaled_value": 0.01
+      },
+      {
+        "feature": "Covariance",
+        "shap_value": 0.5833,
+        "direction": "increases_risk",
+        "unscaled_value": 310429.781
+      },
+      {
+        "feature": "Max",
+        "shap_value": 0.4445,
+        "direction": "increases_risk",
+        "unscaled_value": 1490.96
+      }
+    ]
+  },
+  "4701": {
+    "flow_index": 4701,
+    "true_class": "DDoS",
+    "predicted_class": "DDoS",
+    "predicted_confidence": 0.998,
+    "top_shap_features": [
+      {
+        "feature": "IAT",
+        "shap_value": 5.8879,
+        "direction": "increases_risk",
+        "unscaled_value": 83076120.0
+      },
+      {
+        "feature": "flow_duration",
+        "shap_value": 0.5064,
+        "direction": "increases_risk",
+        "unscaled_value": 0.0
+      },
+      {
+        "feature": "Tot sum",
+        "shap_value": 0.4092,
+        "direction": "increases_risk",
+        "unscaled_value": 567.0
+      },
+      {
+        "feature": "rst_count",
+        "shap_value": 0.385,
+        "direction": "increases_risk",
+        "unscaled_value": 0.0
+      },
+      {
+        "feature": "Protocol Type",
+        "shap_value": 0.3748,
+        "direction": "increases_risk",
+        "unscaled_value": 6.0
+      }
+    ]
+  },
+  "14348": {
+    "flow_index": 14348,
+    "true_class": "DoS",
+    "predicted_class": "DoS",
+    "predicted_confidence": 0.9992,
+    "top_shap_features": [
+      {
+        "feature": "IAT",
+        "shap_value": 8.825,
+        "direction": "increases_risk",
+        "unscaled_value": 82977520.0
+      },
+      {
+        "feature": "Magnitue",
+        "shap_value": 0.9658,
+        "direction": "increases_risk",
+        "unscaled_value": 10.392
+      },
+      {
+        "feature": "urg_count",
+        "shap_value": 0.6021,
+        "direction": "increases_risk",
+        "unscaled_value": 0.0
+      },
+      {
+        "feature": "Variance",
+        "shap_value": 0.5665,
+        "direction": "increases_risk",
+        "unscaled_value": -0.0
+      },
+      {
+        "feature": "flow_duration",
+        "shap_value": 0.4838,
+        "direction": "increases_risk",
+        "unscaled_value": 3.978
+      }
+    ]
+  },
+  "5992": {
+    "flow_index": 5992,
+    "true_class": "DoS",
+    "predicted_class": "DoS",
+    "predicted_confidence": 1.0,
+    "top_shap_features": [
+      {
+        "feature": "IAT",
+        "shap_value": 7.9213,
+        "direction": "increases_risk",
+        "unscaled_value": 83011728.0
+      },
+      {
+        "feature": "Magnitue",
+        "shap_value": 1.0151,
+        "direction": "increases_risk",
+        "unscaled_value": 10.078
+      },
+      {
+        "feature": "Variance",
+        "shap_value": 0.669,
+        "direction": "increases_risk",
+        "unscaled_value": 0.16
+      },
+      {
+        "feature": "urg_count",
+        "shap_value": 0.6264,
+        "direction": "increases_risk",
+        "unscaled_value": 0.0
+      },
+      {
+        "feature": "Header_Length",
+        "shap_value": 0.5343,
+        "direction": "increases_risk",
+        "unscaled_value": 9311.984
+      }
+    ]
+  },
+  "11816": {
+    "flow_index": 11816,
+    "true_class": "DoS",
+    "predicted_class": "DoS",
+    "predicted_confidence": 1.0,
+    "top_shap_features": [
+      {
+        "feature": "IAT",
+        "shap_value": 8.6798,
+        "direction": "increases_risk",
+        "unscaled_value": 83002848.0
+      },
+      {
+        "feature": "syn_count",
+        "shap_value": 1.3748,
+        "direction": "increases_risk",
+        "unscaled_value": 2.67
+      },
+      {
+        "feature": "flow_duration",
+        "shap_value": 0.5119,
+        "direction": "increases_risk",
+        "unscaled_value": 1.591
+      },
+      {
+        "feature": "Variance",
+        "shap_value": -0.4344,
+        "direction": "decreases_risk",
+        "unscaled_value": 0.91
+      },
+      {
+        "feature": "Header_Length",
+        "shap_value": 0.3637,
+        "direction": "increases_risk",
+        "unscaled_value": 6556.969
+      }
+    ]
+  },
+  "11616": {
+    "flow_index": 11616,
+    "true_class": "DoS",
+    "predicted_class": "DoS",
+    "predicted_confidence": 0.9987,
+    "top_shap_features": [
+      {
+        "feature": "IAT",
+        "shap_value": 7.9865,
+        "direction": "increases_risk",
+        "unscaled_value": 82925088.0
+      },
+      {
+        "feature": "Magnitue",
+        "shap_value": 0.9352,
+        "direction": "increases_risk",
+        "unscaled_value": 10.392
+      },
+      {
+        "feature": "Variance",
+        "shap_value": 0.6134,
+        "direction": "increases_risk",
+        "unscaled_value": -0.0
+      },
+      {
+        "feature": "urg_count",
+        "shap_value": 0.5985,
+        "direction": "increases_risk",
+        "unscaled_value": 0.0
+      },
+      {
+        "feature": "flow_duration",
+        "shap_value": 0.5325,
+        "direction": "increases_risk",
+        "unscaled_value": 0.0
+      }
+    ]
+  },
+  "21602": {
+    "flow_index": 21602,
+    "true_class": "DoS",
+    "predicted_class": "DoS",
+    "predicted_confidence": 0.9987,
+    "top_shap_features": [
+      {
+        "feature": "IAT",
+        "shap_value": 7.9878,
+        "direction": "increases_risk",
+        "unscaled_value": 82951232.0
+      },
+      {
+        "feature": "Magnitue",
+        "shap_value": 0.9352,
+        "direction": "increases_risk",
+        "unscaled_value": 10.392
+      },
+      {
+        "feature": "Variance",
+        "shap_value": 0.6134,
+        "direction": "increases_risk",
+        "unscaled_value": -0.0
+      },
+      {
+        "feature": "urg_count",
+        "shap_value": 0.5985,
+        "direction": "increases_risk",
+        "unscaled_value": 0.0
+      },
+      {
+        "feature": "flow_duration",
+        "shap_value": 0.5305,
+        "direction": "increases_risk",
+        "unscaled_value": 0.0
+      }
+    ]
+  },
+  "4380": {
+    "flow_index": 4380,
+    "true_class": "Mirai",
+    "predicted_class": "Mirai",
+    "predicted_confidence": 1.0,
+    "top_shap_features": [
+      {
+        "feature": "IAT",
+        "shap_value": 4.6535,
+        "direction": "increases_risk",
+        "unscaled_value": 83693792.0
+      },
+      {
+        "feature": "Protocol Type",
+        "shap_value": 4.6158,
+        "direction": "increases_risk",
+        "unscaled_value": 47.0
+      },
+      {
+        "feature": "Min",
+        "shap_value": 1.4376,
+        "direction": "increases_risk",
+        "unscaled_value": 592.0
+      },
+      {
+        "feature": "AVG",
+        "shap_value": 0.5857,
+        "direction": "increases_risk",
+        "unscaled_value": 592.0
+      },
+      {
+        "feature": "rst_count",
+        "shap_value": 0.5654,
+        "direction": "increases_risk",
+        "unscaled_value": 0.0
+      }
+    ]
+  },
+  "22384": {
+    "flow_index": 22384,
+    "true_class": "Mirai",
+    "predicted_class": "Mirai",
+    "predicted_confidence": 1.0,
+    "top_shap_features": [
+      {
+        "feature": "IAT",
+        "shap_value": 4.8798,
+        "direction": "increases_risk",
+        "unscaled_value": 83763088.0
+      },
+      {
+        "feature": "Protocol Type",
+        "shap_value": 3.6164,
+        "direction": "increases_risk",
+        "unscaled_value": 17.0
+      },
+      {
+        "feature": "Min",
+        "shap_value": 1.7497,
+        "direction": "increases_risk",
+        "unscaled_value": 554.0
+      },
+      {
+        "feature": "AVG",
+        "shap_value": 0.7182,
+        "direction": "increases_risk",
+        "unscaled_value": 554.0
+      },
+      {
+        "feature": "rst_count",
+        "shap_value": 0.588,
+        "direction": "increases_risk",
+        "unscaled_value": 0.0
+      }
+    ]
+  },
+  "21721": {
+    "flow_index": 21721,
+    "true_class": "Mirai",
+    "predicted_class": "Mirai",
+    "predicted_confidence": 1.0,
+    "top_shap_features": [
+      {
+        "feature": "IAT",
+        "shap_value": 4.7768,
+        "direction": "increases_risk",
+        "unscaled_value": 83663520.0
+      },
+      {
+        "feature": "Protocol Type",
+        "shap_value": 4.7453,
+        "direction": "increases_risk",
+        "unscaled_value": 45.47
+      },
+      {
+        "feature": "Min",
+        "shap_value": 1.3905,
+        "direction": "increases_risk",
+        "unscaled_value": 455.56
+      },
+      {
+        "feature": "rst_count",
+        "shap_value": 0.6858,
+        "direction": "increases_risk",
+        "unscaled_value": 0.06
+      },
+      {
+        "feature": "AVG",
+        "shap_value": 0.6092,
+        "direction": "increases_risk",
+        "unscaled_value": 563.76
+      }
+    ]
+  },
+  "7267": {
+    "flow_index": 7267,
+    "true_class": "Mirai",
+    "predicted_class": "Mirai",
+    "predicted_confidence": 1.0,
+    "top_shap_features": [
+      {
+        "feature": "IAT",
+        "shap_value": 4.7588,
+        "direction": "increases_risk",
+        "unscaled_value": 83651448.0
+      },
+      {
+        "feature": "Protocol Type",
+        "shap_value": 4.7495,
+        "direction": "increases_risk",
+        "unscaled_value": 45.77
+      },
+      {
+        "feature": "Min",
+        "shap_value": 1.4055,
+        "direction": "increases_risk",
+        "unscaled_value": 515.12
+      },
+      {
+        "feature": "rst_count",
+        "shap_value": 0.6979,
+        "direction": "increases_risk",
+        "unscaled_value": 0.13
+      },
+      {
+        "feature": "AVG",
+        "shap_value": 0.6048,
+        "direction": "increases_risk",
+        "unscaled_value": 566.055
+      }
+    ]
+  },
+  "16756": {
+    "flow_index": 16756,
+    "true_class": "Mirai",
+    "predicted_class": "Mirai",
+    "predicted_confidence": 1.0,
+    "top_shap_features": [
+      {
+        "feature": "IAT",
+        "shap_value": 4.9697,
+        "direction": "increases_risk",
+        "unscaled_value": 83767592.0
+      },
+      {
+        "feature": "Protocol Type",
+        "shap_value": 3.6571,
+        "direction": "increases_risk",
+        "unscaled_value": 16.66
+      },
+      {
+        "feature": "Min",
+        "shap_value": 1.7194,
+        "direction": "increases_risk",
+        "unscaled_value": 460.14
+      },
+      {
+        "feature": "AVG",
+        "shap_value": 0.6743,
+        "direction": "increases_risk",
+        "unscaled_value": 536.203
+      },
+      {
+        "feature": "rst_count",
+        "shap_value": 0.5858,
+        "direction": "increases_risk",
+        "unscaled_value": 0.0
+      }
+    ]
+  },
+  "26107": {
+    "flow_index": 26107,
+    "true_class": "Recon",
+    "predicted_class": "Recon",
+    "predicted_confidence": 0.3846,
+    "top_shap_features": [
+      {
+        "feature": "flow_duration",
+        "shap_value": 0.4585,
+        "direction": "increases_risk",
+        "unscaled_value": 894.108
+      },
+      {
+        "feature": "syn_count",
+        "shap_value": 0.4393,
+        "direction": "increases_risk",
+        "unscaled_value": 0.9
+      },
+      {
+        "feature": "Header_Length",
+        "shap_value": 0.4109,
+        "direction": "increases_risk",
+        "unscaled_value": 1373.484
+      },
+      {
+        "feature": "rst_count",
+        "shap_value": 0.2445,
+        "direction": "increases_risk",
+        "unscaled_value": 1.4
+      },
+      {
+        "feature": "ack_count",
+        "shap_value": -0.1884,
+        "direction": "decreases_risk",
+        "unscaled_value": 0.0
+      }
+    ]
+  },
+  "23566": {
+    "flow_index": 23566,
+    "true_class": "Recon",
+    "predicted_class": "Recon",
+    "predicted_confidence": 0.9999,
+    "top_shap_features": [
+      {
+        "feature": "syn_flag_number",
+        "shap_value": 2.2888,
+        "direction": "increases_risk",
+        "unscaled_value": 1.0
+      },
+      {
+        "feature": "Tot sum",
+        "shap_value": 1.3929,
+        "direction": "increases_risk",
+        "unscaled_value": 319.0
+      },
+      {
+        "feature": "syn_count",
+        "shap_value": 1.1021,
+        "direction": "increases_risk",
+        "unscaled_value": 1.0
+      },
+      {
+        "feature": "Header_Length",
+        "shap_value": 0.4909,
+        "direction": "increases_risk",
+        "unscaled_value": 58.0
+      },
+      {
+        "feature": "rst_count",
+        "shap_value": -0.4614,
+        "direction": "decreases_risk",
+        "unscaled_value": 0.0
+      }
+    ]
+  },
+  "17839": {
+    "flow_index": 17839,
+    "true_class": "Recon",
+    "predicted_class": "Recon",
+    "predicted_confidence": 0.9985,
+    "top_shap_features": [
+      {
+        "feature": "IAT",
+        "shap_value": 1.9057,
+        "direction": "increases_risk",
+        "unscaled_value": 166846816.0
+      },
+      {
+        "feature": "syn_flag_number",
+        "shap_value": 1.355,
+        "direction": "increases_risk",
+        "unscaled_value": 1.0
+      },
+      {
+        "feature": "syn_count",
+        "shap_value": 0.5931,
+        "direction": "increases_risk",
+        "unscaled_value": 0.7
+      },
+      {
+        "feature": "Header_Length",
+        "shap_value": 0.4759,
+        "direction": "increases_risk",
+        "unscaled_value": 73.0
+      },
+      {
+        "feature": "Tot size",
+        "shap_value": 0.387,
+        "direction": "increases_risk",
+        "unscaled_value": 56.8
+      }
+    ]
+  },
+  "12064": {
+    "flow_index": 12064,
+    "true_class": "Recon",
+    "predicted_class": "Recon",
+    "predicted_confidence": 0.9688,
+    "top_shap_features": [
+      {
+        "feature": "IAT",
+        "shap_value": 3.2025,
+        "direction": "increases_risk",
+        "unscaled_value": 166421664.0
+      },
+      {
+        "feature": "Variance",
+        "shap_value": 0.6921,
+        "direction": "increases_risk",
+        "unscaled_value": 1.0
+      },
+      {
+        "feature": "syn_count",
+        "shap_value": 0.4682,
+        "direction": "increases_risk",
+        "unscaled_value": 0.6
+      },
+      {
+        "feature": "ack_count",
+        "shap_value": 0.196,
+        "direction": "increases_risk",
+        "unscaled_value": 0.2
+      },
+      {
+        "feature": "Max",
+        "shap_value": 0.1781,
+        "direction": "increases_risk",
+        "unscaled_value": 441.0
+      }
+    ]
+  },
+  "20517": {
+    "flow_index": 20517,
+    "true_class": "Recon",
+    "predicted_class": "Recon",
+    "predicted_confidence": 0.9912,
+    "top_shap_features": [
+      {
+        "feature": "IAT",
+        "shap_value": 3.2093,
+        "direction": "increases_risk",
+        "unscaled_value": 83243104.0
+      },
+      {
+        "feature": "syn_count",
+        "shap_value": 0.62,
+        "direction": "increases_risk",
+        "unscaled_value": 0.65
+      },
+      {
+        "feature": "ack_count",
+        "shap_value": 0.5007,
+        "direction": "increases_risk",
+        "unscaled_value": 0.13
+      },
+      {
+        "feature": "Tot size",
+        "shap_value": -0.2847,
+        "direction": "decreases_risk",
+        "unscaled_value": 157.77
+      },
+      {
+        "feature": "Min",
+        "shap_value": 0.2412,
+        "direction": "increases_risk",
+        "unscaled_value": 68.52
+      }
+    ]
+  },
+  "12782": {
+    "flow_index": 12782,
+    "true_class": "Spoofing",
+    "predicted_class": "Benign",
+    "predicted_confidence": 0.4393,
+    "top_shap_features": [
+      {
+        "feature": "flow_duration",
+        "shap_value": 0.6983,
+        "direction": "increases_risk",
+        "unscaled_value": 4.008
+      },
+      {
+        "feature": "Protocol Type",
+        "shap_value": 0.3702,
+        "direction": "increases_risk",
+        "unscaled_value": 11.5
+      },
+      {
+        "feature": "rst_count",
+        "shap_value": 0.3667,
+        "direction": "increases_risk",
+        "unscaled_value": 88.3
+      },
+      {
+        "feature": "syn_count",
+        "shap_value": 0.2306,
+        "direction": "increases_risk",
+        "unscaled_value": 0.0
+      },
+      {
+        "feature": "Header_Length",
+        "shap_value": 0.1578,
+        "direction": "increases_risk",
+        "unscaled_value": 45951.391
+      }
+    ]
+  },
+  "13543": {
+    "flow_index": 13543,
+    "true_class": "Spoofing",
+    "predicted_class": "Spoofing",
+    "predicted_confidence": 0.9997,
+    "top_shap_features": [
+      {
+        "feature": "Header_Length",
+        "shap_value": 2.1769,
+        "direction": "increases_risk",
+        "unscaled_value": 5980817.0
+      },
+      {
+        "feature": "urg_count",
+        "shap_value": 1.8947,
+        "direction": "increases_risk",
+        "unscaled_value": 1890.0
+      },
+      {
+        "feature": "IAT",
+        "shap_value": 1.0912,
+        "direction": "increases_risk",
+        "unscaled_value": 0.0
+      },
+      {
+        "feature": "flow_duration",
+        "shap_value": 0.6398,
+        "direction": "increases_risk",
+        "unscaled_value": 2.537
+      },
+      {
+        "feature": "rst_count",
+        "shap_value": -0.6347,
+        "direction": "decreases_risk",
+        "unscaled_value": 5185.5
+      }
+    ]
+  },
+  "4089": {
+    "flow_index": 4089,
+    "true_class": "Spoofing",
+    "predicted_class": "Benign",
+    "predicted_confidence": 0.5846,
+    "top_shap_features": [
+      {
+        "feature": "rst_count",
+        "shap_value": 1.2555,
+        "direction": "increases_risk",
+        "unscaled_value": 700.3
+      },
+      {
+        "feature": "flow_duration",
+        "shap_value": 0.7097,
+        "direction": "increases_risk",
+        "unscaled_value": 15.177
+      },
+      {
+        "feature": "Protocol Type",
+        "shap_value": -0.1662,
+        "direction": "decreases_risk",
+        "unscaled_value": 6.0
+      },
+      {
+        "feature": "Max",
+        "shap_value": -0.1586,
+        "direction": "decreases_risk",
+        "unscaled_value": 1844.1
+      },
+      {
+        "feature": "syn_count",
+        "shap_value": 0.1192,
+        "direction": "increases_risk",
+        "unscaled_value": 0.0
+      }
+    ]
+  },
+  "1125": {
+    "flow_index": 1125,
+    "true_class": "Spoofing",
+    "predicted_class": "Spoofing",
+    "predicted_confidence": 0.4937,
+    "top_shap_features": [
+      {
+        "feature": "Header_Length",
+        "shap_value": -0.825,
+        "direction": "decreases_risk",
+        "unscaled_value": 640.188
+      },
+      {
+        "feature": "ack_count",
+        "shap_value": 0.6839,
+        "direction": "increases_risk",
+        "unscaled_value": 1.3
+      },
+      {
+        "feature": "syn_count",
+        "shap_value": 0.5864,
+        "direction": "increases_risk",
+        "unscaled_value": 0.0
+      },
+      {
+        "feature": "IAT",
+        "shap_value": 0.451,
+        "direction": "increases_risk",
+        "unscaled_value": 0.0
+      },
+      {
+        "feature": "rst_count",
+        "shap_value": 0.4137,
+        "direction": "increases_risk",
+        "unscaled_value": 6.0
+      }
+    ]
+  },
+  "14602": {
+    "flow_index": 14602,
+    "true_class": "Spoofing",
+    "predicted_class": "Spoofing",
+    "predicted_confidence": 0.9988,
+    "top_shap_features": [
+      {
+        "feature": "IAT",
+        "shap_value": 3.6564,
+        "direction": "increases_risk",
+        "unscaled_value": 166861312.0
+      },
+      {
+        "feature": "Header_Length",
+        "shap_value": 1.7155,
+        "direction": "increases_risk",
+        "unscaled_value": 962407.688
+      },
+      {
+        "feature": "rst_count",
+        "shap_value": 0.4987,
+        "direction": "increases_risk",
+        "unscaled_value": 0.1
+      },
+      {
+        "feature": "urg_count",
+        "shap_value": 0.3604,
+        "direction": "increases_risk",
+        "unscaled_value": 0.0
+      },
+      {
+        "feature": "Protocol Type",
+        "shap_value": 0.3126,
+        "direction": "increases_risk",
+        "unscaled_value": 15.9
+      }
+    ]
+  },
+  "7342": {
+    "flow_index": 7342,
+    "true_class": "Web-based",
+    "predicted_class": "Web-based",
+    "predicted_confidence": 0.4097,
+    "top_shap_features": [
+      {
+        "feature": "flow_duration",
+        "shap_value": 1.3042,
+        "direction": "increases_risk",
+        "unscaled_value": 1033.553
+      },
+      {
+        "feature": "IAT",
+        "shap_value": 0.5008,
+        "direction": "increases_risk",
+        "unscaled_value": 0.0
+      },
+      {
+        "feature": "Protocol Type",
+        "shap_value": 0.3813,
+        "direction": "increases_risk",
+        "unscaled_value": 14.2
+      },
+      {
+        "feature": "Header_Length",
+        "shap_value": -0.2481,
+        "direction": "decreases_risk",
+        "unscaled_value": 2446.906
+      },
+      {
+        "feature": "urg_count",
+        "shap_value": 0.1869,
+        "direction": "increases_risk",
+        "unscaled_value": 0.0
+      }
+    ]
+  },
+  "25600": {
+    "flow_index": 25600,
+    "true_class": "Web-based",
+    "predicted_class": "Web-based",
+    "predicted_confidence": 0.8704,
+    "top_shap_features": [
+      {
+        "feature": "IAT",
+        "shap_value": 5.5305,
+        "direction": "increases_risk",
+        "unscaled_value": 167639360.0
+      },
+      {
+        "feature": "Min",
+        "shap_value": -0.1618,
+        "direction": "decreases_risk",
+        "unscaled_value": 54.0
+      },
+      {
+        "feature": "Tot size",
+        "shap_value": -0.1503,
+        "direction": "decreases_risk",
+        "unscaled_value": 86.6
+      },
+      {
+        "feature": "rst_count",
+        "shap_value": 0.1486,
+        "direction": "increases_risk",
+        "unscaled_value": 11.0
+      },
+      {
+        "feature": "flow_duration",
+        "shap_value": -0.1254,
+        "direction": "decreases_risk",
+        "unscaled_value": 18.172
+      }
+    ]
+  },
+  "23888": {
+    "flow_index": 23888,
+    "true_class": "Web-based",
+    "predicted_class": "Web-based",
+    "predicted_confidence": 0.699,
+    "top_shap_features": [
+      {
+        "feature": "IAT",
+        "shap_value": 3.5386,
+        "direction": "increases_risk",
+        "unscaled_value": 166845840.0
+      },
+      {
+        "feature": "Covariance",
+        "shap_value": -0.3708,
+        "direction": "decreases_risk",
+        "unscaled_value": 925641.812
+      },
+      {
+        "feature": "Header_Length",
+        "shap_value": -0.3171,
+        "direction": "decreases_risk",
+        "unscaled_value": 71430.5
+      },
+      {
+        "feature": "rst_count",
+        "shap_value": -0.222,
+        "direction": "decreases_risk",
+        "unscaled_value": 218.9
+      },
+      {
+        "feature": "Tot size",
+        "shap_value": 0.1552,
+        "direction": "increases_risk",
+        "unscaled_value": 663.6
+      }
+    ]
+  },
+  "10385": {
+    "flow_index": 10385,
+    "true_class": "Web-based",
+    "predicted_class": "Web-based",
+    "predicted_confidence": 0.294,
+    "top_shap_features": [
+      {
+        "feature": "IAT",
+        "shap_value": 0.3448,
+        "direction": "increases_risk",
+        "unscaled_value": 0.0
+      },
+      {
+        "feature": "flow_duration",
+        "shap_value": -0.3351,
+        "direction": "decreases_risk",
+        "unscaled_value": 20.785
+      },
+      {
+        "feature": "Header_Length",
+        "shap_value": 0.301,
+        "direction": "increases_risk",
+        "unscaled_value": 686.484
+      },
+      {
+        "feature": "Tot size",
+        "shap_value": -0.2373,
+        "direction": "decreases_risk",
+        "unscaled_value": 112.0
+      },
+      {
+        "feature": "Max",
+        "shap_value": -0.1763,
+        "direction": "decreases_risk",
+        "unscaled_value": 147.4
+      }
+    ]
+  },
+  "8132": {
+    "flow_index": 8132,
+    "true_class": "Web-based",
+    "predicted_class": "Web-based",
+    "predicted_confidence": 0.4817,
+    "top_shap_features": [
+      {
+        "feature": "flow_duration",
+        "shap_value": 1.3538,
+        "direction": "increases_risk",
+        "unscaled_value": 590.61
+      },
+      {
+        "feature": "IAT",
+        "shap_value": 0.4727,
+        "direction": "increases_risk",
+        "unscaled_value": 0.0
+      },
+      {
+        "feature": "rst_count",
+        "shap_value": -0.2592,
+        "direction": "decreases_risk",
+        "unscaled_value": 3.9
+      },
+      {
+        "feature": "Header_Length",
+        "shap_value": 0.2429,
+        "direction": "increases_risk",
+        "unscaled_value": 3474.188
+      },
+      {
+        "feature": "Tot size",
+        "shap_value": -0.1985,
+        "direction": "decreases_risk",
+        "unscaled_value": 98.2
+      }
+    ]
+  }
+}
