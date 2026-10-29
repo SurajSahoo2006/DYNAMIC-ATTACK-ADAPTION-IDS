@@ -45,13 +45,18 @@ from config_marl import (
     FINAL_EVAL_SEEDS,
     LEARNING_CURVES_PLOT_PATH,
     MARL_MODELS_DIR,
+    NON_LEARNED_BASELINES,
     PILOT_JSON_PATH,
+    REFERENCE_LABEL_AWARE_BASELINES,
     REPORTS_DIR,
     RETURNS_PLOT_PATH,
     TRAIN_SEEDS,
 )
 from marl.baselines import (
     AlwaysNonePolicy,
+    BudgetAwareLabelAwareRulePolicy,
+    BudgetAwareSeverityRulePolicy,
+    LabelAwareRulePolicy,
     MaxContainmentPolicy,
     OraclePolicy,
     RandomPolicy,
@@ -109,10 +114,13 @@ def run_evaluation_on_test(
         info: Optional[Dict] = None
 
         while not done:
-            if isinstance(policy, OraclePolicy):
+            if isinstance(policy, (LabelAwareRulePolicy, BudgetAwareLabelAwareRulePolicy)):
                 flow_idx = env.episode_flow_indices[env.current_step]
                 is_att = (env.true_labels[flow_idx] != "Benign")
-                actions = policy.get_actions(obs, info={"is_attack": is_att})
+                actions = policy.get_actions(
+                    obs,
+                    info={"is_attack": is_att, "true_label": env.true_labels[flow_idx]},
+                )
             else:
                 actions = policy.get_actions(obs, info=info)
 
@@ -164,22 +172,33 @@ def run_evaluation_on_test(
 def generate_plots(eval_results: Dict, active_settings: List[str]):
     """Generates returns comparison and training learning curve plots."""
     # 1. Returns Comparison Plot
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(12, 6))
     methods = []
     means = []
     ci_err_low = []
     ci_err_high = []
 
+    baseline_order = [
+        "random",
+        "always_none",
+        "max_containment",
+        "severity_rule",
+        "severity_rule_budget_aware",
+        "label_aware_rule",
+        "label_aware_rule_budget_aware",
+    ]
+
     for setting in active_settings:
         set_data = eval_results["settings"][setting]
         # Baselines
-        for b_name in ["random", "always_none", "max_containment", "severity_rule", "oracle"]:
-            b_info = set_data["baselines"][b_name]
-            methods.append(f"{b_name}\n({setting})")
-            m = b_info["mean_return"]
-            means.append(m)
-            ci_err_low.append(m - b_info["return_ci_lower"])
-            ci_err_high.append(b_info["return_ci_upper"] - m)
+        for b_name in baseline_order:
+            if b_name in set_data["baselines"]:
+                b_info = set_data["baselines"][b_name]
+                methods.append(f"{b_name}\n({setting})")
+                m = b_info["mean_return"]
+                means.append(m)
+                ci_err_low.append(m - b_info["return_ci_lower"])
+                ci_err_high.append(b_info["return_ci_upper"] - m)
 
         # MAPPO Aggregate
         agg_info = set_data["mappo_aggregate"]
@@ -192,14 +211,14 @@ def generate_plots(eval_results: Dict, active_settings: List[str]):
     x = np.arange(len(methods))
     yerr = [ci_err_low, ci_err_high]
 
-    colors = ["#7f7f7f", "#bcbd22", "#d62728", "#1f77b4", "#2ca02c", "#ff7f0e"]
+    colors = ["#7f7f7f", "#bcbd22", "#d62728", "#1f77b4", "#17becf", "#9467bd", "#2ca02c", "#ff7f0e"]
     bar_colors = (colors * ((len(methods) // len(colors)) + 1))[: len(methods)]
 
-    ax.bar(x, means, yerr=yerr, capsize=5, color=bar_colors, alpha=0.85, edgecolor="black")
+    ax.bar(x, means, yerr=yerr, capsize=4, color=bar_colors, alpha=0.85, edgecolor="black")
     ax.set_ylabel("Mean Episode Return (T=50)")
     ax.set_title("Tactical Defense Policy Returns on Test Cache (500 Episodes, 95% Bootstrap CI)")
     ax.set_xticks(x)
-    ax.set_xticklabels(methods, rotation=25, ha="right", fontsize=9)
+    ax.set_xticklabels(methods, rotation=30, ha="right", fontsize=8)
     ax.grid(axis="y", linestyle="--", alpha=0.6)
     ax.axhline(0, color="gray", linewidth=0.8)
     plt.tight_layout()
@@ -256,7 +275,9 @@ def main():
         "always_none": AlwaysNonePolicy(),
         "max_containment": MaxContainmentPolicy(),
         "severity_rule": SeverityRulePolicy(),
-        "oracle": OraclePolicy(),
+        "severity_rule_budget_aware": BudgetAwareSeverityRulePolicy(),
+        "label_aware_rule": LabelAwareRulePolicy(),
+        "label_aware_rule_budget_aware": BudgetAwareLabelAwareRulePolicy(),
     }
 
     for setting in active_settings:
@@ -275,14 +296,30 @@ def main():
             b_res = run_evaluation_on_test(b_policy, env, num_episodes=FINAL_EVAL_EPISODES, base_seed=3000)
             setting_record["baselines"][b_name] = b_res
             log.info(
-                f"  [{b_name:<16}] Mean Return: {b_res['mean_return']:>8.2f} "
+                f"  [{b_name:<30}] Mean Return: {b_res['mean_return']:>8.2f} "
                 f"[{b_res['return_ci_lower']:>8.2f}, {b_res['return_ci_upper']:>8.2f}] | "
                 f"Attacks: {b_res['attacks_contained']['formatted']}"
             )
 
-        # 2. Evaluate Selected MAPPO Checkpoints (5 seeds)
+        # Identify best non-learned baseline
+        best_non_learned_name = max(
+            NON_LEARNED_BASELINES,
+            key=lambda b: setting_record["baselines"][b]["mean_return"],
+        )
+        setting_record["best_non_learned_baseline"] = best_non_learned_name
+        log.info(
+            f"Best non-learned baseline for '{setting}': {best_non_learned_name} "
+            f"(Mean Return: {setting_record['baselines'][best_non_learned_name]['mean_return']:.2f})"
+        )
+
+        # 2. Evaluate Selected MAPPO Checkpoints
+        plan = pilot_meta.get("training_plan", {})
+        setting_seeds = plan.get(
+            setting,
+            [s for s in TRAIN_SEEDS if (MARL_MODELS_DIR / f"mappo_{setting}_seed{s}_best.pt").exists()],
+        )
         seed_returns_matrix = []
-        for seed in TRAIN_SEEDS:
+        for seed in setting_seeds:
             ckpt_path = MARL_MODELS_DIR / f"mappo_{setting}_seed{seed}_best.pt"
             log.info(f"Evaluating MAPPO seed {seed} from {ckpt_path} ...")
             mappo_policy = MAPPOEvaluatorPolicy(ckpt_path)
@@ -290,29 +327,34 @@ def main():
             setting_record["mappo_seeds"][f"seed_{seed}"] = seed_res
             seed_returns_matrix.append(seed_res["episode_returns"])
 
-            # Compute paired difference for this seed against severity_rule
+            # Compute paired difference for this seed against best non-learned baseline
+            best_nl_returns = setting_record["baselines"][best_non_learned_name]["episode_returns"]
+            paired_seed_best = bootstrap_ci_paired_difference(seed_res["episode_returns"], best_nl_returns, seed=seed)
+            setting_record["paired_differences"][f"seed_{seed}_vs_best_non_learned"] = paired_seed_best
+
+            # Also compute paired difference vs severity_rule
             sev_returns = setting_record["baselines"]["severity_rule"]["episode_returns"]
-            paired_seed = bootstrap_ci_paired_difference(seed_res["episode_returns"], sev_returns, seed=seed)
-            setting_record["paired_differences"][f"seed_{seed}"] = paired_seed
+            paired_seed_sev = bootstrap_ci_paired_difference(seed_res["episode_returns"], sev_returns, seed=seed)
+            setting_record["paired_differences"][f"seed_{seed}_vs_severity_rule"] = paired_seed_sev
+
             log.info(
                 f"  [MAPPO Seed {seed:<4}] Mean Return: {seed_res['mean_return']:>8.2f} "
                 f"[{seed_res['return_ci_lower']:>8.2f}, {seed_res['return_ci_upper']:>8.2f}] | "
                 f"Attacks: {seed_res['attacks_contained']['formatted']} | "
-                f"Paired Diff vs Severity: {paired_seed['mean_diff']:>6.2f} "
-                f"[{paired_seed['ci_lower']:>6.2f}, {paired_seed['ci_upper']:>6.2f}] -> {paired_seed['decision_outcome']}"
+                f"Diff vs {best_non_learned_name}: {paired_seed_best['mean_diff']:>6.2f} "
+                f"[{paired_seed_best['ci_lower']:>6.2f}, {paired_seed_best['ci_upper']:>6.2f}] -> {paired_seed_best['decision_outcome']}"
             )
 
         # 3. Aggregate across MAPPO seeds
-        all_seed_returns_arr = np.array(seed_returns_matrix)  # shape (5, 500)
-        mean_returns_per_episode = np.mean(all_seed_returns_arr, axis=0)  # shape (500,)
+        all_seed_returns_arr = np.array(seed_returns_matrix)
+        mean_returns_per_episode = np.mean(all_seed_returns_arr, axis=0)
         agg_ci = bootstrap_ci_mean(mean_returns_per_episode, seed=42)
 
-        # Total attacks & benigns across seeds
-        agg_attacks_x = sum(setting_record["mappo_seeds"][f"seed_{s}"]["attacks_contained"]["x"] for s in TRAIN_SEEDS)
-        agg_attacks_y = sum(setting_record["mappo_seeds"][f"seed_{s}"]["attacks_contained"]["n"] for s in TRAIN_SEEDS)
-        agg_benigns_x = sum(setting_record["mappo_seeds"][f"seed_{s}"]["benigns_disrupted"]["x"] for s in TRAIN_SEEDS)
-        agg_benigns_y = sum(setting_record["mappo_seeds"][f"seed_{s}"]["benigns_disrupted"]["n"] for s in TRAIN_SEEDS)
-        agg_notifs = np.mean([setting_record["mappo_seeds"][f"seed_{s}"]["notifications_per_episode"] for s in TRAIN_SEEDS])
+        agg_attacks_x = sum(setting_record["mappo_seeds"][f"seed_{s}"]["attacks_contained"]["x"] for s in setting_seeds)
+        agg_attacks_y = sum(setting_record["mappo_seeds"][f"seed_{s}"]["attacks_contained"]["n"] for s in setting_seeds)
+        agg_benigns_x = sum(setting_record["mappo_seeds"][f"seed_{s}"]["benigns_disrupted"]["x"] for s in setting_seeds)
+        agg_benigns_y = sum(setting_record["mappo_seeds"][f"seed_{s}"]["benigns_disrupted"]["n"] for s in setting_seeds)
+        agg_notifs = np.mean([setting_record["mappo_seeds"][f"seed_{s}"]["notifications_per_episode"] for s in setting_seeds])
 
         setting_record["mappo_aggregate"] = {
             "mean_return": agg_ci["mean"],
@@ -323,17 +365,25 @@ def main():
             "benigns_disrupted": wilson_score_interval(agg_benigns_x, agg_benigns_y),
             "notifications_per_episode": round(float(agg_notifs), 2),
             "episode_returns": [round(float(r), 4) for r in mean_returns_per_episode],
+            "seeds_evaluated": setting_seeds,
         }
 
-        # Paired difference of Aggregate MAPPO vs Severity Rule
+        # Paired difference of Aggregate MAPPO vs Best Non-Learned Baseline
+        best_nl_returns = setting_record["baselines"][best_non_learned_name]["episode_returns"]
+        overall_paired_best = bootstrap_ci_paired_difference(mean_returns_per_episode, best_nl_returns, seed=42)
+        setting_record["paired_differences"]["overall_vs_best_non_learned"] = overall_paired_best
+        setting_record["paired_differences"]["overall"] = overall_paired_best  # Primary decision comparison
+
+        # Paired difference vs Severity Rule
         sev_returns = setting_record["baselines"]["severity_rule"]["episode_returns"]
-        overall_paired = bootstrap_ci_paired_difference(mean_returns_per_episode, sev_returns, seed=42)
-        setting_record["paired_differences"]["overall"] = overall_paired
+        overall_paired_sev = bootstrap_ci_paired_difference(mean_returns_per_episode, sev_returns, seed=42)
+        setting_record["paired_differences"]["overall_vs_severity_rule"] = overall_paired_sev
+
         log.info(
-            f"=== MAPPO Overall Aggregate Return: {agg_ci['mean']:>8.2f} "
+            f"=== MAPPO Overall Return ({setting}): {agg_ci['mean']:>8.2f} "
             f"[{agg_ci['ci_lower']:>8.2f}, {agg_ci['ci_upper']:>8.2f}] | "
-            f"Paired Diff vs Severity: {overall_paired['mean_diff']:>6.2f} "
-            f"[{overall_paired['ci_lower']:>6.2f}, {overall_paired['ci_upper']:>6.2f}] -> {overall_paired['decision_outcome']} ==="
+            f"Paired Diff vs Best ({best_non_learned_name}): {overall_paired_best['mean_diff']:>6.2f} "
+            f"[{overall_paired_best['ci_lower']:>6.2f}, {overall_paired_best['ci_upper']:>6.2f}] -> {overall_paired_best['decision_outcome']} ==="
         )
 
         eval_output["settings"][setting] = setting_record
