@@ -2,102 +2,102 @@
   "reward_setting": "balanced",
   "seed": 456,
   "total_steps": 200000,
-  "runtime_seconds": 384.44,
-  "peak_ram_mb": 409.7,
-  "best_val_return": -7.175,
-  "final_val_return": -10.165,
+  "runtime_seconds": 400.35,
+  "peak_ram_mb": 110.27,
+  "best_val_return": -8.175,
+  "final_val_return": -8.685,
   "learning_curve": [
     {
       "step": 20000,
-      "elapsed_sec": 35.39,
-      "rl_val_return": -29.21,
+      "elapsed_sec": 36.47,
+      "rl_val_return": -39.32,
       "rl_val_attacks_contained_pct": 100.0,
       "rl_val_benigns_disrupted_pct": 100.0,
-      "actor_loss": -0.0158,
-      "critic_loss": 1.9214
+      "actor_loss": -0.0181,
+      "critic_loss": 3.7456
     },
     {
       "step": 40000,
-      "elapsed_sec": 83.28,
-      "rl_val_return": -12.375,
-      "rl_val_attacks_contained_pct": 94.29,
-      "rl_val_benigns_disrupted_pct": 6.0,
-      "actor_loss": -0.0072,
-      "critic_loss": 5.5657
+      "elapsed_sec": 73.36,
+      "rl_val_return": -18.75,
+      "rl_val_attacks_contained_pct": 90.09,
+      "rl_val_benigns_disrupted_pct": 6.15,
+      "actor_loss": -0.0074,
+      "critic_loss": 4.9601
     },
     {
       "step": 60000,
-      "elapsed_sec": 128.93,
-      "rl_val_return": -9.925,
-      "rl_val_attacks_contained_pct": 90.69,
-      "rl_val_benigns_disrupted_pct": 5.25,
-      "actor_loss": -0.0008,
-      "critic_loss": 1.1169
+      "elapsed_sec": 114.99,
+      "rl_val_return": -13.21,
+      "rl_val_attacks_contained_pct": 97.0,
+      "rl_val_benigns_disrupted_pct": 10.04,
+      "actor_loss": -0.0018,
+      "critic_loss": 5.5418
     },
     {
       "step": 80000,
-      "elapsed_sec": 162.11,
-      "rl_val_return": -7.175,
-      "rl_val_attacks_contained_pct": 88.29,
-      "rl_val_benigns_disrupted_pct": 3.9,
-      "actor_loss": -0.0022,
-      "critic_loss": 0.6707
+      "elapsed_sec": 155.0,
+      "rl_val_return": -11.325,
+      "rl_val_attacks_contained_pct": 91.89,
+      "rl_val_benigns_disrupted_pct": 10.04,
+      "actor_loss": -0.0028,
+      "critic_loss": 2.2272
     },
     {
       "step": 100000,
-      "elapsed_sec": 195.57,
-      "rl_val_return": -7.8,
-      "rl_val_attacks_contained_pct": 85.89,
-      "rl_val_benigns_disrupted_pct": 4.2,
-      "actor_loss": -0.0029,
-      "critic_loss": 2.7946
+      "elapsed_sec": 195.6,
+      "rl_val_return": -9.34,
+      "rl_val_attacks_contained_pct": 95.2,
+      "rl_val_benigns_disrupted_pct": 11.24,
+      "actor_loss": -0.0042,
+      "critic_loss": 6.5622
     },
     {
       "step": 120000,
-      "elapsed_sec": 231.71,
-      "rl_val_return": -9.325,
-      "rl_val_attacks_contained_pct": 85.89,
-      "rl_val_benigns_disrupted_pct": 4.2,
-      "actor_loss": -0.0017,
-      "critic_loss": 1.1587
+      "elapsed_sec": 236.13,
+      "rl_val_return": -11.355,
+      "rl_val_attacks_contained_pct": 93.69,
+      "rl_val_benigns_disrupted_pct": 7.5,
+      "actor_loss": -0.0153,
+      "critic_loss": 0.6403
     },
     {
       "step": 140000,
-      "elapsed_sec": 266.43,
-      "rl_val_return": -14.125,
-      "rl_val_attacks_contained_pct": 66.07,
-      "rl_val_benigns_disrupted_pct": 2.55,
-      "actor_loss": -0.0028,
-      "critic_loss": 6.0633
+      "elapsed_sec": 278.13,
+      "rl_val_return": -8.175,
+      "rl_val_attacks_contained_pct": 93.09,
+      "rl_val_benigns_disrupted_pct": 9.6,
+      "actor_loss": -0.003,
+      "critic_loss": 30.305
     },
     {
       "step": 160000,
-      "elapsed_sec": 301.3,
-      "rl_val_return": -8.3,
-      "rl_val_attacks_contained_pct": 88.59,
-      "rl_val_benigns_disrupted_pct": 4.65,
-      "actor_loss": 0.0004,
-      "critic_loss": 1.8272
+      "elapsed_sec": 322.09,
+      "rl_val_return": -11.33,
+      "rl_val_attacks_contained_pct": 96.1,
+      "rl_val_benigns_disrupted_pct": 11.84,
+      "actor_loss": -0.0048,
+      "critic_loss": 1.5696
     },
     {
       "step": 180000,
-      "elapsed_sec": 336.36,
-      "rl_val_return": -8.335,
-      "rl_val_attacks_contained_pct": 90.39,
-      "rl_val_benigns_disrupted_pct": 3.9,
-      "actor_loss": -0.0029,
-      "critic_loss": 0.8132
+      "elapsed_sec": 361.63,
+      "rl_val_return": -9.845,
+      "rl_val_attacks_contained_pct": 94.29,
+      "rl_val_benigns_disrupted_pct": 7.05,
+      "actor_loss": -0.0015,
+      "critic_loss": 3.8998
     },
     {
       "step": 200000,
-      "elapsed_sec": 384.43,
-      "rl_val_return": -10.165,
-      "rl_val_attacks_contained_pct": 94.59,
-      "rl_val_benigns_disrupted_pct": 6.6,
-      "actor_loss": -0.002,
-      "critic_loss": 2.6703
+      "elapsed_sec": 400.33,
+      "rl_val_return": -8.685,
+      "rl_val_attacks_contained_pct": 94.29,
+      "rl_val_benigns_disrupted_pct": 10.94,
+      "actor_loss": -0.0055,
+      "critic_loss": 3.2329
     }
   ],
-  "best_checkpoint": "D:\\IROP MODEL\\DYNAMIC-ATTACK-ADAPTION-IDS\\models\\marl\\mappo_balanced_seed456_best.pt",
-  "final_checkpoint": "D:\\IROP MODEL\\DYNAMIC-ATTACK-ADAPTION-IDS\\models\\marl\\mappo_balanced_seed456_final.pt"
+  "best_checkpoint": "models/marl/mappo_balanced_seed456_best.pt",
+  "final_checkpoint": "models/marl/mappo_balanced_seed456_final.pt"
 }

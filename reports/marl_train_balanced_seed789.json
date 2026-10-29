@@ -2,102 +2,102 @@
   "reward_setting": "balanced",
   "seed": 789,
   "total_steps": 200000,
-  "runtime_seconds": 345.87,
-  "peak_ram_mb": 410.41,
-  "best_val_return": -6.6,
-  "final_val_return": -7.475,
+  "runtime_seconds": 367.04,
+  "peak_ram_mb": 109.46,
+  "best_val_return": -10.375,
+  "final_val_return": -22.525,
   "learning_curve": [
     {
       "step": 20000,
-      "elapsed_sec": 37.96,
-      "rl_val_return": -27.125,
-      "rl_val_attacks_contained_pct": 92.22,
-      "rl_val_benigns_disrupted_pct": 5.86,
-      "actor_loss": -0.0194,
-      "critic_loss": 9.2453
+      "elapsed_sec": 35.66,
+      "rl_val_return": -30.48,
+      "rl_val_attacks_contained_pct": 95.51,
+      "rl_val_benigns_disrupted_pct": 6.76,
+      "actor_loss": -0.0165,
+      "critic_loss": 9.9565
     },
     {
       "step": 40000,
-      "elapsed_sec": 71.62,
-      "rl_val_return": -10.7,
-      "rl_val_attacks_contained_pct": 89.52,
-      "rl_val_benigns_disrupted_pct": 4.35,
-      "actor_loss": -0.0097,
-      "critic_loss": 5.545
+      "elapsed_sec": 70.21,
+      "rl_val_return": -13.735,
+      "rl_val_attacks_contained_pct": 96.11,
+      "rl_val_benigns_disrupted_pct": 5.56,
+      "actor_loss": -0.0091,
+      "critic_loss": 1.5848
     },
     {
       "step": 60000,
-      "elapsed_sec": 106.57,
-      "rl_val_return": -9.25,
-      "rl_val_attacks_contained_pct": 89.82,
-      "rl_val_benigns_disrupted_pct": 4.5,
-      "actor_loss": -0.0012,
-      "critic_loss": 8.2624
+      "elapsed_sec": 104.92,
+      "rl_val_return": -14.425,
+      "rl_val_attacks_contained_pct": 93.41,
+      "rl_val_benigns_disrupted_pct": 4.35,
+      "actor_loss": -0.0033,
+      "critic_loss": 53.4876
     },
     {
       "step": 80000,
-      "elapsed_sec": 140.96,
-      "rl_val_return": -9.1,
-      "rl_val_attacks_contained_pct": 93.11,
-      "rl_val_benigns_disrupted_pct": 4.5,
-      "actor_loss": -0.0028,
-      "critic_loss": 0.9097
+      "elapsed_sec": 143.75,
+      "rl_val_return": -10.625,
+      "rl_val_attacks_contained_pct": 95.21,
+      "rl_val_benigns_disrupted_pct": 4.35,
+      "actor_loss": -0.0046,
+      "critic_loss": 2.0134
     },
     {
       "step": 100000,
-      "elapsed_sec": 175.61,
-      "rl_val_return": -9.525,
-      "rl_val_attacks_contained_pct": 89.52,
-      "rl_val_benigns_disrupted_pct": 4.65,
-      "actor_loss": -0.0001,
-      "critic_loss": 0.291
+      "elapsed_sec": 176.88,
+      "rl_val_return": -12.75,
+      "rl_val_attacks_contained_pct": 98.5,
+      "rl_val_benigns_disrupted_pct": 6.16,
+      "actor_loss": 0.0014,
+      "critic_loss": 0.6515
     },
     {
       "step": 120000,
-      "elapsed_sec": 210.63,
-      "rl_val_return": -7.25,
-      "rl_val_attacks_contained_pct": 91.62,
-      "rl_val_benigns_disrupted_pct": 4.5,
-      "actor_loss": -0.0007,
-      "critic_loss": 7.5624
+      "elapsed_sec": 215.48,
+      "rl_val_return": -11.175,
+      "rl_val_attacks_contained_pct": 98.5,
+      "rl_val_benigns_disrupted_pct": 6.01,
+      "actor_loss": -0.0022,
+      "critic_loss": 3.4726
     },
     {
       "step": 140000,
-      "elapsed_sec": 244.54,
-      "rl_val_return": -10.925,
-      "rl_val_attacks_contained_pct": 93.41,
-      "rl_val_benigns_disrupted_pct": 4.65,
-      "actor_loss": -0.002,
-      "critic_loss": 2.8166
+      "elapsed_sec": 267.47,
+      "rl_val_return": -10.375,
+      "rl_val_attacks_contained_pct": 97.31,
+      "rl_val_benigns_disrupted_pct": 5.26,
+      "actor_loss": -0.0083,
+      "critic_loss": 0.7193
     },
     {
       "step": 160000,
-      "elapsed_sec": 278.25,
-      "rl_val_return": -6.6,
-      "rl_val_attacks_contained_pct": 92.81,
-      "rl_val_benigns_disrupted_pct": 4.35,
-      "actor_loss": -0.0005,
-      "critic_loss": 2.3169
+      "elapsed_sec": 306.33,
+      "rl_val_return": -23.6,
+      "rl_val_attacks_contained_pct": 97.01,
+      "rl_val_benigns_disrupted_pct": 5.26,
+      "actor_loss": -0.0054,
+      "critic_loss": 155.2358
     },
     {
       "step": 180000,
-      "elapsed_sec": 311.98,
-      "rl_val_return": -9.85,
-      "rl_val_attacks_contained_pct": 97.6,
+      "elapsed_sec": 336.06,
+      "rl_val_return": -20.425,
+      "rl_val_attacks_contained_pct": 96.71,
       "rl_val_benigns_disrupted_pct": 4.35,
-      "actor_loss": -0.0006,
-      "critic_loss": 7.9648
+      "actor_loss": -0.0028,
+      "critic_loss": 1.5551
     },
     {
       "step": 200000,
-      "elapsed_sec": 345.86,
-      "rl_val_return": -7.475,
+      "elapsed_sec": 367.02,
+      "rl_val_return": -22.525,
       "rl_val_attacks_contained_pct": 97.9,
-      "rl_val_benigns_disrupted_pct": 5.11,
-      "actor_loss": -0.0002,
-      "critic_loss": 3.4899
+      "rl_val_benigns_disrupted_pct": 5.26,
+      "actor_loss": -0.0005,
+      "critic_loss": 8.6823
     }
   ],
-  "best_checkpoint": "D:\\IROP MODEL\\DYNAMIC-ATTACK-ADAPTION-IDS\\models\\marl\\mappo_balanced_seed789_best.pt",
-  "final_checkpoint": "D:\\IROP MODEL\\DYNAMIC-ATTACK-ADAPTION-IDS\\models\\marl\\mappo_balanced_seed789_final.pt"
+  "best_checkpoint": "models/marl/mappo_balanced_seed789_best.pt",
+  "final_checkpoint": "models/marl/mappo_balanced_seed789_final.pt"
 }

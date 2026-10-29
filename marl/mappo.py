@@ -56,6 +56,7 @@ from config_marl import (
     PPO_EPOCHS,
     REPORTS_DIR,
     REWARD_SETTINGS,
+    STAGE4_EXTENDED_LIMIT_SEC,
     STAGE4_RUNTIME_LIMIT_SEC,
     TRAIN_SEEDS,
     TRIAGE_ACTIONS,
@@ -464,16 +465,42 @@ def run_pilot() -> Dict:
     log.info(f"Chosen training budget per seed: {chosen_budget} steps.")
     log.info(f"Estimated runtime for 15 runs: {total_est_seconds:.1f}s (budget cap: {STAGE4_RUNTIME_LIMIT_SEC}s).")
 
-    if total_est_seconds > STAGE4_RUNTIME_LIMIT_SEC:
-        active_settings = ["balanced"]
+    est_per_run = chosen_budget / max(1.0, steps_per_sec)
+    est_balanced_5 = est_per_run * 5
+    est_secfirst_3 = est_per_run * 3
+    est_total_2settings = est_balanced_5 + est_secfirst_3
+
+    if total_est_seconds <= STAGE4_RUNTIME_LIMIT_SEC:
+        active_settings = ["balanced", "security-first", "availability-first"]
+        training_plan = {
+            "balanced": TRAIN_SEEDS,
+            "security-first": TRAIN_SEEDS,
+            "availability-first": TRAIN_SEEDS,
+        }
+        skipped_reason = None
+    elif est_total_2settings <= STAGE4_EXTENDED_LIMIT_SEC:
+        active_settings = ["balanced", "security-first"]
+        training_plan = {
+            "balanced": TRAIN_SEEDS,
+            "security-first": TRAIN_SEEDS[:3],
+        }
         skipped_reason = (
-            f"Estimated training runtime ({total_est_seconds:.1f}s) exceeds 45-minute limit "
-            f"({STAGE4_RUNTIME_LIMIT_SEC}s). Reduced to 'balanced' setting only as per Stage 4 specification."
+            f"All 3 settings x 5 seeds estimated at {total_est_seconds:.1f}s (> 45 min / {STAGE4_RUNTIME_LIMIT_SEC}s). "
+            f"Trained 'balanced' (5 seeds, est {est_balanced_5:.1f}s) + 'security-first' (3 seeds, est {est_secfirst_3:.1f}s), "
+            f"total est {est_total_2settings:.1f}s <= 75 min ({STAGE4_EXTENDED_LIMIT_SEC}s). "
+            f"Skipped 'availability-first' and 'security-first' seeds 789, 1011."
+        )
+        log.warning(f"Restricting settings: {skipped_reason}")
+    else:
+        active_settings = ["balanced"]
+        training_plan = {
+            "balanced": TRAIN_SEEDS,
+        }
+        skipped_reason = (
+            f"All 3 settings x 5 seeds ({total_est_seconds:.1f}s) and 2 settings ({est_total_2settings:.1f}s) "
+            f"exceed 75-minute limit ({STAGE4_EXTENDED_LIMIT_SEC}s). Trained 'balanced' setting only (5 seeds)."
         )
         log.warning(f"Restricting to 'balanced' setting only: {skipped_reason}")
-    else:
-        active_settings = ["balanced", "security-first", "availability-first"]
-        skipped_reason = None
 
     pilot_metrics = {
         "description": "Stage 4 MAPPO Pilot Benchmark and Budget Selection",
@@ -483,6 +510,7 @@ def run_pilot() -> Dict:
         "steps_per_second": steps_per_sec,
         "rule": "budget = min(MAX_TRAIN_STEPS, steps_per_sec * 1500s), >= 100,000 steps",
         "chosen_budget": chosen_budget,
+        "training_plan": {s: list(seeds) for s, seeds in training_plan.items()},
         "active_settings": active_settings,
         "skipped_settings_reason": skipped_reason,
         "peak_ram_mb": round(get_peak_ram_mb(), 2),
@@ -595,8 +623,8 @@ def train_mappo_seed(
         "best_val_return": round(best_val_return, 4),
         "final_val_return": learning_curve[-1]["rl_val_return"],
         "learning_curve": learning_curve,
-        "best_checkpoint": str(best_checkpoint_path),
-        "final_checkpoint": str(final_checkpoint_path),
+        "best_checkpoint": f"models/marl/{best_checkpoint_path.name}",
+        "final_checkpoint": f"models/marl/{final_checkpoint_path.name}",
     }
 
     with open(train_log_path, "w", encoding="utf-8") as f:
@@ -628,10 +656,18 @@ def main():
         log.info(f"Loaded existing pilot metadata from {PILOT_JSON_PATH} (budget: {pilot_meta['chosen_budget']} steps)")
 
     budget = args.steps if args.steps is not None else pilot_meta["chosen_budget"]
-    target_settings = pilot_meta["active_settings"] if args.setting == "all" else [args.setting]
+    training_plan = pilot_meta.get("training_plan")
+    if training_plan is None:
+        training_plan = {s: TRAIN_SEEDS for s in pilot_meta.get("active_settings", ["balanced"])}
 
-    for setting in target_settings:
-        for seed in TRAIN_SEEDS:
+    if args.setting != "all":
+        seeds_to_run = TRAIN_SEEDS if args.setting == "balanced" else TRAIN_SEEDS[:3]
+        target_plan = {args.setting: seeds_to_run}
+    else:
+        target_plan = training_plan
+
+    for setting, seeds in target_plan.items():
+        for seed in seeds:
             train_log_path = REPORTS_DIR / f"marl_train_{setting}_seed{seed}.json"
             best_ckpt = MARL_MODELS_DIR / f"mappo_{setting}_seed{seed}_best.pt"
             if args.resume and train_log_path.exists() and best_ckpt.exists():
