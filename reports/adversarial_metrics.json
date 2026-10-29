@@ -1,83 +1,152 @@
 {
-  "fgsm_results": [
+  "zero_attack_control": {
+    "samples": 500,
+    "max_numerical_drift": 0.0,
+    "dnn_clean_raw_acc": 0.776,
+    "dnn_clean_pipeline_acc": 0.776,
+    "ensemble_clean_raw_acc": 0.956,
+    "ensemble_clean_pipeline_acc": 0.956
+  },
+  "fgsm_and_random_noise_results": [
     {
       "epsilon": 0.01,
-      "l2_perturbation": 0.0316,
-      "dnn_clean_acc": 0.148,
-      "dnn_adversarial_acc": 0.15,
+      "mean_l2_fgsm": 0.0313,
+      "mean_l2_random": 0.0291,
+      "dnn_clean_acc": 0.776,
+      "dnn_adversarial_acc": 0.774,
       "ensemble_clean_acc": 0.956,
-      "ensemble_adversarial_acc": 0.618,
-      "transfer_asr": 0.364,
-      "runtime_sec": 0.14
+      "ensemble_adversarial_acc": 0.57,
+      "transfer_asr": 0.41,
+      "ensemble_random_noise_acc": 0.706,
+      "random_noise_asr": 0.2699,
+      "runtime_sec": 0.17
     },
     {
       "epsilon": 0.05,
-      "l2_perturbation": 0.1561,
-      "dnn_clean_acc": 0.148,
-      "dnn_adversarial_acc": 0.146,
+      "mean_l2_fgsm": 0.1515,
+      "mean_l2_random": 0.1342,
+      "dnn_clean_acc": 0.776,
+      "dnn_adversarial_acc": 0.76,
       "ensemble_clean_acc": 0.956,
-      "ensemble_adversarial_acc": 0.66,
-      "transfer_asr": 0.3264,
-      "runtime_sec": 0.1
+      "ensemble_adversarial_acc": 0.532,
+      "transfer_asr": 0.4582,
+      "ensemble_random_noise_acc": 0.61,
+      "random_noise_asr": 0.3724,
+      "runtime_sec": 0.18
     },
     {
       "epsilon": 0.1,
-      "l2_perturbation": 0.3076,
-      "dnn_clean_acc": 0.148,
-      "dnn_adversarial_acc": 0.144,
+      "mean_l2_fgsm": 0.2943,
+      "mean_l2_random": 0.256,
+      "dnn_clean_acc": 0.776,
+      "dnn_adversarial_acc": 0.736,
       "ensemble_clean_acc": 0.956,
-      "ensemble_adversarial_acc": 0.572,
-      "transfer_asr": 0.4184,
-      "runtime_sec": 0.1
+      "ensemble_adversarial_acc": 0.51,
+      "transfer_asr": 0.4791,
+      "ensemble_random_noise_acc": 0.592,
+      "random_noise_asr": 0.3912,
+      "runtime_sec": 0.15
     },
     {
       "epsilon": 0.2,
-      "l2_perturbation": 0.6079,
-      "dnn_clean_acc": 0.148,
-      "dnn_adversarial_acc": 0.142,
+      "mean_l2_fgsm": 0.5689,
+      "mean_l2_random": 0.4756,
+      "dnn_clean_acc": 0.776,
+      "dnn_adversarial_acc": 0.624,
       "ensemble_clean_acc": 0.956,
-      "ensemble_adversarial_acc": 0.568,
-      "transfer_asr": 0.4163,
-      "runtime_sec": 0.09
+      "ensemble_adversarial_acc": 0.478,
+      "transfer_asr": 0.5167,
+      "ensemble_random_noise_acc": 0.566,
+      "random_noise_asr": 0.4205,
+      "runtime_sec": 0.15
     },
     {
       "epsilon": 0.3,
-      "l2_perturbation": 0.9067,
-      "dnn_clean_acc": 0.148,
-      "dnn_adversarial_acc": 0.158,
+      "mean_l2_fgsm": 0.8413,
+      "mean_l2_random": 0.6992,
+      "dnn_clean_acc": 0.776,
+      "dnn_adversarial_acc": 0.57,
       "ensemble_clean_acc": 0.956,
-      "ensemble_adversarial_acc": 0.496,
-      "transfer_asr": 0.4958,
-      "runtime_sec": 0.1
+      "ensemble_adversarial_acc": 0.39,
+      "transfer_asr": 0.6088,
+      "ensemble_random_noise_acc": 0.53,
+      "random_noise_asr": 0.4519,
+      "runtime_sec": 0.15
     }
   ],
-  "hopskipjump": {
-    "samples": 100,
-    "clean_accuracy": 0.95,
-    "adversarial_accuracy": 0.35,
-    "attack_success_rate": 0.6632,
-    "mean_l2_perturbation": 0.3244,
-    "runtime_sec": 256.08
+  "hopskipjump_budgets": {
+    "Budget 1 (Low: 3 iters, 10 evals)": {
+      "samples": 20,
+      "max_iter": 3,
+      "max_eval": 10,
+      "clean_accuracy": 1.0,
+      "adversarial_accuracy": 0.3,
+      "attack_success_rate": 0.7,
+      "mean_l2_perturbation": 0.7166,
+      "runtime_sec": 18.39
+    },
+    "Budget 2 (High: 6 iters, 20 evals)": {
+      "samples": 10,
+      "max_iter": 6,
+      "max_eval": 20,
+      "clean_accuracy": 0.8,
+      "adversarial_accuracy": 0.1,
+      "attack_success_rate": 1.0,
+      "mean_l2_perturbation": 0.7153,
+      "runtime_sec": 16.13
+    }
   },
-  "zoo": {
-    "samples": 40,
-    "clean_accuracy": 0.875,
-    "adversarial_accuracy": 0.7,
-    "attack_success_rate": 0.2286,
-    "mean_l2_perturbation": 0.0181,
-    "runtime_sec": 59.72
+  "zoo_budgets": {
+    "Budget 1 (Low: 4 iters)": {
+      "samples": 10,
+      "max_iter": 4,
+      "clean_accuracy": 0.9,
+      "adversarial_accuracy": 0.5,
+      "attack_success_rate": 0.4444,
+      "mean_l2_perturbation": 0.0979,
+      "runtime_sec": 18.37
+    },
+    "Budget 2 (High: 8 iters)": {
+      "samples": 10,
+      "max_iter": 8,
+      "clean_accuracy": 0.9,
+      "adversarial_accuracy": 0.3,
+      "attack_success_rate": 0.6667,
+      "mean_l2_perturbation": 0.1339,
+      "runtime_sec": 35.7
+    }
   },
   "defense_experiment": {
-    "training_samples_clean": 3000,
-    "training_samples_adv": 3000,
-    "baseline_clean_acc": 0.956,
-    "baseline_adv_acc_eps010": 0.572,
-    "retrained_clean_acc": 0.916,
-    "retrained_adv_acc_eps010": 0.908,
-    "clean_acc_delta": -0.04,
-    "adv_acc_gain": 0.336,
-    "runtime_sec": 1.61
+    "test_sample_size": 398,
+    "hsj_subsample_size": 15,
+    "arms": {
+      "Arm A: Original B2 (Full)": {
+        "clean_acc": 0.9673,
+        "fgsm_eps010_acc": 0.5126,
+        "random_noise_acc": 0.5779,
+        "hopskipjump_acc": 0.4
+      },
+      "Arm B: Retrained Clean 1x (3k)": {
+        "clean_acc": 0.9397,
+        "fgsm_eps010_acc": 0.407,
+        "random_noise_acc": 0.5025,
+        "hopskipjump_acc": 0.4
+      },
+      "Arm C: Retrained Clean 2x (6k)": {
+        "clean_acc": 0.9472,
+        "fgsm_eps010_acc": 0.4698,
+        "random_noise_acc": 0.5477,
+        "hopskipjump_acc": 0.5333
+      },
+      "Arm D: Retrained Clean + Adv (3k+3k)": {
+        "clean_acc": 0.9146,
+        "fgsm_eps010_acc": 0.8995,
+        "random_noise_acc": 0.6508,
+        "hopskipjump_acc": 0.7333
+      }
+    },
+    "runtime_sec": 22.25
   },
-  "runtime_total_sec": 319.48,
-  "peak_ram_mb": 676.0
+  "runtime_total_sec": 113.27,
+  "peak_ram_mb": 709.3
 }
