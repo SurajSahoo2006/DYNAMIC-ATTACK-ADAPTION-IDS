@@ -350,6 +350,7 @@ def run_stage_hsj(hsj1_samples: int = 100, hsj2_samples: int = 50, reuse_b1: boo
     print(f"  Clean Accuracy on HSJ test set (100 flows): {format_count_and_ci(k_hsj_clean, len(y_hsj_clean))}")
 
     hsj_results = {}
+    chunk_size = 10
 
     # Budget 1: Low Budget (3 iters, 10 evals) on 100 flows
     if reuse_b1:
