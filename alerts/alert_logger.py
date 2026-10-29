@@ -87,12 +87,36 @@ class ForensicAlertLogger:
         conf_band = "low" if confidence < 0.60 else ("medium" if confidence < 0.85 else "high")
         now_utc = datetime.now(timezone.utc).isoformat()
 
-        # Format top SHAP features for flat indexing
-        shap_summary_str = ""
-        shap_features_list = []
+        # Format and separate SHAP attribution values and raw flow telemetry values
+        shap_summary_parts = []
+        clean_shap_features = []
+        top_shap_values: Dict[str, float] = {}
+        top_raw_feature_values: Dict[str, float] = {}
+
         if top_shap_features:
-            shap_features_list = [f"{item['feature']} ({item.get('direction', 'risk')}: {item.get('unscaled_value', 0.0)})" for item in top_shap_features]
-            shap_summary_str = ", ".join(shap_features_list)
+            for item in top_shap_features:
+                feat = item.get("feature", "unknown")
+                shap_val = round(float(item.get("shap_value", 0.0)), 4)
+                raw_val = round(float(item.get("raw_value", item.get("unscaled_value", 0.0))), 4)
+                dir_label = str(item.get("direction", ""))
+                if "decreases" in dir_label:
+                    impact = "decreases_prediction"
+                elif "increases" in dir_label:
+                    impact = "increases_prediction"
+                else:
+                    impact = "positive_attribution" if shap_val >= 0 else "negative_attribution"
+
+                clean_shap_features.append({
+                    "feature": feat,
+                    "shap_value": shap_val,
+                    "raw_value": raw_val,
+                    "impact": impact,
+                })
+                top_shap_values[feat] = shap_val
+                top_raw_feature_values[feat] = raw_val
+                shap_summary_parts.append(f"{feat} [SHAP: {shap_val:+.4f}, Raw: {raw_val}]")
+
+        shap_summary_str = ", ".join(shap_summary_parts)
 
         entry = {
             "alert_id": f"ALT-{uuid.uuid4().hex[:12].upper()}",
@@ -109,7 +133,9 @@ class ForensicAlertLogger:
             "adversarial": bool(adversarial),
             "source": str(source),
             "top_shap_summary": shap_summary_str,
-            "top_shap_features": top_shap_features or [],
+            "top_shap_features": clean_shap_features,
+            "top_shap_values": top_shap_values,
+            "top_raw_feature_values": top_raw_feature_values,
             "explanation": str(explanation),
             "recommended_action": str(recommended_action),
             "prev_hash": self.last_hash,
