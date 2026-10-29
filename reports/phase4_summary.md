@@ -163,15 +163,21 @@ White-box gradients were computed on the PyTorch DNN surrogate (77.60% clean bas
 
 > **Finding**: FGSM transfer evasion exceeds random noise across all evaluated perturbation levels by **+8.6% to +15.7% ASR**. Even small gradient-guided shifts ($\epsilon = 0.01$, mean $L_2 = 0.031$) drop tree ensemble accuracy to 57.0%, demonstrating that surrogate gradient directions capture shared tabular vulnerabilities.
 
-### HopSkipJump Black-Box Attack (Multi-Budget Comparison)
-Evaluated directly on the B2 Tree Ensemble across decision boundaries under domain constraints:
+### HopSkipJump Black-Box Attack (Multi-Budget Comparison on Same 100 Flows)
+Evaluated directly on the B2 Tree Ensemble across decision boundaries on the same fixed, stratified set of 100 flows for both budgets:
 
-| Query Budget Setting | Sample Size | Max Iter | Max Eval | Clean Accuracy | Perturbed Accuracy | Attack Success Rate (ASR) | Mean $L_2$ | Runtime |
+| Query Budget Setting | Sample Size | Max Iter | Max Eval | Clean Accuracy | Perturbed Accuracy (Constrained) | Attack Success Rate (ASR) | Mean $ | Runtime |
 |:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **Budget 1 (Low)** | 100 flows | 3 | 10 | **93.0%** (93/100) [86.3%, 96.6%] | **29.0%** (29/100) [21.0%, 38.5%] | **72.0%** (67/93) [62.2%, 80.1%] | 0.4537 | 88.57 s |
-| **Budget 2 (High)** | 50 flows | 6 | 20 | **90.0%** (45/50) [78.6%, 95.7%] | **44.0%** (22/50) [31.2%, 57.7%] | **53.3%** (24/45) [39.1%, 67.1%] | 0.1279 | 69.75 s |
+| **Budget 1 (Low)** | 100 flows | 3 | 10 | **93.0%** (93/100) [86.3%, 96.6%] | **31.0%** (31/100) [22.8%, 40.6%] | **68.8%** (64/93) [58.8%, 77.3%] | 0.3983 | 108.88 s |
+| **Budget 2 (High)** | 100 flows | 6 | 20 | **93.0%** (93/100) [86.3%, 96.6%] | **38.0%** (38/100) [29.1%, 47.8%] | **61.3%** (57/93) [51.1%, 70.6%] | 0.2375 | 231.01 s |
 
-*Note*: Budget 2 was evaluated on a fixed 50-flow subset to keep CPU runtime manageable. Budget 2 achieves a smaller mean $L_2$ perturbation (0.1279 vs 0.4537) by performing finer binary searches along the decision boundary.
+*Methodological Rigor & Constraint Effects*:
+- **Same Flow Comparison**: Both budgets evaluate the exact same 100 flows under identical class distributions.
+- **Unconstrained vs. Constrained ASR**:
+  - Raw unconstrained attacks achieved 100.0% ASR (93/93) with mean  = 0.5745$ (Budget 1) and  = 0.3382$ (Budget 2).
+  - Domain constraint enforcement reversed **29 of 93 (31.2%)** evasions for Budget 1, and **36 of 93 (38.7%)** evasions for Budget 2. Higher iteration budgets achieve finer perturbations closer to the boundary ( = 0.2375$ vs .3983$), making them more susceptible to domain constraint snapping.
+- **Execution Safeguards**: Run flow-by-flow with a 30s per-flow timeout and 1,000 query cap. Zero candidate flows timed out (1 non-candidate flow hit the query cap in Budget 1 and was bounded safely).
+- **Small-Sample Note**: For  = 100$ flows, the 95% Wilson confidence intervals span approximately $\pm 8\text{--}9\%$, reflecting empirical sample size.
 
 ### Zeroth-Order Optimization (ZOO) Attack (Multi-Budget Comparison)
 Score-based coordinate descent attack against B2 Ensemble probabilities on a fixed set of 40 flows:
@@ -187,7 +193,7 @@ Score-based coordinate descent attack against B2 Ensemble probabilities on a fix
 
 ## 4. Defense Experiment: 4-Arm Multi-Condition Matrix
 
-Four model arms were trained and evaluated on **the same fresh test split of 500 flows** (and 50 fresh flows per arm for HopSkipJump):
+Four model arms were trained and evaluated on **the same fresh test split of 500 flows** (and 100 fresh flows per arm for HopSkipJump):
 - **Arm A**: Original B2 Ensemble (trained on full dataset).
 - **Arm B**: Retrained Clean 1x (3,000 clean training flows).
 - **Arm C**: Retrained Clean 2x (6,000 clean training flows, data volume control).
@@ -195,21 +201,23 @@ Four model arms were trained and evaluated on **the same fresh test split of 500
 
 ### 4-Arm Benchmark Matrix
 
-| Model Arm | Clean (500 flows) | FGSM $\epsilon=0.10$ (500 flows) | Random Noise (500 flows) | HSJ Budget 1 (50 flows/arm) | Held-Out FGSM $\epsilon=0.20$ (500 flows) |
+| Model Arm | Clean (500 flows) | FGSM $\epsilon=0.10$ (500 flows) | Random Noise (500 flows) | HSJ Budget 1 (100 flows/arm) | Held-Out FGSM $\epsilon=0.20$ (500 flows) |
 |:---|:---:|:---:|:---:|:---:|:---:|
-| **Arm A: Original B2** | **95.6%** (478/500) [93.4%, 97.1%] | 52.6% (263/500) [48.2%, 56.9%] | 61.6% (308/500) [57.3%, 65.8%] | 42.0% (21/50) [29.4%, 55.8%] | 49.6% (248/500) [45.2%, 54.0%] |
-| **Arm B: Retrained 1x (3k)** | 92.0% (460/500) [89.3%, 94.1%] | 44.4% (222/500) [40.1%, 48.8%] | 57.0% (285/500) [52.6%, 61.3%] | 34.0% (17/50) [22.4%, 47.9%] | 42.2% (211/500) [38.0%, 46.6%] |
-| **Arm C: Retrained 2x (6k)** | 91.6% (458/500) [88.8%, 93.7%] | 48.2% (241/500) [43.9%, 52.6%] | 58.0% (290/500) [53.6%, 62.3%] | 30.0% (15/50) [19.1%, 43.8%] | 45.4% (227/500) [41.1%, 49.8%] |
-| **Arm D: Retrained Clean+Adv** | 89.4% (447/500) [86.4%, 91.8%] | **88.8%** (444/500) [85.7%, 91.3%] | **69.0%** (345/500) [64.8%, 72.9%] | **52.0%** (26/50) [38.5%, 65.2%] | **63.0%** (315/500) [58.7%, 67.1%] |
+| **Arm A: Original B2** | **95.6%** (478/500) [93.4%, 97.1%] | 52.6% (263/500) [48.2%, 56.9%] | 61.6% (308/500) [57.3%, 65.8%] | 39.0% (39/100) [30.0%, 48.8%] | 49.6% (248/500) [45.2%, 54.0%] |
+| **Arm B: Retrained 1x (3k)** | 92.0% (460/500) [89.3%, 94.1%] | 44.4% (222/500) [40.1%, 48.8%] | 57.0% (285/500) [52.6%, 61.3%] | 41.0% (41/100) [31.9%, 50.8%] | 42.2% (211/500) [38.0%, 46.6%] |
+| **Arm C: Retrained 2x (6k)** | 91.6% (458/500) [88.8%, 93.7%] | 48.2% (241/500) [43.9%, 52.6%] | 58.0% (290/500) [53.6%, 62.3%] | 38.0% (38/100) [29.1%, 47.8%] | 45.4% (227/500) [41.1%, 49.8%] |
+| **Arm D: Retrained Clean+Adv** | 89.4% (447/500) [86.4%, 91.8%] | **88.8%** (444/500) [85.7%, 91.3%] | **69.0%** (345/500) [64.8%, 72.9%] | **56.0%** (56/100) [46.2%, 65.3%] | **63.0%** (315/500) [58.7%, 67.1%] |
 
 ### Honest Defense Assessment
-1. **Specific Hardening on Trained Attack**: Arm D hardened effectively against the exact attack family it was trained on (FGSM $\epsilon=0.10$), reaching **88.8% accuracy** (compared to 48.2% for Arm C).
+1. **Specific Hardening on Trained Attack**: Arm D hardened effectively against the exact attack family it was trained on (FGSM $\epsilon=0.10$), reaching **88.8% accuracy (444/500)** (compared to 48.2% (241/500) for Arm C).
 2. **Limited Generalization**: Arm D **does not generalize broadly** across arbitrary perturbations:
-   - Under isotropic random noise of matching $L_2$, accuracy drops to **69.0%**.
-   - Under held-out FGSM at doubled magnitude ($\epsilon=0.20$), accuracy drops to **63.0%**.
-   - Under black-box HopSkipJump, accuracy drops to **52.0% [38.5%, 65.2%]**.
+   - Under isotropic random noise of matching $, accuracy drops to **69.0% (345/500)**.
+   - Under held-out FGSM at doubled magnitude ($\epsilon=0.20$), accuracy drops to **63.0% (315/500)**.
+   - Under black-box HopSkipJump (100 flows), accuracy drops to **56.0% (56/100) [46.2%, 65.3%]**.
    Arm D hardened specifically against the perturbation vector it observed during training.
-3. **The Robustness Tax**: Arm D exhibits a **-2.2% drop** in clean test accuracy (89.4% vs 91.6% for Arm C, and 95.6% for full-data Arm A).
+3. **The Robustness Tax**: Arm D exhibits a **-2.2% drop** in clean test accuracy (89.4% (447/500) vs 91.6% (458/500) for Arm C, and 95.6% (478/500) for full-data Arm A).
+4. **Statistical Uncertainty**: For test conditions with  = 100$ flows, the confidence interval is wider ($\pm 9.5\%$, [46.2%, 65.3%]); claims of generalization must reflect this empirical uncertainty.
+
 
 ---
 

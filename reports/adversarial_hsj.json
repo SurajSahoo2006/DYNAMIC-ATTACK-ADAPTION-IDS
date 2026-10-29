@@ -9,44 +9,62 @@
       0.8625,
       0.9657
     ],
-    "adversarial_accuracy": 0.29,
-    "adversarial_count": "29/100",
+    "raw_adversarial_accuracy": 0.02,
+    "raw_adversarial_count": "2/100",
+    "raw_asr": 1.0,
+    "raw_asr_count": "93/93",
+    "raw_mean_l2": 0.5745,
+    "adversarial_accuracy": 0.31,
+    "adversarial_count": "31/100",
     "adversarial_ci_95": [
-      0.2101,
-      0.3848
+      0.2278,
+      0.4063
     ],
-    "attack_success_rate": 0.7204,
-    "attack_success_count": "67/93",
+    "attack_success_rate": 0.6882,
+    "attack_success_count": "64/93",
     "asr_ci_95": [
-      0.6216,
-      0.8011
+      0.5881,
+      0.7733
     ],
-    "mean_l2_perturbation": 0.4537,
-    "runtime_sec": 88.57
+    "mean_l2_perturbation": 0.3983,
+    "constraint_reversed_count": "29/93",
+    "constraint_reversed_share": 0.3118,
+    "timeouts": 1,
+    "timeouts_in_candidates": 0,
+    "runtime_sec": 108.88
   },
   "Budget 2 (High: 6 iters, 20 evals)": {
-    "samples": 50,
+    "samples": 100,
     "max_iter": 6,
     "max_eval": 20,
-    "clean_accuracy": 0.9,
-    "clean_count": "45/50",
+    "clean_accuracy": 0.93,
+    "clean_count": "93/100",
     "clean_ci_95": [
-      0.7864,
-      0.9565
+      0.8625,
+      0.9657
     ],
-    "adversarial_accuracy": 0.44,
-    "adversarial_count": "22/50",
+    "raw_adversarial_accuracy": 0.03,
+    "raw_adversarial_count": "3/100",
+    "raw_asr": 1.0,
+    "raw_asr_count": "93/93",
+    "raw_mean_l2": 0.3382,
+    "adversarial_accuracy": 0.38,
+    "adversarial_count": "38/100",
     "adversarial_ci_95": [
-      0.3116,
-      0.5769
+      0.291,
+      0.4779
     ],
-    "attack_success_rate": 0.5333,
-    "attack_success_count": "24/45",
+    "attack_success_rate": 0.6129,
+    "attack_success_count": "57/93",
     "asr_ci_95": [
-      0.3908,
-      0.6706
+      0.5113,
+      0.7055
     ],
-    "mean_l2_perturbation": 0.1279,
-    "runtime_sec": 69.75
+    "mean_l2_perturbation": 0.2375,
+    "constraint_reversed_count": "36/93",
+    "constraint_reversed_share": 0.3871,
+    "timeouts": 0,
+    "timeouts_in_candidates": 0,
+    "runtime_sec": 231.01
   }
 }

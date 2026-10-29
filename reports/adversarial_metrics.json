@@ -170,45 +170,63 @@
         0.8625,
         0.9657
       ],
-      "adversarial_accuracy": 0.29,
-      "adversarial_count": "29/100",
+      "raw_adversarial_accuracy": 0.02,
+      "raw_adversarial_count": "2/100",
+      "raw_asr": 1.0,
+      "raw_asr_count": "93/93",
+      "raw_mean_l2": 0.5745,
+      "adversarial_accuracy": 0.31,
+      "adversarial_count": "31/100",
       "adversarial_ci_95": [
-        0.2101,
-        0.3848
+        0.2278,
+        0.4063
       ],
-      "attack_success_rate": 0.7204,
-      "attack_success_count": "67/93",
+      "attack_success_rate": 0.6882,
+      "attack_success_count": "64/93",
       "asr_ci_95": [
-        0.6216,
-        0.8011
+        0.5881,
+        0.7733
       ],
-      "mean_l2_perturbation": 0.4537,
-      "runtime_sec": 88.57
+      "mean_l2_perturbation": 0.3983,
+      "constraint_reversed_count": "29/93",
+      "constraint_reversed_share": 0.3118,
+      "timeouts": 1,
+      "timeouts_in_candidates": 0,
+      "runtime_sec": 108.88
     },
     "Budget 2 (High: 6 iters, 20 evals)": {
-      "samples": 50,
+      "samples": 100,
       "max_iter": 6,
       "max_eval": 20,
-      "clean_accuracy": 0.9,
-      "clean_count": "45/50",
+      "clean_accuracy": 0.93,
+      "clean_count": "93/100",
       "clean_ci_95": [
-        0.7864,
-        0.9565
+        0.8625,
+        0.9657
       ],
-      "adversarial_accuracy": 0.44,
-      "adversarial_count": "22/50",
+      "raw_adversarial_accuracy": 0.03,
+      "raw_adversarial_count": "3/100",
+      "raw_asr": 1.0,
+      "raw_asr_count": "93/93",
+      "raw_mean_l2": 0.3382,
+      "adversarial_accuracy": 0.38,
+      "adversarial_count": "38/100",
       "adversarial_ci_95": [
-        0.3116,
-        0.5769
+        0.291,
+        0.4779
       ],
-      "attack_success_rate": 0.5333,
-      "attack_success_count": "24/45",
+      "attack_success_rate": 0.6129,
+      "attack_success_count": "57/93",
       "asr_ci_95": [
-        0.3908,
-        0.6706
+        0.5113,
+        0.7055
       ],
-      "mean_l2_perturbation": 0.1279,
-      "runtime_sec": 69.75
+      "mean_l2_perturbation": 0.2375,
+      "constraint_reversed_count": "36/93",
+      "constraint_reversed_share": 0.3871,
+      "timeouts": 0,
+      "timeouts_in_candidates": 0,
+      "runtime_sec": 231.01
     }
   },
   "zoo_budgets": {
@@ -263,7 +281,7 @@
   },
   "defense_experiment": {
     "test_sample_size": 500,
-    "hsj_sample_size": 50,
+    "hsj_sample_size": 100,
     "arms": {
       "Arm A: Original B2 (Full Data)": {
         "clean": {
@@ -298,12 +316,12 @@
             0.5397
           ]
         },
-        "hopskipjump_50": {
-          "count": "21/50",
-          "acc": 0.42,
+        "hopskipjump_100": {
+          "count": "39/100",
+          "acc": 0.39,
           "ci_95": [
-            0.2938,
-            0.5577
+            0.3002,
+            0.488
           ]
         }
       },
@@ -340,12 +358,12 @@
             0.4657
           ]
         },
-        "hopskipjump_50": {
-          "count": "17/50",
-          "acc": 0.34,
+        "hopskipjump_100": {
+          "count": "41/100",
+          "acc": 0.41,
           "ci_95": [
-            0.2244,
-            0.4785
+            0.3187,
+            0.508
           ]
         }
       },
@@ -382,12 +400,12 @@
             0.4978
           ]
         },
-        "hopskipjump_50": {
-          "count": "15/50",
-          "acc": 0.3,
+        "hopskipjump_100": {
+          "count": "38/100",
+          "acc": 0.38,
           "ci_95": [
-            0.191,
-            0.4375
+            0.291,
+            0.4779
           ]
         }
       },
@@ -424,22 +442,22 @@
             0.6712
           ]
         },
-        "hopskipjump_50": {
-          "count": "26/50",
-          "acc": 0.52,
+        "hopskipjump_100": {
+          "count": "56/100",
+          "acc": 0.56,
           "ci_95": [
-            0.3851,
-            0.652
+            0.4623,
+            0.6533
           ]
         }
       }
     },
-    "runtime_sec": 99.62
+    "runtime_sec": 346.22
   },
   "stage_runtimes_sec": {
     "fgsm": 1.97,
-    "hsj": 158.32,
+    "hsj": 339.89,
     "zoo": 157.47,
-    "defense": 99.62
+    "defense": 346.22
   }
 }

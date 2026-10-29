@@ -1,6 +1,6 @@
 {
   "test_sample_size": 500,
-  "hsj_sample_size": 50,
+  "hsj_sample_size": 100,
   "arms": {
     "Arm A: Original B2 (Full Data)": {
       "clean": {
@@ -35,12 +35,12 @@
           0.5397
         ]
       },
-      "hopskipjump_50": {
-        "count": "21/50",
-        "acc": 0.42,
+      "hopskipjump_100": {
+        "count": "39/100",
+        "acc": 0.39,
         "ci_95": [
-          0.2938,
-          0.5577
+          0.3002,
+          0.488
         ]
       }
     },
@@ -77,12 +77,12 @@
           0.4657
         ]
       },
-      "hopskipjump_50": {
-        "count": "17/50",
-        "acc": 0.34,
+      "hopskipjump_100": {
+        "count": "41/100",
+        "acc": 0.41,
         "ci_95": [
-          0.2244,
-          0.4785
+          0.3187,
+          0.508
         ]
       }
     },
@@ -119,12 +119,12 @@
           0.4978
         ]
       },
-      "hopskipjump_50": {
-        "count": "15/50",
-        "acc": 0.3,
+      "hopskipjump_100": {
+        "count": "38/100",
+        "acc": 0.38,
         "ci_95": [
-          0.191,
-          0.4375
+          0.291,
+          0.4779
         ]
       }
     },
@@ -161,15 +161,15 @@
           0.6712
         ]
       },
-      "hopskipjump_50": {
-        "count": "26/50",
-        "acc": 0.52,
+      "hopskipjump_100": {
+        "count": "56/100",
+        "acc": 0.56,
         "ci_95": [
-          0.3851,
-          0.652
+          0.4623,
+          0.6533
         ]
       }
     }
   },
-  "runtime_sec": 99.62
+  "runtime_sec": 346.22
 }

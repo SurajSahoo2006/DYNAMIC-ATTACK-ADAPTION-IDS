@@ -189,7 +189,7 @@ def check_requirements_completeness() -> List[str]:
         "shutil", "datetime", "re", "warnings", "collections", "ast", "glob", "math",
         "models", "ingest", "preprocess", "xai", "adversarial", "alerts", "orchestrator",
         "config", "predict", "tools", "__future__", "dataclasses", "gc", "uuid", "experiments",
-        "run_phase3_llm", "scapy"
+        "run_phase3_llm", "scapy", "concurrent"
     }
 
     missing = []
