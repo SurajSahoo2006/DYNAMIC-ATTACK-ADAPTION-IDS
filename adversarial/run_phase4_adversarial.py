@@ -21,6 +21,8 @@ logs progress every 10 flows to logs/adversarial_run.log.
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
+from datetime import datetime
 import json
 import logging
 import os
@@ -324,7 +326,282 @@ def run_stage_fgsm(fgsm_samples: int = 500) -> Dict[str, Any]:
 # ======================================================================
 # STAGE 2: HopSkipJump Decision-Based Attack (Multi-Budget on SAME 100 flows)
 # ======================================================================
-def run_stage_hsj(hsj_samples: int = 100) -> Dict[str, Any]:
+class FlowTimeoutError(Exception):
+    """Raised when HopSkipJump per-flow evaluation exceeds the allowed time limit."""
+    pass
+
+
+class FlowQueryCapError(Exception):
+    """Raised when HopSkipJump per-flow evaluation exceeds the allowed query cap."""
+    pass
+
+
+def generate_hsj_flow_by_flow(
+    X_clean: np.ndarray,
+    y_clean: np.ndarray,
+    clean_preds: np.ndarray,
+    predictor: Callable[[np.ndarray], np.ndarray],
+    enforcer: AdversarialConstraintEnforcer,
+    budget_name: str,
+    max_iter: int,
+    max_eval: int,
+    init_eval: int,
+    checkpoint_file: Optional[Path] = None,
+    resume: bool = False,
+    per_flow_timeout: float = 30.0,
+    max_queries: int = 1000,
+    log_prefix: str = "HSJ",
+) -> Tuple[np.ndarray, np.ndarray, Dict[str, Any]]:
+    """
+    Executes HopSkipJump iteratively on each individual flow with:
+    1. Per-flow timeout limit (default 30s)
+    2. Per-flow query cap (default 1000 queries)
+    3. Checkpointing every 10 flows to JSON with --resume capability
+    4. Progress logging every 5 flows with elapsed time, rate, and slowest flow
+    5. Warning if any flow exceeds 60s
+    6. Isolated execution per sample avoiding multi-sample line-search deadlocks
+    """
+    N = len(X_clean)
+    completed_flows: Dict[str, Any] = {}
+
+    if resume and checkpoint_file and checkpoint_file.exists():
+        try:
+            with open(checkpoint_file, "r", encoding="utf-8") as f:
+                chk_all = json.load(f)
+            if budget_name in chk_all and "flows" in chk_all[budget_name]:
+                completed_flows = chk_all[budget_name]["flows"]
+                print(f"  [RESUME] Loaded {len(completed_flows)}/{N} completed flows from checkpoint for '{budget_name}'.")
+        except Exception as e:
+            print(f"  [RESUME WARNING] Could not read checkpoint: {e}")
+
+    t_budget_start = time.time()
+    slowest_sec = 0.0
+    slowest_idx = -1
+    slowest_queries = 0
+
+    for idx_str, entry in completed_flows.items():
+        if entry.get("seconds", 0.0) > slowest_sec:
+            slowest_sec = entry["seconds"]
+            slowest_idx = entry["flow_idx"]
+            slowest_queries = entry.get("queries", 0)
+
+    for i in range(N):
+        idx_key = str(i)
+        if idx_key in completed_flows:
+            continue
+
+        flow_x = X_clean[i : i + 1]
+        flow_y = y_clean[i]
+        clean_pred = int(clean_preds[i])
+
+        flow_state = {
+            "flow_idx": i,
+            "start_time": time.time(),
+            "queries": 0,
+        }
+
+        def guarded_predict(x: np.ndarray) -> np.ndarray:
+            now = time.time()
+            if now - flow_state["start_time"] > per_flow_timeout:
+                raise FlowTimeoutError(f"Flow {i} exceeded {per_flow_timeout}s timeout")
+            if flow_state["queries"] + len(x) > max_queries:
+                raise FlowQueryCapError(f"Flow {i} exceeded query cap {max_queries}")
+            flow_state["queries"] += len(x)
+            return predictor(x)
+
+        bbox = BlackBoxClassifierNeuralNetwork(
+            predict_fn=guarded_predict, input_shape=(19,), nb_classes=8
+        )
+        attack = HopSkipJump(
+            classifier=bbox,
+            targeted=False,
+            max_iter=max_iter,
+            max_eval=max_eval,
+            init_eval=init_eval,
+            verbose=False,
+        )
+
+        t_flow_start = time.time()
+        outcome = "normal"
+        adv_flow_raw = flow_x.copy()
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(attack.generate, x=flow_x)
+            try:
+                adv_cand = future.result(timeout=per_flow_timeout + 2.0)
+                adv_flow_raw = adv_cand
+                raw_pred = int(np.argmax(predictor(adv_flow_raw), axis=1)[0])
+                outcome = "evaded_raw" if raw_pred != flow_y else "evasion_failed"
+            except (FlowTimeoutError, concurrent.futures.TimeoutError):
+                outcome = "timeout"
+                raw_pred = clean_pred
+            except FlowQueryCapError:
+                outcome = "query_cap"
+                raw_pred = clean_pred
+            except Exception as ex:
+                outcome = f"error_{type(ex).__name__}"
+                raw_pred = clean_pred
+
+        t_flow_elapsed = time.time() - t_flow_start
+        if t_flow_elapsed > 60.0:
+            print(f"  [WARNING] Flow {i} took {t_flow_elapsed:.2f}s (> 60s)!", flush=True)
+
+        if t_flow_elapsed > slowest_sec:
+            slowest_sec = t_flow_elapsed
+            slowest_idx = i
+            slowest_queries = flow_state["queries"]
+
+        adv_flow_constrained = enforcer.enforce_constraints(adv_flow_raw, flow_x)
+        pred_constrained = int(np.argmax(predictor(adv_flow_constrained), axis=1)[0])
+        l2_raw = float(np.linalg.norm(adv_flow_raw - flow_x))
+        l2_constrained = float(np.linalg.norm(adv_flow_constrained - flow_x))
+
+        completed_flows[idx_key] = {
+            "flow_idx": i,
+            "outcome": outcome,
+            "true_label": int(flow_y),
+            "clean_pred": clean_pred,
+            "raw_pred": raw_pred,
+            "constrained_pred": pred_constrained,
+            "queries": flow_state["queries"],
+            "seconds": round(t_flow_elapsed, 3),
+            "l2_raw": round(l2_raw, 4),
+            "l2_constrained": round(l2_constrained, 4),
+            "raw_adv": adv_flow_raw[0].tolist(),
+            "constrained_adv": adv_flow_constrained[0].tolist(),
+        }
+
+        # Checkpoint every 10 flows or on last flow
+        if checkpoint_file and ((i + 1) % 10 == 0 or (i + 1) == N):
+            try:
+                chk_all = {}
+                if checkpoint_file.exists():
+                    with open(checkpoint_file, "r", encoding="utf-8") as f:
+                        chk_all = json.load(f)
+                chk_all[budget_name] = {
+                    "completed": (len(completed_flows) == N),
+                    "total_flows": N,
+                    "completed_count": len(completed_flows),
+                    "flows": completed_flows,
+                }
+                with open(checkpoint_file, "w", encoding="utf-8") as f:
+                    json.dump(chk_all, f, indent=2)
+            except Exception as e:
+                print(f"  [CHECKPOINT ERROR] Failed to write checkpoint: {e}")
+
+        # Progress logging every 5 flows or on last flow
+        if (i + 1) % 5 == 0 or (i + 1) == N:
+            elapsed = time.time() - t_budget_start
+            rate = (i + 1) / elapsed if elapsed > 0 else 0.0
+            log_line = (
+                f"[{log_prefix}] Flows {i + 1:3d}/{N} ({(i + 1) / N * 100:5.1f}%) | "
+                f"Elapsed: {elapsed:6.1f}s | Rate: {rate:4.2f} flows/s | "
+                f"Slowest: Flow {slowest_idx} ({slowest_sec:.2f}s, {slowest_queries} q)"
+            )
+            print("  " + log_line, flush=True)
+            with open(RUN_LOG_PATH, "a", encoding="utf-8") as lf:
+                lf.write(f"[{datetime.now().strftime('%H:%M:%S')}] {log_line}\n")
+
+    # Assemble arrays
+    X_raw_list = [completed_flows[str(i)]["raw_adv"] for i in range(N)]
+    X_constrained_list = [completed_flows[str(i)]["constrained_adv"] for i in range(N)]
+    X_raw = np.array(X_raw_list, dtype=np.float32)
+    X_constrained = np.array(X_constrained_list, dtype=np.float32)
+    t_budget_total = time.time() - t_budget_start
+
+    # Metrics computation
+    entries = [completed_flows[str(i)] for i in range(N)]
+    m_clean = (clean_preds == y_clean)
+    n_corr_clean = int(np.sum(m_clean))
+    k_clean = int(np.sum(clean_preds == y_clean))
+    acc_clean = float(k_clean / N)
+    ci_cl_l, ci_cl_u = wilson_ci(k_clean, N)
+
+    n_timeouts = sum(1 for e in entries if e["outcome"] in ["timeout", "query_cap"])
+    cand_entries = [e for e in entries if e["clean_pred"] == e["true_label"]]
+    t_cand = sum(1 for e in cand_entries if e["outcome"] in ["timeout", "query_cap"])
+    n_attacked_clean = n_corr_clean - t_cand
+
+    # Raw evaluation
+    l2_raw = float(np.mean(np.linalg.norm(X_raw - X_clean, axis=1)))
+    preds_raw = np.array([e["raw_pred"] for e in entries], dtype=np.int64)
+    k_raw = int(np.sum(preds_raw == y_clean))
+    acc_raw = float(k_raw / N)
+
+    evaded_raw_mask = [(e["clean_pred"] == e["true_label"] and e["outcome"] == "evaded_raw") for e in entries]
+    n_evaded_raw = int(sum(evaded_raw_mask))
+    asr_raw = float(n_evaded_raw / n_attacked_clean) if n_attacked_clean > 0 else 0.0
+
+    # Constrained evaluation
+    l2_constrained = float(np.mean(np.linalg.norm(X_constrained - X_clean, axis=1)))
+    preds_constrained = np.array([e["constrained_pred"] for e in entries], dtype=np.int64)
+    k_constrained = int(np.sum(preds_constrained == y_clean))
+    acc_constrained = float(k_constrained / N)
+    ci_c_l, ci_c_u = wilson_ci(k_constrained, N)
+
+    evaded_constrained_mask = [
+        (e["clean_pred"] == e["true_label"] and e["constrained_pred"] != e["true_label"] and e["outcome"] not in ["timeout", "query_cap"])
+        for e in entries
+    ]
+    n_evaded_constrained = int(sum(evaded_constrained_mask))
+    asr_constrained = float(n_evaded_constrained / n_attacked_clean) if n_attacked_clean > 0 else 0.0
+    ci_asr_l, ci_asr_u = wilson_ci(n_evaded_constrained, n_attacked_clean if n_attacked_clean > 0 else 1)
+
+    n_reversed = int(sum(
+        (e["clean_pred"] == e["true_label"] and e["outcome"] == "evaded_raw" and e["constrained_pred"] == e["true_label"])
+        for e in entries
+    ))
+    pct_reversed = float(n_reversed / n_evaded_raw) if n_evaded_raw > 0 else 0.0
+
+    asr_count_str = (
+        f"{n_evaded_constrained}/{n_attacked_clean} attacked ({t_cand} timed out)"
+        if t_cand > 0
+        else f"{n_evaded_constrained}/{n_corr_clean}"
+    )
+
+    metrics = {
+        "samples": N,
+        "max_iter": max_iter,
+        "max_eval": max_eval,
+        "clean_accuracy": round(acc_clean, 4),
+        "clean_count": f"{k_clean}/{N}",
+        "clean_ci_95": [round(ci_cl_l, 4), round(ci_cl_u, 4)],
+        "raw_adversarial_accuracy": round(acc_raw, 4),
+        "raw_adversarial_count": f"{k_raw}/{N}",
+        "raw_asr": round(asr_raw, 4),
+        "raw_asr_count": f"{n_evaded_raw}/{n_attacked_clean}",
+        "raw_mean_l2": round(l2_raw, 4),
+        "adversarial_accuracy": round(acc_constrained, 4),
+        "adversarial_count": f"{k_constrained}/{N}",
+        "adversarial_ci_95": [round(ci_c_l, 4), round(ci_c_u, 4)],
+        "attack_success_rate": round(asr_constrained, 4),
+        "attack_success_count": asr_count_str,
+        "asr_ci_95": [round(ci_asr_l, 4), round(ci_asr_u, 4)],
+        "mean_l2_perturbation": round(l2_constrained, 4),
+        "constraint_reversed_count": f"{n_reversed}/{n_evaded_raw}",
+        "constraint_reversed_share": round(pct_reversed, 4),
+        "timeouts": n_timeouts,
+        "timeouts_in_candidates": t_cand,
+        "runtime_sec": round(t_budget_total, 2),
+    }
+
+    print(f"  {budget_name} Results on same {N} flows:")
+    print(f"    Raw (Unconstrained): Acc={k_raw}/{N} ({acc_raw*100:.1f}%) | ASR={n_evaded_raw}/{n_attacked_clean} ({asr_raw*100:.1f}%) | Mean L2: {l2_raw:.4f}")
+    print(f"    Constrained:         Acc={format_count_and_ci(k_constrained, N)}")
+    print(f"    Constrained ASR:     {format_count_and_ci(n_evaded_constrained, n_attacked_clean)} | Mean L2: {l2_constrained:.4f} ({t_budget_total:.2f}s)")
+    if t_cand > 0:
+        print(f"    Timeouts:            {t_cand} flows timed out (excluded from denominator)")
+    print(f"    Constraint Effect:   {n_reversed}/{n_evaded_raw} ({pct_reversed*100:.1f}%) evasions reversed by protocol/range bounds")
+
+    return X_raw, X_constrained, metrics
+
+
+def run_stage_hsj(
+    hsj_samples: int = 100,
+    resume: bool = False,
+    per_flow_timeout: float = 30.0,
+    max_queries: int = 1000,
+) -> Dict[str, Any]:
     print("\n" + "=" * 80)
     print(f"  STAGE 2: HOPSKIPJUMP DECISION-BASED ATTACK (SAME {hsj_samples} flows for both budgets)")
     print("=" * 80)
@@ -332,11 +609,6 @@ def run_stage_hsj(hsj_samples: int = 100) -> Dict[str, Any]:
     _, _, selected_features, _, _, enforcer, df_test, ensemble = load_shared_environment()
     fast_predict = get_fast_ensemble_predictor(ensemble)
 
-    classifier_ensemble = BlackBoxClassifierNeuralNetwork(
-        predict_fn=fast_predict, input_shape=(19,), nb_classes=8
-    )
-
-    # Fixed 100 flows test set
     df_hsj = sample_stratified_subset(df_test, n_samples=hsj_samples, seed=RANDOM_SEED + 10)
     X_hsj_clean = df_hsj[selected_features].to_numpy(dtype=np.float32)
     y_hsj_clean = df_hsj["label_8"].to_numpy(dtype=np.int64)
@@ -344,15 +616,10 @@ def run_stage_hsj(hsj_samples: int = 100) -> Dict[str, Any]:
     prob_hsj_clean = fast_predict(X_hsj_clean)
     preds_hsj_clean = np.argmax(prob_hsj_clean, axis=1)
     k_hsj_clean = int(np.sum(preds_hsj_clean == y_hsj_clean))
-    acc_hsj_clean = float(accuracy_score(y_hsj_clean, preds_hsj_clean))
-    ci_hsj_cl, ci_hsj_cu = wilson_ci(k_hsj_clean, len(y_hsj_clean))
-
     print(f"  Clean Accuracy on HSJ test set ({hsj_samples} flows): {format_count_and_ci(k_hsj_clean, len(y_hsj_clean))}")
 
+    checkpoint_file = REPORTS_DIR / "adversarial_hsj_partial.json"
     hsj_results = {}
-    chunk_size = 10
-    m_clean = (preds_hsj_clean == y_hsj_clean)
-    n_corr_clean = int(np.sum(m_clean))
 
     budgets = [
         ("Budget 1 (Low: 3 iters, 10 evals)", 3, 10, 5),
@@ -360,77 +627,26 @@ def run_stage_hsj(hsj_samples: int = 100) -> Dict[str, Any]:
     ]
 
     for budget_name, max_iter, max_eval, init_eval in budgets:
-        print(f"\n  Running {budget_name} on {hsj_samples} flows in chunks of 10 ...")
-        t_b = time.time()
-        attack_hsj = HopSkipJump(
-            classifier=classifier_ensemble, targeted=False, max_iter=max_iter, max_eval=max_eval, init_eval=init_eval, verbose=False
+        print(f"\n  Running {budget_name} on {hsj_samples} flows flow-by-flow (timeout: {per_flow_timeout}s, cap: {max_queries} q) ...")
+        _, _, metrics = generate_hsj_flow_by_flow(
+            X_clean=X_hsj_clean,
+            y_clean=y_hsj_clean,
+            clean_preds=preds_hsj_clean,
+            predictor=fast_predict,
+            enforcer=enforcer,
+            budget_name=budget_name,
+            max_iter=max_iter,
+            max_eval=max_eval,
+            init_eval=init_eval,
+            checkpoint_file=checkpoint_file,
+            resume=resume,
+            per_flow_timeout=per_flow_timeout,
+            max_queries=max_queries,
+            log_prefix=f"HSJ-I{max_iter}",
         )
-        adv_chunks = []
-        for i in range(0, len(X_hsj_clean), chunk_size):
-            chunk = X_hsj_clean[i : i + chunk_size]
-            adv_chunks.append(attack_hsj.generate(x=chunk))
-            log_progress(f"HSJ-I{max_iter}", min(i + chunk_size, len(X_hsj_clean)), len(X_hsj_clean), t_b)
-        X_raw = np.vstack(adv_chunks)
-        X_constrained = enforcer.enforce_constraints(X_raw, X_hsj_clean)
-        t_total = time.time() - t_b
-
-        # Raw (unconstrained) evaluation
-        l2_raw = float(np.mean(np.linalg.norm(X_raw - X_hsj_clean, axis=1)))
-        preds_raw = np.argmax(fast_predict(X_raw), axis=1)
-        k_raw = int(np.sum(preds_raw == y_hsj_clean))
-        acc_raw = float(accuracy_score(y_hsj_clean, preds_raw))
-        n_evaded_raw = int(np.sum(preds_raw[m_clean] != y_hsj_clean[m_clean]))
-        asr_raw = float(n_evaded_raw / n_corr_clean) if n_corr_clean > 0 else 0.0
-
-        # Constrained evaluation
-        l2_constrained = float(np.mean(np.linalg.norm(X_constrained - X_hsj_clean, axis=1)))
-        preds_constrained = np.argmax(fast_predict(X_constrained), axis=1)
-        k_constrained = int(np.sum(preds_constrained == y_hsj_clean))
-        acc_constrained = float(accuracy_score(y_hsj_clean, preds_constrained))
-        ci_c_l, ci_c_u = wilson_ci(k_constrained, len(y_hsj_clean))
-        n_evaded_constrained = int(np.sum(preds_constrained[m_clean] != y_hsj_clean[m_clean]))
-        asr_constrained = float(n_evaded_constrained / n_corr_clean) if n_corr_clean > 0 else 0.0
-        ci_asr_l, ci_asr_u = wilson_ci(n_evaded_constrained, n_corr_clean)
-
-        # Constraint reversal effect: attack succeeded raw, but domain constraints restored correct label
-        n_reversed = int(np.sum((preds_raw[m_clean] != y_hsj_clean[m_clean]) & (preds_constrained[m_clean] == y_hsj_clean[m_clean])))
-        pct_reversed = float(n_reversed / n_evaded_raw) if n_evaded_raw > 0 else 0.0
-
-        print(f"  {budget_name} Results on same {hsj_samples} flows:")
-        print(f"    Raw (Unconstrained): Acc={k_raw}/{len(y_hsj_clean)} ({acc_raw*100:.1f}%) | ASR={n_evaded_raw}/{n_corr_clean} ({asr_raw*100:.1f}%) | Mean L2: {l2_raw:.4f}")
-        print(f"    Constrained:         Acc={format_count_and_ci(k_constrained, len(y_hsj_clean))}")
-        print(f"    Constrained ASR:     {format_count_and_ci(n_evaded_constrained, n_corr_clean)} | Mean L2: {l2_constrained:.4f} ({t_total:.2f}s)")
-        print(f"    Constraint Effect:   {n_reversed}/{n_evaded_raw} ({pct_reversed*100:.1f}%) evasions reversed by protocol/range bounds")
-
-        hsj_results[budget_name] = {
-            "samples": hsj_samples,
-            "max_iter": max_iter,
-            "max_eval": max_eval,
-            "clean_accuracy": round(acc_hsj_clean, 4),
-            "clean_count": f"{k_hsj_clean}/{len(y_hsj_clean)}",
-            "clean_ci_95": [round(ci_hsj_cl, 4), round(ci_hsj_cu, 4)],
-            "raw_adversarial_accuracy": round(acc_raw, 4),
-            "raw_adversarial_count": f"{k_raw}/{len(y_hsj_clean)}",
-            "raw_asr": round(asr_raw, 4),
-            "raw_asr_count": f"{n_evaded_raw}/{n_corr_clean}",
-            "raw_mean_l2": round(l2_raw, 4),
-            "adversarial_accuracy": round(acc_constrained, 4),
-            "adversarial_count": f"{k_constrained}/{len(y_hsj_clean)}",
-            "adversarial_ci_95": [round(ci_c_l, 4), round(ci_c_u, 4)],
-            "attack_success_rate": round(asr_constrained, 4),
-            "attack_success_count": f"{n_evaded_constrained}/{n_corr_clean}",
-            "asr_ci_95": [round(ci_asr_l, 4), round(ci_asr_u, 4)],
-            "mean_l2_perturbation": round(l2_constrained, 4),
-            "constraint_reversed_count": f"{n_reversed}/{n_evaded_raw}",
-            "constraint_reversed_share": round(pct_reversed, 4),
-            "runtime_sec": round(t_total, 2),
-        }
+        hsj_results[budget_name] = metrics
 
     out_file = REPORTS_DIR / "adversarial_hsj.json"
-    with open(out_file, "w", encoding="utf-8") as f:
-        json.dump(hsj_results, f, indent=2)
-    print(f"  [STAGE DONE] HopSkipJump metrics saved --> {out_file.name} (Total: {time.time() - t_stage_start:.2f}s)")
-    return hsj_results
     with open(out_file, "w", encoding="utf-8") as f:
         json.dump(hsj_results, f, indent=2)
     print(f"  [STAGE DONE] HopSkipJump metrics saved --> {out_file.name} (Total: {time.time() - t_stage_start:.2f}s)")
@@ -646,21 +862,25 @@ def run_stage_defense(test_samples: int = 500, hsj_defense_samples: int = 50) ->
         k_rn = int(np.sum(p_rand == y_te))
         k_fg2 = int(np.sum(p_fgsm020 == y_te))
 
-        # HopSkipJump Budget 1 on 50 flows for this specific arm
-        arm_bbox = BlackBoxClassifierNeuralNetwork(predict_fn=pred_fn, input_shape=(19,), nb_classes=8)
-        arm_hsj_attack = HopSkipJump(
-            classifier=arm_bbox, targeted=False, max_iter=3, max_eval=10, init_eval=5, verbose=False
+        # HopSkipJump Budget 1 on hsj_defense_samples flows for this specific arm
+        arm_preds_clean = np.argmax(pred_fn(X_te_hsj_sub), axis=1)
+        _, _, hsj_arm_metrics = generate_hsj_flow_by_flow(
+            X_clean=X_te_hsj_sub,
+            y_clean=y_te_hsj_sub,
+            clean_preds=arm_preds_clean,
+            predictor=pred_fn,
+            enforcer=enforcer,
+            budget_name=f"Defense-{arm_name[:5]}",
+            max_iter=3,
+            max_eval=10,
+            init_eval=5,
+            checkpoint_file=None,
+            resume=False,
+            per_flow_timeout=30.0,
+            max_queries=1000,
+            log_prefix=f"DEF-{arm_name[:5]}",
         )
-        hsj_chunks = []
-        for i in range(0, len(X_te_hsj_sub), chunk_size):
-            chunk = X_te_hsj_sub[i : i + chunk_size]
-            hsj_chunks.append(arm_hsj_attack.generate(x=chunk))
-            log_progress(f"DEF-{arm_name[:5]}", min(i + chunk_size, len(X_te_hsj_sub)), len(X_te_hsj_sub), t_arm)
-        X_te_hsj_arm_raw = np.vstack(hsj_chunks)
-        X_te_hsj_arm = enforcer.enforce_constraints(X_te_hsj_arm_raw, X_te_hsj_sub)
-
-        p_hsj = np.argmax(pred_fn(X_te_hsj_arm), axis=1)
-        k_hs = int(np.sum(p_hsj == y_te_hsj_sub))
+        k_hs = int(hsj_arm_metrics["adversarial_count"].split("/")[0])
 
         arms_results[arm_name] = {
             "clean": {"count": f"{k_cl}/{len(y_te)}", "acc": round(k_cl / len(y_te), 4), "ci_95": [round(c, 4) for c in wilson_ci(k_cl, len(y_te))]},
@@ -788,6 +1008,9 @@ if __name__ == "__main__":
     parser.add_argument("--zoo-samples", type=int, default=40, help="Test flows for ZOO")
     parser.add_argument("--defense-samples", type=int, default=500, help="Test flows for defense matrix")
     parser.add_argument("--defense-hsj-samples", type=int, default=100, help="Test flows per arm for HSJ in defense")
+    parser.add_argument("--resume", action="store_true", help="Resume HopSkipJump from partial checkpoint")
+    parser.add_argument("--per-flow-timeout", type=float, default=30.0, help="Per-flow timeout limit in seconds")
+    parser.add_argument("--max-queries", type=int, default=1000, help="Hard query cap per flow")
     args = parser.parse_args()
 
     proc = psutil.Process(os.getpid())
@@ -797,7 +1020,12 @@ if __name__ == "__main__":
         run_stage_fgsm(fgsm_samples=args.fgsm_samples)
 
     if args.stage in ["hsj", "all"]:
-        run_stage_hsj(hsj_samples=args.hsj_samples)
+        run_stage_hsj(
+            hsj_samples=args.hsj_samples,
+            resume=args.resume,
+            per_flow_timeout=args.per_flow_timeout,
+            max_queries=args.max_queries,
+        )
 
     if args.stage in ["zoo", "all"]:
         run_stage_zoo(zoo_samples=args.zoo_samples)
