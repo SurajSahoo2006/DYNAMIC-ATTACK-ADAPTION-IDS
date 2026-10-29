@@ -189,7 +189,7 @@ python xai/run_phase4_shap.py
 ```bash
 python adversarial/run_phase4_adversarial.py
 ```
-*Enforces domain constraints (freezes protocols/flags, bounds packet sizes/timing), executes FGSM transfer from the PyTorch DNN surrogate to the B2 ensemble, runs black-box HopSkipJump (66.3% ASR) and ZOO attacks, and tests adversarial retraining (+33.6% accuracy gain under attack).*
+*Enforces domain constraints (freezes protocols/flags, bounds packet sizes/timing), verifies zero-attack pipeline invariance (0.000000 drift), evaluates FGSM transfer vs isotropic random-noise controls (+8.6% to +15.7% attack advantage), runs multi-budget black-box HopSkipJump & ZOO, and tests a 4-arm defense matrix (+42.97% gain under FGSM, +20.00% under HopSkipJump).*
 
 ### Step 6: Generate & Audit Forensic Alert Logs (Phase 4C)
 ```bash
@@ -211,7 +211,7 @@ python alerts/verify_log.py --file logs/alerts.jsonl
 | **3A** | Ensemble Classifier (RF + XGB + DNN) | **COMPLETE** | 8-class (95.53% acc, 87.66% F1); 34-class B2 (93.43% acc, 85.97% F1) |
 | **3B** | LLM Semantic Orchestrator | **COMPLETE** | 40/40 real Ollama outputs (100%), 0 fallbacks, 12.0s/flow, peak 315 MB RAM |
 | **4A** | Explainable AI (SHAP TreeExplainer) | **COMPLETE** | 2,000 stratified flows, $\rho = 0.9088$ stability, `--use-shap` LLM integration |
-| **4B** | Adversarial Robustness (ART) | **COMPLETE** | Domain constraints, FGSM transfer, HopSkipJump, ZOO, Defense Retraining (+33.6% gain) |
+| **4B** | Adversarial Robustness (ART) | **COMPLETE** | Domain constraints, zero-attack control (0.0 drift), random noise control, FGSM transfer, multi-budget HSJ & ZOO, 4-arm defense matrix |
 | **4C** | Cryptographic Alert Logging | **COMPLETE** | Flat ELK-ready schema, SHA-256 hash chaining, 100% verified tamper detection |
 | **5** | MARL Tactical Defense (MAPPO) | UPCOMING | Multi-agent dynamic adaptation against adversarial evasion |
 | **6** | SIEM Dashboard (ELK / Kibana) | UPCOMING | Ingestion of `logs/alerts.jsonl` into Elasticsearch & Kibana dashboards |
