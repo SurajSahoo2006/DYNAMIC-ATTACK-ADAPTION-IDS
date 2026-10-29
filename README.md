@@ -11,7 +11,7 @@
 ## Architecture Overview
 
 ```
-Network Traffic (PCAP)          Honeypot (Cowrie JSON)       Benchmark Datasets
+Network Traffic (PCAP)          Honeypot (Cowrie JSON)*      Benchmark Datasets
         |                               |                            |
         +---------------+---------------+----------------------------+
                         |
@@ -23,12 +23,19 @@ Network Traffic (PCAP)          Honeypot (Cowrie JSON)       Benchmark Datasets
                         |
               data/processed/*.parquet    artifacts/
                         |
-            [Phase 3: Classification & Semantic Orchestration]
-            ├── Ensemble Classifier (Random Forest + XGBoost + PyTorch DNN)
-            └── LLM Semantic Orchestrator (Ollama Llama-3.2 / Expert Fallback)
+            [Phase 3A: Ensemble Classifier]
+            ├── Random Forest (Balanced) + XGBoost (Sample-Weighted) + PyTorch DNN
+            │   (Optimal validation weights: w_RF=0.60, w_XGB=0.40, w_DNN=0.00)
+            │
+            ▼ (Downstream predictions & telemetry)
+            [Phase 3B: LLM Semantic Orchestrator]
+            └── Ollama Llama-3.2:3b (CPU-only, temp=0) / Deterministic Expert Fallback
+                (Explanations + Recommended Mitigations; never overrides classification)
                         |
             [Phase 4+: Future Phases]
             MARL Tactical Agents -> Adversarial Checks -> SHAP -> ELK / Kibana
+
+* Note: Honeypot log enrichment is future work; current pipeline consumes statistical flow vectors.
 ```
 
 ---
@@ -37,16 +44,18 @@ Network Traffic (PCAP)          Honeypot (Cowrie JSON)       Benchmark Datasets
 
 ```
 .
-├── config.py                    # All configuration (paths, knobs, label & severity mapping)
+├── config.py                    # Central configuration (paths, hyperparameters, mappings)
 ├── requirements.txt
 ├── run_phase1_2.py              # Phase 1 & 2 pipeline runner
 ├── run_phase3_ensemble.py       # Phase 3 ensemble training & evaluation runner
-├── run_phase3_llm.py            # Phase 3 LLM semantic orchestrator demo runner
-├── predict.py                   # Standalone flow prediction & severity module
+├── run_phase3_llm.py            # Phase 3 LLM semantic orchestrator runner (Ollama / Fallback)
+├── predict.py                   # Standalone flow prediction & severity module (B2 default)
 │
 ├── models/
 │   ├── load_validation.py       # Leak-free pure validation data loader (NO SMOTE)
 │   ├── ensemble.py              # RF + XGBoost + PyTorch DNN + soft/weighted voting
+│   ├── wire_b2_models.py        # Model wiring utility for Method B2
+│   ├── investigate_dnn.py       # Step 5 DNN outlier & loss investigation script
 │   ├── ensemble_weights_8class.json
 │   └── ensemble_weights_34class.json
 │
@@ -58,12 +67,12 @@ Network Traffic (PCAP)          Honeypot (Cowrie JSON)       Benchmark Datasets
 │   ├── loader.py                # Chunked CSV reader with per-class sampling
 │   ├── validate.py              # Validation report + class distribution chart
 │   ├── pcap_demo.py             # DEMO ONLY: raw PCAP feature extraction
-│   └── cowrie_loader.py         # Honeypot enrichment (documented placeholder)
+│   └── cowrie_loader.py         # Honeypot enrichment (documented placeholder / future work)
 │
 ├── preprocess/
 │   ├── clean.py                 # Drop NaN / Inf / duplicates
 │   ├── encode.py                # LabelEncoder for 34-class and 8-class labels
-│   ├── split.py                 # Stratified 80/20 split (before scaling!)
+│   ├── split.py                 # Stratified 80/20 split (before scaling)
 │   ├── scale.py                 # StandardScaler (fit on train only)
 │   ├── balance.py               # SMOTE (applied to train only)
 │   └── select_features.py       # RFE: 46 features → top 19
@@ -78,8 +87,10 @@ Network Traffic (PCAP)          Honeypot (Cowrie JSON)       Benchmark Datasets
 │   ├── confusion_matrix_8class.png  # Phase 3 8-class test confusion matrix
 │   ├── phase3_metrics.json      # Machine-readable test metrics
 │   ├── phase3_summary.md        # Comprehensive Phase 3 report
-│   ├── llm_demo_outputs.csv     # 40-flow LLM triage demonstrations
-│   └── llm_metrics.json
+│   ├── rare_class_confusions.md # Rare class confusion slice diagnosis
+│   ├── rare_class_experiments.md# 5-experiment study on Backdoor, PingSweep, Uploading
+│   ├── llm_demo_outputs.csv     # 40-flow real Ollama triage outputs
+│   └── llm_metrics.json         # Real Ollama performance telemetry
 │
 ├── artifacts/                   # Saved sklearn & preprocessing objects
 │   ├── standard_scaler.pkl
@@ -89,176 +100,118 @@ Network Traffic (PCAP)          Honeypot (Cowrie JSON)       Benchmark Datasets
 │   └── rfe_feature_ranking.csv
 │
 └── data/
-    ├── raw/    ← git-ignored, put your CSVs here
-    └── processed/  ← git-ignored, Parquet outputs (train, test, val)
+    ├── raw/                     # Git-ignored, put raw CSVs here
+    └── processed/               # Git-ignored, Parquet outputs (train, test, val)
 ```
 
 ---
 
 ## Quick Start
 
-### 1. Clone & setup
+### 1. Clone & Setup Environment
 
 ```bash
-git clone -b phase1-2-prototype https://github.com/SurajSahoo2006/DYNAMIC-ATTACK-ADAPTION-IDS
+git clone -b phase3-ensemble-llm https://github.com/SurajSahoo2006/DYNAMIC-ATTACK-ADAPTION-IDS
 cd DYNAMIC-ATTACK-ADAPTION-IDS
 pip install -r requirements.txt
 ```
 
-### 2. Place the dataset
+### 2. Place Dataset Files
 
-The raw CSVs go in a folder **outside** the repo (they are too large for git):
+The raw CSVs belong in a directory outside the repository:
 
 ```
 D:\IROP MODEL\CICIOT23\
     train\train.csv          (~1.5 GB)
     test\test.csv            (~330 MB)
-    validation\validation.csv
+    validation\validation.csv (~330 MB)
 ```
 
-If you downloaded them elsewhere, edit `DATA_RAW_DIR` in `config.py`.
+If stored elsewhere, adjust `DATA_RAW_DIR` in `config.py`.
 
-**Where to download CICIoT2023:**  
-Official link: https://www.unb.ca/cic/datasets/iotdataset-2023.html  
-Direct download page: https://ciciot2023.unb.ca  
-Files needed: `train.csv`, `test.csv` (and optionally `validation.csv`).
+* **CICIoT2023 Official Download**: https://www.unb.ca/cic/datasets/iotdataset-2023.html
 
-### 3. Run the pipeline
+---
 
-```bash
-# On your laptop (fast — ~5 min)
-python run_phase1_2.py --sample 5000
+## Ollama Local LLM Setup
 
-# Scale up on Colab (more accurate results)
-python run_phase1_2.py --sample 50000
+The LLM Semantic Orchestrator uses local [Ollama](https://ollama.com) running `llama3.2:3b` on CPU:
 
-# Use ALL rows (needs ~32 GB RAM)
-python run_phase1_2.py --full
-
-# Skip SMOTE for a very quick smoke-test
-python run_phase1_2.py --sample 2000 --no-smote
-```
-
-### 4. Run Phase 3 (Ensemble Classifier & LLM Semantic Orchestrator)
-
-Phase 3 trains the multi-model ensemble (Random Forest + XGBoost + PyTorch DNN) and runs the LLM Orchestrator:
-
-```bash
-# 1. Train and evaluate the Ensemble Classifier (Primary 8-class & Secondary 34-class)
-python run_phase3_ensemble.py
-
-# Optional flags:
-# python run_phase3_ensemble.py --skip-34            # Fast run: 8-class target only (~2.5 min)
-# python run_phase3_ensemble.py --val-sample 2000    # Smaller validation sample cap
-
-# 2. Run the LLM Semantic Orchestrator Demo (40 balanced test flows)
-python run_phase3_llm.py
-
-# 3. Test standalone flow inference with the predict interface
-python predict.py --target 8class --samples 5
-python predict.py --target 34class --samples 5
-```
-
-#### Optional: Local Ollama LLM Setup
-By default, `run_phase3_llm.py` uses an internal deterministic rule-based expert triage engine when Ollama is offline. To run with live local Llama-3:
-1. Install [Ollama](https://ollama.com).
-2. Pull the model:
+1. **Install Ollama**: Download and run the installer from [ollama.com](https://ollama.com).
+2. **Pull the Model**:
    ```bash
    ollama pull llama3.2:3b
    ```
-3. Ensure Ollama is running (`http://localhost:11434`), then re-run `python run_phase3_llm.py`.
+3. **Verify the Service**:
+   Check that Ollama is listening locally on port 11434:
+   ```bash
+   # On PowerShell:
+   Invoke-RestMethod http://localhost:11434/api/tags
+   # Or in bash / cmd:
+   curl http://localhost:11434/api/tags
+   ```
+   Ensure `llama3.2:3b` appears in the returned models list.
 
-> **Windows tip**: If you see a Unicode error in your terminal, run:  
-> `$env:PYTHONIOENCODING="utf-8"` in PowerShell before running scripts.
-
----
-
-## Running on Google Colab
-
-1. Upload the CSVs to Google Drive under `MyDrive/CICIoT2023/train/train.csv` etc.
-2. Open `notebooks/phase1_2_walkthrough.ipynb` in Colab.
-3. In **Cell 3 (Configuration)**, set `SAMPLE_PER_CLASS = 50000` for a larger run.
-4. The notebook mounts Drive automatically and clones the repo.
-5. Run all cells top to bottom.
+*(Note: If Ollama is offline or unreachable, the orchestrator automatically activates its deterministic rule-based expert fallback.)*
 
 ---
 
-## What Each Phase Produces
+## Running the Pipeline (Step-by-Step)
 
-### Phase 1 Outputs
-| Output | Description |
-|--------|-------------|
-| Console validation report | Row counts, NaN/Inf counts, duplicate counts |
-| `reports/class_distribution.png` | Bar chart of 34 labels and 8 classes |
-| Summary dict (returned from `run_validation_report`) | Saved into `summary.md` |
+Execute the components sequentially:
 
-### Phase 2 Outputs
-| Output | Description |
-|--------|-------------|
-| `data/processed/train_phase2.parquet` | SMOTE-balanced train set, 19 features |
-| `data/processed/test_phase2.parquet` | Untouched test set, 19 features |
-| `artifacts/standard_scaler.pkl` | Fitted StandardScaler |
-| `artifacts/label_encoder_34class.pkl` | 34-class LabelEncoder |
-| `artifacts/label_encoder_8class.pkl` | 8-class LabelEncoder |
-| `artifacts/selected_features.json` | List of the 19 selected feature names |
-| `artifacts/rfe_feature_ranking.csv` | All 46 features with RFE rank |
-| `reports/rfe_ranking.png` | Feature importance bar chart |
-| `reports/summary.md` | Full numbers, ready to paste into slides |
-
----
-
-## Important Notes for Your Slides
-
-### 1. Feature count correction (IMPORTANT)
-Your current slides say **"115 → 19 features"** — this is from an older dataset.  
-CICIoT2023 has **46 numeric features**. The correct statement is:  
-> **"RFE reduces 46 features → top 19 features"**
-
-### 2. Label mapping (verified from real data)
-The 34 → 8 class mapping was built by scanning the actual CSV labels, not from literature.
-Full mapping is in `config.py → LABEL_TO_CLASS` and in `reports/summary.md`.
-
-### 3. Reproducibility
-All random operations use `RANDOM_SEED = 42`. Results are fully reproducible.
-
-### 4. Note on SMOTE and flag features (limitation)
-Some features are 0/1 binary flags (such as TCP flags, HTTP/DNS protocol indicators) or protocol codes; standard SMOTE creates continuous in-between values for them during interpolation. Tree-based ensembles naturally partition such continuous representations, but specialized variants (e.g., SMOTE-NC or post-synthesis rounding) can be explored in future work.
-
----
-
-## Data Leakage Prevention
-
-The pipeline follows this strict order to prevent data leakage:
-
+### Step 1: Preprocessing & Feature Selection (Phases 1 & 2)
+```bash
+python run_phase1_2.py --sample 5000
 ```
-Raw data
-   ↓ clean()          -- remove bad rows
-   ↓ encode_labels()  -- create label_34, label_8 columns
-   ↓ split()          ← SPLIT HAPPENS HERE (before any fitting)
-   |
-   ├── TRAIN set only:
-   |      scale()  (fit + transform)
-   |      balance() (SMOTE)
-   |      select_features() (RFE fit)
-   |
-   └── TEST set only:
-          scale()  (transform only, using train's scaler)
-          [NO SMOTE on test]
-          [NO RFE refit on test]
+*Loads chunked raw data, cleans invalid values, performs a strict train/test split, fits `StandardScaler`, applies SMOTE to the training split, and runs RFE to identify the top 19 features.*
+
+### Step 2: Train & Evaluate Ensemble Classifiers (Phase 3A)
+```bash
+python run_phase3_ensemble.py
 ```
+*Trains Random Forest, XGBoost, and PyTorch DNN for 8-class and 34-class targets. Computes optimal simplex voting weights against the leak-free `validation.csv` set, and evaluates performance on the untouched `test.csv` split.*
+
+### Step 3: Run the LLM Semantic Orchestrator (Phase 3B)
+```bash
+python run_phase3_llm.py
+```
+*Randomly samples 40 test flows with fixed seed 42 (5 flows per 8-class family, guaranteeing representation of rare classes `Backdoor_Malware`, `Recon-PingSweep`, and `Uploading_Attack`). Runs local Ollama (`llama3.2:3b`) at `temperature: 0` to produce concise natural language explanations and mitigation playbooks, recording execution telemetry to `reports/llm_metrics.json`.*
+
+### Step 4: Run Standalone Predictions
+```bash
+# Predict on 5 test samples using the 8-class model:
+python predict.py --target 8class --samples 5
+
+# Predict on 5 test samples using the 34-class B2 model:
+python predict.py --target 34class --samples 5
+```
+
+---
+
+## Assumptions & Methodological Invariants
+
+1. **Dataset Nature & Scope**: Network flows in the CICIoT2023 benchmark are represented purely as aggregated statistical feature vectors derived from 5-second sliding windows. Application-layer payload strings, full PCAP files, and raw textual logs are not part of the dataset.
+2. **Zero-Leakage Validation Split**: `validation.csv` (106,766 real flows) is strictly isolated from model training. No synthetic SMOTE interpolation is ever applied to validation or test splits. All hyperparameter decisions, early stopping, and ensemble weighting simplex optimizations are tuned on validation data only. Test data is evaluated once.
+3. **Feature Dimensionality (46 → 19)**: Exactly 19 numerical features selected via Recursive Feature Elimination (RFE) on the training split are used. The slide claim "115 → 19" is corrected to "46 → 19" based on the actual CSV column schema.
+4. **Ensemble Architecture & DNN Weighting**: The ensemble combines Random Forest, XGBoost, and a PyTorch Deep Neural Network. Because tree-based models naturally partition heavy-tailed tabular distributions (where standardized flow features reach $z = 89.75$), validation simplex optimization assigned the DNN a weight of 0.00. The active prediction ensemble is effectively **Random Forest + XGBoost**.
+5. **Adoption of Method B2 (Balanced Weights, No SMOTE)**: Following a 5-experiment study on rare classes, Method B2 was adopted as the production classifier. It achieves 93.43% test accuracy and 85.97% Macro F1. It raised `Backdoor_Malware` (51.5% -> 57.0%) and `Recon-PingSweep` (53.3% -> 56.3%), but lowered `Uploading_Attack` F1 (51.6% -> 46.0%).
+6. **Rare Class Support & Statistical Limits**: True test support for the three rarest classes is minimal (34 flows for `Uploading_Attack`, 59 for `Recon-PingSweep`, 95 for `Backdoor_Malware`). A swing of 1–2 misclassified flows changes recall by 3–6%, so score differences between candidate models may be sample noise. Reaching >85% F1 was not achieved on this data and is likely limited by the scarcity of real rows (only 208 total rows exist across the entire 7.84M benchmark for `Uploading_Attack`).
+7. **Downstream LLM Orchestration Invariant**: The LLM sits strictly downstream **AFTER** the ensemble classifier. The ensemble determines the predicted attack class, and a deterministic configuration table determines severity. The LLM produces natural language operator explanations and mitigation recommendations using unscaled features, without overriding ensemble classifications.
+8. **Honeypot Enrichment as Future Work**: Cowrie honeypot log integration is recognized as essential future work to resolve intra-family HTTP attack ambiguity, as the current loader ingests purely tabular network headers.
+9. **Hardware Constraints**: All components are engineered and verified to run on a local CPU-only laptop with 8 GB RAM, strictly enforcing a peak RAM ceiling below 6.0 GB (measured peak: 1.37 GB for ensemble training, 0.55 GB for LLM inference).
 
 ---
 
 ## Phase Roadmap
 
-| Phase | Component | Status | Details |
+| Phase | Component | Status | Empirical Highlights |
 |:---:|:---|:---:|:---|
-| **1** | Ingestion & Sampling (CICIoT2023) | **COMPLETE** | Chunked reservoir sampling, validation |
-| **2** | Preprocessing & Feature Selection | **COMPLETE** | Clean, encode, 80/20 split, scale, SMOTE, RFE (19 features) |
-| **3A** | Ensemble Classifier (RF + XGBoost + DNN) | **COMPLETE** | 8-class (95.53% acc) & 34-class (93.19% acc), zero leak validation |
-| **3B** | LLM Semantic Orchestrator | **COMPLETE** | Flow triage, explanations, mitigations, Ollama + rule fallback |
-| **4** | MARL Tactical Agents (MAPPO) | UPCOMING | Multi-agent dynamic adaptation |
+| **1** | Ingestion & Sampling (CICIoT2023) | **COMPLETE** | Chunked reservoir sampling, validation reporting |
+| **2** | Preprocessing & Feature Selection | **COMPLETE** | Clean, encode, 80/20 split, scale, SMOTE, RFE (46 → 19 features) |
+| **3A** | Ensemble Classifier (RF + XGB + DNN) | **COMPLETE** | 8-class (95.53% acc, 87.66% F1); 34-class B2 (93.43% acc, 85.97% F1) |
+| **3B** | LLM Semantic Orchestrator | **COMPLETE** | 40/40 real Ollama outputs (100%), 0 fallbacks, 12.0s/flow, peak 564.9 MB RAM |
+| **4** | MARL Tactical Agents (MAPPO) | UPCOMING | Multi-agent dynamic defense adaptation |
 | **5** | Adversarial Robustness Check | UPCOMING | FGSM, ZOO, HopSkipJump evasion testing |
-| **6** | SHAP Explainability Layer | UPCOMING | Feature contribution explainability |
-| **7** | Alert & Forensic Logging (ELK/Kibana) | UPCOMING | Forensic log trail, SIEM dashboard |
-
+| **6** | SHAP Explainability Layer | UPCOMING | Global and local feature attribution |
+| **7** | Alert & Forensic Logging (ELK/Kibana) | UPCOMING | SIEM dashboard and incident response trail |
