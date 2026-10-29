@@ -3,8 +3,12 @@
 
 > **Project**: AI/ML pipeline for adaptive network intrusion detection in IoT environments.  
 > **Dataset**: CICIoT2023 (University of New Brunswick) — 47M+ records, 33 attack types.  
-> **Branch**: `phase3-ensemble-llm`  
-> **Current Pipeline Scope**: Phase 1 (Ingestion) + Phase 2 (Preprocessing & RFE) + Phase 3 (Ensemble Classifier & LLM Semantic Orchestrator).
+> **Branch**: `phase4-xai-adversarial`  
+> **Current Pipeline Scope**:  
+> - **Phase 1**: Chunked Ingestion & Invariant Validation  
+> - **Phase 2**: Leak-Free Preprocessing & Recursive Feature Elimination (46 → 19 features)  
+> - **Phase 3**: Multi-Model Ensemble (Method B2) & LLM Semantic Orchestrator (Ollama Llama-3.2:3b)  
+> - **Phase 4**: Explainable AI (SHAP TreeExplainer), Realistic Adversarial Robustness (ART), and Tamper-Evident Forensic Logging
 
 ---
 
@@ -23,17 +27,31 @@ Network Traffic (PCAP)          Honeypot (Cowrie JSON)*      Benchmark Datasets
                         |
               data/processed/*.parquet    artifacts/
                         |
-            [Phase 3A: Ensemble Classifier]
-            ├── Random Forest (Balanced) + XGBoost (Sample-Weighted) + PyTorch DNN
-            │   (Optimal validation weights: w_RF=0.60, w_XGB=0.40, w_DNN=0.00)
+            [Phase 3A: Ensemble Classifier (Method B2)]
+            ├── Random Forest (0.60) + XGBoost (0.40) + PyTorch DNN (0.00)
             │
-            ▼ (Downstream predictions & telemetry)
+            +---------------------------------------+
+            |                                       |
+            ▼                                       ▼
+    [Phase 4A: Explainable AI]             [Phase 4B: Adversarial Suite]
+    ├── SHAP TreeExplainer (2,000 flows)   ├── Domain Constraints (11 modifiable / 8 fixed)
+    ├── Stability check (rho = 0.9088)     ├── FGSM Transfer (White-box DNN -> Ensemble)
+    └── Opt-in --use-shap telemetry         ├── HopSkipJump & ZOO Black-Box Attacks
+            |                              └── Adversarial Retraining Defense
+            |                                       |
+            +-------------------+-------------------+
+                                |
+                                ▼
             [Phase 3B: LLM Semantic Orchestrator]
             └── Ollama Llama-3.2:3b (CPU-only, temp=0) / Deterministic Expert Fallback
-                (Explanations + Recommended Mitigations; never overrides classification)
-                        |
-            [Phase 4+: Future Phases]
-            MARL Tactical Agents -> Adversarial Checks -> SHAP -> ELK / Kibana
+                (Translates predictions & SHAP attributions into analyst playbooks)
+                                |
+                                ▼
+            [Phase 4C: Forensic Alert Logging]
+            └── Cryptographic SHA-256 Tamper-Evident Audit Trail (logs/alerts.jsonl)
+                                |
+            [Phase 5+: Future Strategic Phases]
+            MARL Tactical Defense Agents (MAPPO) -> Full ELK Stack / SIEM Dashboard
 
 * Note: Honeypot log enrichment is future work; current pipeline consumes statistical flow vectors.
 ```
@@ -44,64 +62,74 @@ Network Traffic (PCAP)          Honeypot (Cowrie JSON)*      Benchmark Datasets
 
 ```
 .
-├── config.py                    # Central configuration (paths, hyperparameters, mappings)
+├── config.py                         # Central configuration (paths, hyperparameters, mappings)
 ├── requirements.txt
-├── run_phase1_2.py              # Phase 1 & 2 pipeline runner
-├── run_phase3_ensemble.py       # Phase 3 ensemble training & evaluation runner
-├── run_phase3_llm.py            # Phase 3 LLM semantic orchestrator runner (Ollama / Fallback)
-├── predict.py                   # Standalone flow prediction & severity module (B2 default)
+├── run_phase1_2.py                   # Phase 1 & 2 pipeline runner
+├── run_phase3_ensemble.py            # Phase 3 ensemble training & evaluation runner
+├── run_phase3_llm.py                 # Phase 3/4 LLM orchestrator runner (--use-shap flag)
+├── predict.py                        # Standalone flow prediction & severity module (B2 default)
+│
+├── xai/                              # Phase 4A: Explainable AI Module
+│   ├── shap_explain.py               # SHAP TreeExplainer wrapper & stability evaluation
+│   └── run_phase4_shap.py            # SHAP runner (2,000 stratified flows, global/class plots)
+│
+├── adversarial/                      # Phase 4B: Adversarial Robustness Module
+│   ├── constraints.py                # 19-feature domain constraints, clipping, and bounds
+│   └── run_phase4_adversarial.py     # FGSM transfer, HopSkipJump, ZOO, and defense retraining
+│
+├── alerts/                           # Phase 4C: Forensic Alert Logging Module
+│   ├── alert_logger.py               # Flattened ELK-ready logger with SHA-256 hash chaining
+│   ├── verify_log.py                 # Tamper-evident hash chain auditor
+│   └── generate_and_test_alerts.py   # Test suite: populates logs/alerts.jsonl and verifies tamper test
 │
 ├── models/
-│   ├── load_validation.py       # Leak-free pure validation data loader (NO SMOTE)
-│   ├── ensemble.py              # RF + XGBoost + PyTorch DNN + soft/weighted voting
-│   ├── wire_b2_models.py        # Model wiring utility for Method B2
-│   ├── investigate_dnn.py       # Step 5 DNN outlier & loss investigation script
+│   ├── load_validation.py            # Leak-free pure validation data loader (NO SMOTE)
+│   ├── ensemble.py                   # RF + XGBoost + PyTorch DNN + soft/weighted voting
+│   ├── wire_b2_models.py             # Model wiring utility for Method B2
+│   ├── investigate_dnn.py            # Tabular neural network limit investigation
 │   ├── ensemble_weights_8class.json
 │   └── ensemble_weights_34class.json
 │
 ├── orchestrator/
 │   ├── __init__.py
-│   └── llm_orchestrator.py      # Ollama client + deterministic expert fallback
+│   └── llm_orchestrator.py           # Ollama client + deterministic expert fallback + SHAP injection
 │
 ├── ingest/
-│   ├── loader.py                # Chunked CSV reader with per-class sampling
-│   ├── validate.py              # Validation report + class distribution chart
-│   ├── pcap_demo.py             # DEMO ONLY: raw PCAP feature extraction
-│   └── cowrie_loader.py         # Honeypot enrichment (documented placeholder / future work)
+│   ├── loader.py                     # Chunked CSV reader with per-class sampling
+│   ├── validate.py                   # Validation report + class distribution chart
+│   └── cowrie_loader.py              # Honeypot enrichment (future work)
 │
 ├── preprocess/
-│   ├── clean.py                 # Drop NaN / Inf / duplicates
-│   ├── encode.py                # LabelEncoder for 34-class and 8-class labels
-│   ├── split.py                 # Stratified 80/20 split (before scaling)
-│   ├── scale.py                 # StandardScaler (fit on train only)
-│   ├── balance.py               # SMOTE (applied to train only)
-│   └── select_features.py       # RFE: 46 features → top 19
+│   ├── clean.py                      # Drop NaN / Inf / duplicates
+│   ├── encode.py                     # LabelEncoder for 34-class and 8-class labels
+│   ├── split.py                      # Stratified 80/20 split (before scaling)
+│   ├── scale.py                      # StandardScaler (fit on train only)
+│   ├── balance.py                    # SMOTE (applied to train only)
+│   └── select_features.py            # RFE: 46 features → top 19
 │
-├── notebooks/
-│   └── phase1_2_walkthrough.ipynb   # Step-by-step notebook (Colab-ready)
-│
-├── reports/                     # Generated charts and reports
+├── reports/                          # Generated charts and reports
 │   ├── class_distribution.png
 │   ├── rfe_ranking.png
-│   ├── summary.md               # Phase 1 & 2 summary
-│   ├── confusion_matrix_8class.png  # Phase 3 8-class test confusion matrix
-│   ├── phase3_metrics.json      # Machine-readable test metrics
-│   ├── phase3_summary.md        # Comprehensive Phase 3 report
-│   ├── rare_class_confusions.md # Rare class confusion slice diagnosis
-│   ├── rare_class_experiments.md# 5-experiment study on Backdoor, PingSweep, Uploading
-│   ├── llm_demo_outputs.csv     # 40-flow real Ollama triage outputs
-│   └── llm_metrics.json         # Real Ollama performance telemetry
+│   ├── confusion_matrix_8class.png
+│   ├── phase3_summary.md             # Comprehensive Phase 3 report
+│   ├── phase4_summary.md             # Comprehensive Phase 4 report
+│   ├── shap_global_importance.png    # Global SHAP feature importance plot
+│   ├── shap_per_class_importance.png # Per-class SHAP importance heatmap
+│   ├── shap_metrics.json
+│   ├── adversarial_accuracy_vs_epsilon.png # Evasion curves: DNN vs Ensemble transfer
+│   ├── adversarial_metrics.json
+│   ├── llm_demo_outputs.csv          # Standard 40-flow triage outputs
+│   └── llm_demo_outputs_shap.csv     # SHAP-grounded 40-flow triage outputs
 │
-├── artifacts/                   # Saved sklearn & preprocessing objects
-│   ├── standard_scaler.pkl
-│   ├── label_encoder_34class.pkl
-│   ├── label_encoder_8class.pkl
-│   ├── selected_features.json
-│   └── rfe_feature_ranking.csv
+├── logs/
+│   └── alerts.jsonl                  # Cryptographically chained forensic alert log
 │
-└── data/
-    ├── raw/                     # Git-ignored, put raw CSVs here
-    └── processed/               # Git-ignored, Parquet outputs (train, test, val)
+└── artifacts/                        # Saved preprocessing objects and attributions
+    ├── standard_scaler.pkl
+    ├── label_encoder_8class.pkl
+    ├── selected_features.json
+    ├── shap_local_40flows.json       # Top-5 SHAP features per demo flow
+    └── adversarial_demo_flows.parquet# Sample adversarial evaluation flows
 ```
 
 ---
@@ -111,95 +139,66 @@ Network Traffic (PCAP)          Honeypot (Cowrie JSON)*      Benchmark Datasets
 ### 1. Clone & Setup Environment
 
 ```bash
-git clone -b phase3-ensemble-llm https://github.com/SurajSahoo2006/DYNAMIC-ATTACK-ADAPTION-IDS
+git clone -b phase4-xai-adversarial https://github.com/SurajSahoo2006/DYNAMIC-ATTACK-ADAPTION-IDS
 cd DYNAMIC-ATTACK-ADAPTION-IDS
 pip install -r requirements.txt
 ```
+*Dependencies include `shap` (0.52.0) and `adversarial-robustness-toolbox` (1.20.1).*
 
-### 2. Place Dataset Files
+### 2. Ollama Local LLM Setup
 
-The raw CSVs belong in a directory outside the repository:
+The LLM Semantic Orchestrator uses local [Ollama](https://ollama.com) running `llama3.2:3b`:
+```bash
+# Pull model
+ollama pull llama3.2:3b
 
+# Verify connection
+curl http://localhost:11434/api/tags
 ```
-D:\IROP MODEL\CICIOT23\
-    train\train.csv          (~1.5 GB)
-    test\test.csv            (~330 MB)
-    validation\validation.csv (~330 MB)
-```
-
-If stored elsewhere, adjust `DATA_RAW_DIR` in `config.py`.
-
-* **CICIoT2023 Official Download**: https://www.unb.ca/cic/datasets/iotdataset-2023.html
-
----
-
-## Ollama Local LLM Setup
-
-The LLM Semantic Orchestrator uses local [Ollama](https://ollama.com) running `llama3.2:3b` on CPU:
-
-1. **Install Ollama**: Download and run the installer from [ollama.com](https://ollama.com).
-2. **Pull the Model**:
-   ```bash
-   ollama pull llama3.2:3b
-   ```
-3. **Verify the Service**:
-   Check that Ollama is listening locally on port 11434:
-   ```bash
-   # On PowerShell:
-   Invoke-RestMethod http://localhost:11434/api/tags
-   # Or in bash / cmd:
-   curl http://localhost:11434/api/tags
-   ```
-   Ensure `llama3.2:3b` appears in the returned models list.
-
-*(Note: If Ollama is offline or unreachable, the orchestrator automatically activates its deterministic rule-based expert fallback.)*
 
 ---
 
 ## Running the Pipeline (Step-by-Step)
 
-Execute the components sequentially:
-
 ### Step 1: Preprocessing & Feature Selection (Phases 1 & 2)
 ```bash
 python run_phase1_2.py --sample 5000
 ```
-*Loads chunked raw data, cleans invalid values, performs a strict train/test split, fits `StandardScaler`, applies SMOTE to the training split, and runs RFE to identify the top 19 features.*
 
 ### Step 2: Train & Evaluate Ensemble Classifiers (Phase 3A)
 ```bash
 python run_phase3_ensemble.py
 ```
-*Trains Random Forest, XGBoost, and PyTorch DNN for 8-class and 34-class targets. Computes optimal simplex voting weights against the leak-free `validation.csv` set, and evaluates performance on the untouched `test.csv` split.*
 
 ### Step 3: Run the LLM Semantic Orchestrator (Phase 3B)
 ```bash
+# Standard fixed telemetry run:
 python run_phase3_llm.py
-```
-*Randomly samples 40 test flows with fixed seed 42 (5 flows per 8-class family, guaranteeing representation of rare classes `Backdoor_Malware`, `Recon-PingSweep`, and `Uploading_Attack`). Runs local Ollama (`llama3.2:3b`) at `temperature: 0` to produce concise natural language explanations and mitigation playbooks, recording execution telemetry to `reports/llm_metrics.json`.*
 
-### Step 4: Run Standalone Predictions
+# Or with real top SHAP feature grounding:
+python run_phase3_llm.py --use-shap
+```
+
+### Step 4: Run Phase 4A Explainable AI (SHAP Analysis)
 ```bash
-# Predict on 5 test samples using the 8-class model:
-python predict.py --target 8class --samples 5
-
-# Predict on 5 test samples using the 34-class B2 model:
-python predict.py --target 34class --samples 5
+python xai/run_phase4_shap.py
 ```
+*Computes TreeExplainer SHAP values across 2,000 stratified test flows, evaluates XGBoost vs RF stability ($\rho = 0.9088$), generates global and per-class plots, and exports `artifacts/shap_local_40flows.json`.*
 
----
+### Step 5: Run Phase 4B Adversarial Robustness Assessment
+```bash
+python adversarial/run_phase4_adversarial.py
+```
+*Enforces domain constraints (freezes protocols/flags, bounds packet sizes/timing), executes FGSM transfer from the PyTorch DNN surrogate to the B2 ensemble, runs black-box HopSkipJump (66.3% ASR) and ZOO attacks, and tests adversarial retraining (+33.6% accuracy gain under attack).*
 
-## Assumptions & Methodological Invariants
+### Step 6: Generate & Audit Forensic Alert Logs (Phase 4C)
+```bash
+# Populate logs/alerts.jsonl and execute tamper verification tests:
+python alerts/generate_and_test_alerts.py
 
-1. **Dataset Nature & Scope**: Network flows in the CICIoT2023 benchmark are represented purely as aggregated statistical feature vectors derived from 5-second sliding windows. Application-layer payload strings, full PCAP files, and raw textual logs are not part of the dataset.
-2. **Zero-Leakage Validation Split**: `validation.csv` (106,766 real flows) is strictly isolated from model training. No synthetic SMOTE interpolation is ever applied to validation or test splits. All hyperparameter decisions, early stopping, and ensemble weighting simplex optimizations are tuned on validation data only. Test data is evaluated once.
-3. **Feature Dimensionality (46 → 19)**: Exactly 19 numerical features selected via Recursive Feature Elimination (RFE) on the training split are used. The slide claim "115 → 19" is corrected to "46 → 19" based on the actual CSV column schema.
-4. **Ensemble Architecture & DNN Weighting**: The ensemble combines Random Forest, XGBoost, and a PyTorch Deep Neural Network. Because tree-based models naturally partition heavy-tailed tabular distributions (where standardized flow features reach $z = 89.75$), validation simplex optimization assigned the DNN a weight of 0.00. The active prediction ensemble is effectively **Random Forest + XGBoost**.
-5. **Adoption of Method B2 (Balanced Weights, No SMOTE)**: Following a 5-experiment study on rare classes, Method B2 was adopted as the production classifier. It achieves 93.43% test accuracy and 85.97% Macro F1. It raised `Backdoor_Malware` (51.5% -> 57.0%) and `Recon-PingSweep` (53.3% -> 56.3%), but lowered `Uploading_Attack` F1 (51.6% -> 46.0%).
-6. **Rare Class Support & Statistical Limits**: True test support for the three rarest classes is minimal (34 flows for `Uploading_Attack`, 59 for `Recon-PingSweep`, 95 for `Backdoor_Malware`). A swing of 1–2 misclassified flows changes recall by 3–6%, so score differences between candidate models may be sample noise. Reaching >85% F1 was not achieved on this data and is likely limited by the scarcity of real rows (only 208 total rows exist across the entire 7.84M benchmark for `Uploading_Attack`).
-7. **Downstream LLM Orchestration Invariant**: The LLM sits strictly downstream **AFTER** the ensemble classifier. The ensemble determines the predicted attack class, and a deterministic configuration table determines severity. The LLM produces natural language operator explanations and mitigation recommendations using unscaled features, without overriding ensemble classifications.
-8. **Honeypot Enrichment as Future Work**: Cowrie honeypot log integration is recognized as essential future work to resolve intra-family HTTP attack ambiguity, as the current loader ingests purely tabular network headers.
-9. **Hardware Constraints**: All components are engineered and verified to run on a local CPU-only laptop with 8 GB RAM, strictly enforcing a peak RAM ceiling below 6.0 GB (measured peak: 1.37 GB for ensemble training, 0.55 GB for LLM inference).
+# Audit an existing log file directly:
+python alerts/verify_log.py --file logs/alerts.jsonl
+```
 
 ---
 
@@ -207,11 +206,12 @@ python predict.py --target 34class --samples 5
 
 | Phase | Component | Status | Empirical Highlights |
 |:---:|:---|:---:|:---|
-| **1** | Ingestion & Sampling (CICIoT2023) | **COMPLETE** | Chunked reservoir sampling, validation reporting |
+| **1** | Ingestion & Sampling | **COMPLETE** | Chunked reservoir sampling, validation reporting |
 | **2** | Preprocessing & Feature Selection | **COMPLETE** | Clean, encode, 80/20 split, scale, SMOTE, RFE (46 → 19 features) |
 | **3A** | Ensemble Classifier (RF + XGB + DNN) | **COMPLETE** | 8-class (95.53% acc, 87.66% F1); 34-class B2 (93.43% acc, 85.97% F1) |
-| **3B** | LLM Semantic Orchestrator | **COMPLETE** | 40/40 real Ollama outputs (100%), 0 fallbacks, 12.0s/flow, peak 564.9 MB RAM |
-| **4** | MARL Tactical Agents (MAPPO) | UPCOMING | Multi-agent dynamic defense adaptation |
-| **5** | Adversarial Robustness Check | UPCOMING | FGSM, ZOO, HopSkipJump evasion testing |
-| **6** | SHAP Explainability Layer | UPCOMING | Global and local feature attribution |
-| **7** | Alert & Forensic Logging (ELK/Kibana) | UPCOMING | SIEM dashboard and incident response trail |
+| **3B** | LLM Semantic Orchestrator | **COMPLETE** | 40/40 real Ollama outputs (100%), 0 fallbacks, 12.0s/flow, peak 315 MB RAM |
+| **4A** | Explainable AI (SHAP TreeExplainer) | **COMPLETE** | 2,000 stratified flows, $\rho = 0.9088$ stability, `--use-shap` LLM integration |
+| **4B** | Adversarial Robustness (ART) | **COMPLETE** | Domain constraints, FGSM transfer, HopSkipJump, ZOO, Defense Retraining (+33.6% gain) |
+| **4C** | Cryptographic Alert Logging | **COMPLETE** | Flat ELK-ready schema, SHA-256 hash chaining, 100% verified tamper detection |
+| **5** | MARL Tactical Defense (MAPPO) | UPCOMING | Multi-agent dynamic adaptation against adversarial evasion |
+| **6** | SIEM Dashboard (ELK / Kibana) | UPCOMING | Ingestion of `logs/alerts.jsonl` into Elasticsearch & Kibana dashboards |
