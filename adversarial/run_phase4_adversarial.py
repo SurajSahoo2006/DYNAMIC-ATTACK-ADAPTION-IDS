@@ -421,23 +421,6 @@ def run_stage_hsj(hsj1_samples: int = 100, hsj2_samples: int = 50, reuse_b1: boo
             "runtime_sec": round(t_hsj1_total, 2),
         }
 
-    hsj_results["Budget 1 (Low: 3 iters, 10 evals)"] = {
-        "samples": hsj1_samples,
-        "max_iter": 3,
-        "max_eval": 10,
-        "clean_accuracy": round(acc_hsj_clean, 4),
-        "clean_count": f"{k_hsj_clean}/{len(y_hsj_clean)}",
-        "clean_ci_95": [round(ci_hsj_cl, 4), round(ci_hsj_cu, 4)],
-        "adversarial_accuracy": round(acc_b1, 4),
-        "adversarial_count": f"{k_b1}/{len(y_hsj_clean)}",
-        "adversarial_ci_95": [round(ci_b1_l, 4), round(ci_b1_u, 4)],
-        "attack_success_rate": round(asr_b1, 4),
-        "attack_success_count": f"{n_evaded_b1}/{n_corr_b1}",
-        "asr_ci_95": [round(ci_asr_b1_l, 4), round(ci_asr_b1_u, 4)],
-        "mean_l2_perturbation": round(l2_b1, 4),
-        "runtime_sec": round(t_hsj1_total, 2),
-    }
-
     # Budget 2: High Budget (6 iters, 20 evals) on 50 flows subset
     X_hsj2_clean = X_hsj_clean[:hsj2_samples]
     y_hsj2_clean = y_hsj_clean[:hsj2_samples]
