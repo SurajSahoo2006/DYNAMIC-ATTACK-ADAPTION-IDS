@@ -245,10 +245,23 @@ STRESS_TEST_EPSILON = 0.10
 STRESS_TEST_TIME_LIMIT_SEC = 600  # 10 minutes
 
 # -----------------------------------------------------------------------------
-# 9. Pre-registered Evaluation Decision Rule
+# 9. Pre-registered Evaluation Decision Rule & Baseline Definitions
 # -----------------------------------------------------------------------------
+NON_LEARNED_BASELINES: List[str] = [
+    "random",
+    "always_none",
+    "max_containment",
+    "severity_rule",
+    "severity_rule_budget_aware",
+]
+
+REFERENCE_LABEL_AWARE_BASELINES: List[str] = [
+    "label_aware_rule",
+    "label_aware_rule_budget_aware",
+]
+
 DECISION_RULE_TEXT = (
-    "MAPPO is reported as better than the severity-rule baseline only if the paired-difference "
+    "MAPPO is reported as better than the best non-learned baseline only if the paired-difference "
     "interval excludes zero in the positive direction for that reward setting; if it excludes zero "
     "in the negative direction it is reported as worse; otherwise it is reported as not distinguishable."
 )

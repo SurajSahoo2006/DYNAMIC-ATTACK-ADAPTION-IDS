@@ -1,9 +1,9 @@
 """
 marl/baselines.py
 =================
-Stage 3: Heuristic, Rule-Based, and Oracle Baselines for Tactical Defense.
+Stage 3: Heuristic, Rule-Based, and Reference Baselines for Tactical Defense.
 
-Implements and benchmarks 5 baseline policies across reward settings:
+Implements and benchmarks 7 baseline policies across reward settings:
   1. Random: Uniform random action selection across all 3 agent action spaces.
   2. Always None: Inaction baseline (accept_verdict, none, none).
   3. Max Containment: Extreme posture baseline (accept_verdict, isolate, forensic_capture).
@@ -12,7 +12,13 @@ Implements and benchmarks 5 baseline policies across reward settings:
        - High     -> (flag_for_review, block, notify_analyst)
        - Medium   -> (accept_verdict, rate_limit, none)
        - Low      -> (accept_verdict, none, none)
-  5. Oracle: Theoretical upper bound accessing ground truth attack labels (non-deployable).
+  5. Budget-Aware Severity Rule: Same mapping as Severity Rule, but notifies analysts
+     only while the escalation budget lasts, prioritizing highest severity first
+     (Critical prioritized over High when budget is scarce; stops notifying at budget 0).
+  6. Label-Aware Rule: Hand-written rule that accesses ground truth attack labels
+     (non-deployable reference policy, not an upper bound).
+  7. Budget-Aware Label-Aware Rule: Hand-written label-aware rule that additionally
+     respects the escalation budget, prioritizing Critical threats.
 
 Saves benchmark metrics to reports/marl_baselines.json.
 """
@@ -40,9 +46,11 @@ from config_marl import (
     EPISODE_STEPS,
     ESCALATION_ACTIONS,
     ESCALATION_ACTION_TO_IDX,
+    ESCALATION_BUDGET,
     REWARD_SETTINGS,
     TRIAGE_ACTIONS,
     TRIAGE_ACTION_TO_IDX,
+    get_true_class_severity,
 )
 from marl.env import BasePolicy, TacticalDefenseEnv
 from marl.stats import bootstrap_ci_mean, wilson_score_interval
@@ -117,11 +125,56 @@ class SeverityRulePolicy(BasePolicy):
             )
 
 
-class OraclePolicy(BasePolicy):
+class BudgetAwareSeverityRulePolicy(BasePolicy):
     """
-    Theoretical upper bound with perfect knowledge of the ground-truth attack flow label.
-    Clearly marked as not deployable in real environments.
+    Same mapping as SeverityRulePolicy, but monitors remaining escalation budget:
+    - Never notifies when budget reaches 0 (avoids excess budget penalty).
+    - Reserves the final notification strictly for Critical severity threats.
     """
+
+    def get_actions(self, observations: np.ndarray, info: Optional[Dict] = None) -> Tuple[int, int, int]:
+        sev_onehot = observations[0, 9:13]
+        sev_idx = int(np.argmax(sev_onehot))  # 0: Low, 1: Medium, 2: High, 3: Critical
+
+        # Normalized remaining budget: dim 14 = remaining / ESCALATION_BUDGET
+        esc_left_norm = float(observations[0, 14])
+        esc_left = int(round(esc_left_norm * ESCALATION_BUDGET))
+
+        if sev_idx == 3:  # Critical
+            esc_act = ESCALATION_ACTION_TO_IDX["notify_analyst"] if esc_left > 0 else ESCALATION_ACTION_TO_IDX["none"]
+            return (
+                TRIAGE_ACTION_TO_IDX["flag_for_review"],
+                CONTAINMENT_ACTION_TO_IDX["isolate"],
+                esc_act,
+            )
+        elif sev_idx == 2:  # High
+            # Reserve final budget unit for Critical threats
+            esc_act = ESCALATION_ACTION_TO_IDX["notify_analyst"] if esc_left > 1 else ESCALATION_ACTION_TO_IDX["none"]
+            return (
+                TRIAGE_ACTION_TO_IDX["flag_for_review"],
+                CONTAINMENT_ACTION_TO_IDX["block"],
+                esc_act,
+            )
+        elif sev_idx == 1:  # Medium
+            return (
+                TRIAGE_ACTION_TO_IDX["accept_verdict"],
+                CONTAINMENT_ACTION_TO_IDX["rate_limit"],
+                ESCALATION_ACTION_TO_IDX["none"],
+            )
+        else:  # Low
+            return (
+                TRIAGE_ACTION_TO_IDX["accept_verdict"],
+                CONTAINMENT_ACTION_TO_IDX["none"],
+                ESCALATION_ACTION_TO_IDX["none"],
+            )
+
+
+class LabelAwareRulePolicy(BasePolicy):
+    """
+    Hand-written label-aware reference policy that accesses ground truth attack labels.
+    Clearly marked as non-deployable in real environments (not an upper bound).
+    """
+
     def get_actions(self, observations: np.ndarray, info: Optional[Dict] = None) -> Tuple[int, int, int]:
         if info and info.get("is_attack", False):
             return (
@@ -135,6 +188,43 @@ class OraclePolicy(BasePolicy):
                 CONTAINMENT_ACTION_TO_IDX["none"],
                 ESCALATION_ACTION_TO_IDX["none"],
             )
+
+
+class BudgetAwareLabelAwareRulePolicy(BasePolicy):
+    """
+    Budget-aware hand-written label-aware reference policy.
+    Isolates attack flows and notifies analysts only while budget lasts, prioritizing Critical threats.
+    """
+
+    def get_actions(self, observations: np.ndarray, info: Optional[Dict] = None) -> Tuple[int, int, int]:
+        if not info or not info.get("is_attack", False):
+            return (
+                TRIAGE_ACTION_TO_IDX["accept_verdict"],
+                CONTAINMENT_ACTION_TO_IDX["none"],
+                ESCALATION_ACTION_TO_IDX["none"],
+            )
+
+        true_label = info.get("true_label", "")
+        true_sev = get_true_class_severity(true_label)
+        esc_left_norm = float(observations[0, 14])
+        esc_left = int(round(esc_left_norm * ESCALATION_BUDGET))
+
+        if true_sev == "Critical":
+            esc_act = ESCALATION_ACTION_TO_IDX["notify_analyst"] if esc_left > 0 else ESCALATION_ACTION_TO_IDX["none"]
+        elif true_sev == "High":
+            esc_act = ESCALATION_ACTION_TO_IDX["notify_analyst"] if esc_left > 1 else ESCALATION_ACTION_TO_IDX["none"]
+        else:
+            esc_act = ESCALATION_ACTION_TO_IDX["notify_analyst"] if esc_left > 2 else ESCALATION_ACTION_TO_IDX["none"]
+
+        return (
+            TRIAGE_ACTION_TO_IDX["flag_for_review"],
+            CONTAINMENT_ACTION_TO_IDX["isolate"],
+            esc_act,
+        )
+
+
+# Backward compatibility alias
+OraclePolicy = LabelAwareRulePolicy
 
 
 def evaluate_policy_on_env(
@@ -158,11 +248,13 @@ def evaluate_policy_on_env(
         info: Optional[Dict] = None
 
         while not done:
-            # Oracle checks ground truth from env state
-            if isinstance(policy, OraclePolicy):
+            if isinstance(policy, (LabelAwareRulePolicy, BudgetAwareLabelAwareRulePolicy)):
                 flow_idx = env.episode_flow_indices[env.current_step]
                 is_att = (env.true_labels[flow_idx] != "Benign")
-                actions = policy.get_actions(obs, info={"is_attack": is_att})
+                actions = policy.get_actions(
+                    obs,
+                    info={"is_attack": is_att, "true_label": env.true_labels[flow_idx]},
+                )
             else:
                 actions = policy.get_actions(obs, info=info)
 
@@ -183,7 +275,6 @@ def evaluate_policy_on_env(
 
         episode_returns.append(ep_return)
 
-    # Compute bootstrap CI for return
     return_ci = bootstrap_ci_mean(episode_returns, num_resamples=10_000, seed=base_seed)
     attacks_wilson = wilson_score_interval(contained_attacks, total_attacks)
     benigns_wilson = wilson_score_interval(disrupted_benigns, total_benigns)
@@ -213,11 +304,11 @@ def evaluate_policy_on_env(
 
 def run_baselines_benchmark() -> Dict:
     start_time = time.time()
-    log.info("Starting Stage 3 Baselines benchmark...")
+    log.info("Starting Stage 3 Baselines benchmark (7 policies across 3 settings)...")
 
     results: Dict[str, Dict] = {
         "metadata": {
-            "description": "Stage 3 Heuristic and Oracle Baselines Benchmark",
+            "description": "Stage 3 Heuristic, Rule-Based, and Reference Baselines Benchmark",
             "episodes_per_setting": BASELINE_EVAL_EPISODES,
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
         },
@@ -229,7 +320,9 @@ def run_baselines_benchmark() -> Dict:
         "always_none": AlwaysNonePolicy(),
         "max_containment": MaxContainmentPolicy(),
         "severity_rule": SeverityRulePolicy(),
-        "oracle": OraclePolicy(),
+        "severity_rule_budget_aware": BudgetAwareSeverityRulePolicy(),
+        "label_aware_rule": LabelAwareRulePolicy(),
+        "label_aware_rule_budget_aware": BudgetAwareLabelAwareRulePolicy(),
     }
 
     for split in ["rl_val", "test"]:
@@ -250,7 +343,7 @@ def run_baselines_benchmark() -> Dict:
                 )
                 results["splits"][split][setting_name][policy_name] = eval_metrics
                 log.info(
-                    f"  [{policy_name:<16}] Return: {eval_metrics['mean_return']:>8.2f} "
+                    f"  [{policy_name:<30}] Return: {eval_metrics['mean_return']:>8.2f} "
                     f"[{eval_metrics['return_ci_lower']:>8.2f}, {eval_metrics['return_ci_upper']:>8.2f}] | "
                     f"Attacks: {eval_metrics['attacks_contained_formatted']} | "
                     f"Disrupted: {eval_metrics['benigns_disrupted_formatted']}"
