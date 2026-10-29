@@ -25,7 +25,8 @@ from config import (
     ENCODER_34_PATH,
     get_flow_severity,
 )
-from models.ensemble import EnsembleClassifier
+import torch
+from models.ensemble import EnsembleClassifier, PyTorchDNN
 
 _LOADED_MODELS: dict[str, EnsembleClassifier] = {}
 _FEATURE_LIST: Optional[list[str]] = None
@@ -69,6 +70,21 @@ def get_or_load_model(target: str = "8class", model_type: str = "b2") -> Ensembl
         if not xgb_path.exists():
             xgb_path = MODELS_DIR / f"xgb_{target}.joblib"
         instance.xgb_model = joblib.load(xgb_path)
+
+        # Load trained PyTorch DNN
+        dnn_path = MODELS_DIR / f"dnn{suffix}.pt"
+        if not dnn_path.exists():
+            dnn_path = MODELS_DIR / f"dnn_{target}.pt"
+        if dnn_path.exists():
+            checkpoint = torch.load(dnn_path, map_location="cpu", weights_only=False)
+            instance.dnn_model = PyTorchDNN(
+                input_dim=checkpoint.get("input_dim", 19),
+                hidden_1=checkpoint.get("hidden_1", 128),
+                hidden_2=checkpoint.get("hidden_2", 64),
+                num_classes=checkpoint.get("num_classes", meta["num_classes"]),
+            )
+            instance.dnn_model.load_state_dict(checkpoint["model_state_dict"])
+            instance.dnn_model.eval()
 
         _LOADED_MODELS[cache_key] = instance
 
