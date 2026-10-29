@@ -95,11 +95,120 @@ def check_machine_specific_paths(markdown_text: str, filename: str) -> List[str]
     """Ensures no local machine-specific path strings exist in markdown reports."""
     errors = []
     # Match Windows drive paths (e.g. D:\, D:/, C:\, C:/) excluding standard web schemes (http/https/ftp)
-    # or explicit file:/// URIs
-    pattern = re.compile(r"(?<!https)(?<!http)(?<!ftp)\b[A-Za-z]:[\\/]|file:\/\/\/")
+    # or explicit file:/// URIs, Users, or username suraj
+    pattern = re.compile(r"(?<!https)(?<!http)(?<!ftp)\b[A-Za-z]:[\\/]|file:\/\/\/|\bUsers[\\/]|\\suraj\b|\/suraj\b")
     for i, line in enumerate(markdown_text.splitlines(), 1):
         if pattern.search(line):
             errors.append(f"[{filename}] Line {i}: machine-specific path detected: {line.strip()}")
+    return errors
+
+
+def check_all_tracked_text_files_paths() -> List[str]:
+    r"""
+    Scans ALL tracked text files in the git repository for local machine-specific path strings:
+    - Windows drive letters (e.g. D:\, C:\, D:/, C:/) excluding web schemes (http/https/ftp)
+    - file:/// URIs
+    - Users/ or Users\
+    - username suraj
+    """
+    import subprocess
+    errors = []
+    try:
+        res = subprocess.run(
+            ["git", "ls-files"],
+            cwd=str(PROJECT_ROOT),
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        tracked_files = [f.strip() for f in res.stdout.splitlines() if f.strip()]
+    except Exception as e:
+        return [f"Failed to execute git ls-files: {e}"]
+
+    binary_exts = {".pt", ".joblib", ".parquet", ".png", ".jpg", ".jpeg", ".webp", ".ico", ".bin"}
+    pattern = re.compile(r"(?<!https)(?<!http)(?<!ftp)\b[A-Za-z]:[\\/]|file:\/\/\/|\bUsers[\\/]|\\suraj\b|\/suraj\b")
+
+    for rel_path in tracked_files:
+        if rel_path == "tools/check_report_consistency.py":
+            continue
+        fpath = PROJECT_ROOT / rel_path
+        if fpath.suffix.lower() in binary_exts or not fpath.exists():
+            continue
+
+        try:
+            with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
+                for line_num, line in enumerate(f, 1):
+                    if pattern.search(line):
+                        errors.append(f"[{rel_path}] Line {line_num}: machine-specific path detected: {line.strip()[:120]}")
+        except Exception:
+            pass
+
+    return errors
+
+
+def check_phase5_table_intervals(p5_text: str) -> List[str]:
+    """
+    Verifies that all tables in phase5_summary.md reporting counts or means
+    include confidence intervals (e.g. [..., ...]).
+    """
+    errors = []
+    lines = p5_text.splitlines()
+    in_table = False
+    headers = []
+    table_rows = []
+    table_start_line = 0
+
+    for i, line in enumerate(lines, 1):
+        stripped = line.strip()
+        if stripped.startswith("|") and stripped.endswith("|"):
+            if not in_table:
+                headers = [c.strip() for c in stripped.strip("|").split("|")]
+                in_table = True
+                table_start_line = i
+                table_rows = []
+            elif len(table_rows) == 0 and re.match(r"^\|(?:\s*[:\-]+\s*\|)+$", stripped):
+                # Separator line
+                table_rows.append(stripped)
+            else:
+                cells = [c.strip() for c in stripped.strip("|").split("|")]
+                table_rows.append((i, cells))
+        else:
+            if in_table and len(table_rows) > 1:
+                # Check headers for statistical counts or means
+                target_cols = []
+                for idx, h in enumerate(headers):
+                    h_lower = h.lower()
+                    if any(kw in h_lower for kw in ["return", "attacks", "benign", "containment", "disrupted", "diff"]):
+                        if not any(skip in h_lower for skip in ["budget", "step", "seed", "outcome", "rl_val", "training"]):
+                            target_cols.append((idx, h))
+
+                if target_cols:
+                    for line_no, row_cells in table_rows[1:]:
+                        for col_idx, col_header in target_cols:
+                            if col_idx < len(row_cells):
+                                cell_val = row_cells[col_idx]
+                                if "[" in cell_val and "]" in cell_val:
+                                    continue
+                                if cell_val in ["--", "N/A", ""]:
+                                    continue
+                                # Check if adjacent column contains CI (e.g. 95% Bootstrap CI)
+                                adjacent_has_ci = False
+                                if col_idx + 1 < len(row_cells):
+                                    adj_cell = row_cells[col_idx + 1]
+                                    adj_header = headers[col_idx + 1].lower() if col_idx + 1 < len(headers) else ""
+                                    if "ci" in adj_header and "[" in adj_cell and "]" in adj_cell:
+                                        adjacent_has_ci = True
+
+                                if not adjacent_has_ci:
+                                    errors.append(
+                                        f"[phase5_summary.md] Table at line {table_start_line}, row {line_no}: "
+                                        f"column '{col_header}' lacks confidence interval brackets in cell: '{cell_val}'"
+                                    )
+
+            in_table = False
+            headers = []
+            table_rows = []
+
     return errors
 
 
@@ -190,10 +299,19 @@ def check_phase5_json_alignments(summary_md: str) -> List[str]:
         s_data = e["settings"][active_setting]
         
         # Baselines
-        for b in ["random", "always_none", "max_containment", "severity_rule", "oracle"]:
-            b_info = s_data["baselines"][b]
-            check_presence(f"{b_info['mean_return']:.2f}", f"Baseline {b} return ({b_info['mean_return']:.2f})")
-            check_presence(f"{b_info['attacks_contained']['x']} of {b_info['attacks_contained']['n']}", f"Baseline {b} attacks count")
+        for b in [
+            "random",
+            "always_none",
+            "max_containment",
+            "severity_rule",
+            "severity_rule_budget_aware",
+            "label_aware_rule",
+            "label_aware_rule_budget_aware",
+        ]:
+            if b in s_data["baselines"]:
+                b_info = s_data["baselines"][b]
+                check_presence(f"{b_info['mean_return']:.2f}", f"Baseline {b} return ({b_info['mean_return']:.2f})")
+                check_presence(f"{b_info['attacks_contained']['x']} of {b_info['attacks_contained']['n']}", f"Baseline {b} attacks count")
 
         # MAPPO Aggregate
         m_agg = s_data["mappo_aggregate"]
@@ -201,8 +319,9 @@ def check_phase5_json_alignments(summary_md: str) -> List[str]:
         check_presence(f"{m_agg['attacks_contained']['x']} of {m_agg['attacks_contained']['n']}", f"MAPPO aggregate attacks count")
 
         # Paired diff
-        p_diff = s_data["paired_differences"]["overall"]
-        check_presence(f"+{p_diff['mean_diff']:.2f}", f"Overall paired diff (+{p_diff['mean_diff']:.2f})")
+        p_diff = s_data["paired_differences"].get("overall_vs_best_non_learned", s_data["paired_differences"]["overall"])
+        sign = "+" if p_diff['mean_diff'] > 0 else ""
+        check_presence(f"{sign}{p_diff['mean_diff']:.2f}", f"Overall paired diff ({sign}{p_diff['mean_diff']:.2f})")
         check_presence(p_diff["decision_outcome"], f"Decision outcome ({p_diff['decision_outcome']})")
 
     # 4. Adversarial stress test
@@ -212,7 +331,13 @@ def check_phase5_json_alignments(summary_md: str) -> List[str]:
             st = json.load(f)
         check_presence(f"{st['metadata']['clean_classifier_acc'] * 100:.2f}%", "Stress test clean accuracy")
         check_presence(f"{st['metadata']['adversarial_classifier_acc'] * 100:.2f}%", "Stress test adversarial accuracy")
-        check_presence(f"{st['comparison_vs_clean']['mappo_aggregate']['delta_return']:+.2f}", "MAPPO delta return")
+        if "paired_comparisons" in st:
+            delta = st['paired_comparisons']['mappo_aggregate']['paired_delta_return']
+            sign = "+" if delta > 0 else ""
+            check_presence(f"{sign}{delta:.2f}", "MAPPO delta return")
+        elif "comparison_vs_clean" in st:
+            delta = st['comparison_vs_clean']['mappo_aggregate']['delta_return']
+            check_presence(f"{delta:+.2f}", "MAPPO delta return")
 
     return errors
 
@@ -251,7 +376,7 @@ def check_requirements_completeness() -> List[str]:
         "models", "ingest", "preprocess", "xai", "adversarial", "alerts", "orchestrator",
         "config", "predict", "tools", "__future__", "dataclasses", "gc", "uuid", "experiments",
         "run_phase3_llm", "scapy", "concurrent", "marl", "export", "dashboard", "config_marl",
-        "io", "base64", "tempfile", "urllib",
+        "io", "base64", "tempfile", "urllib", "subprocess",
     }
 
     missing = []
@@ -373,19 +498,25 @@ def main():
     else:
         print("  [PASS] Markdown formatting, table headers, and math delimiters verified.")
 
-    print("\n[6] Auditing for machine-specific path strings across markdown documents ...")
-    path_p4 = check_machine_specific_paths(p4_text, "phase4_summary.md")
-    path_p5 = check_machine_specific_paths(p5_text, "phase5_summary.md")
-    path_readme = check_machine_specific_paths(readme_text, "README.md")
-    path_errs = path_p4 + path_p5 + path_readme
-    if path_errs:
-        all_errors.extend(path_errs)
-        for e in path_errs:
+    print("\n[6] Auditing for machine-specific path strings across ALL tracked text files ...")
+    path_tracked_errs = check_all_tracked_text_files_paths()
+    if path_tracked_errs:
+        all_errors.extend(path_tracked_errs)
+        for e in path_tracked_errs:
             print(f"  [ERROR] {e}")
     else:
-        print("  [PASS] Zero machine-specific path strings found.")
+        print("  [PASS] Zero machine-specific path strings found across all tracked text files.")
 
-    print("\n[7] Verifying README execution commands ...")
+    print("\n[7] Auditing Phase 5 report tables for confidence intervals on counts & means ...")
+    tbl_int_errs = check_phase5_table_intervals(p5_text)
+    if tbl_int_errs:
+        all_errors.extend(tbl_int_errs)
+        for e in tbl_int_errs:
+            print(f"  [ERROR] {e}")
+    else:
+        print("  [PASS] All Phase 5 report tables reporting counts or means include confidence intervals.")
+
+    print("\n[8] Verifying README execution commands ...")
     cmd_errs = check_readme_commands_exist()
     if cmd_errs:
         all_errors.extend(cmd_errs)

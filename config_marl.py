@@ -236,6 +236,7 @@ MAX_TRAIN_STEPS = 200_000
 MIN_TRAIN_STEPS = 100_000
 EVAL_INTERVAL_STEPS = 20_000
 STAGE4_RUNTIME_LIMIT_SEC = 2700  # 45 minutes hard cap
+STAGE4_EXTENDED_LIMIT_SEC = 4500  # 75 minutes extended cap
 
 # -----------------------------------------------------------------------------
 # 8. Adversarial Stress Test

@@ -187,11 +187,11 @@ Run the Phase 5 pipeline stages in sequence. All commands execute locally in the
 |:---:|:---|:---|:---:|:---:|
 | **1** | `python marl/build_cache.py` | Runs frozen B2 ensemble over val & test sets; generates 70/30 `rl_train`/`rl_val` splits | ~6.1 s | 610 MB |
 | **2** | `pytest marl/tests/test_env.py -v` | Unit tests: no label leakage, determinism, reward arithmetic, budget/posture limits | ~1.6 s | 95 MB |
-| **3** | `python marl/baselines.py` | Benchmarks 5 baselines (Random, None, Max, Severity Rule, Oracle) over 200 episodes | ~15.4 s | 122 MB |
-| **4** | `python marl/mappo.py --pilot` | Runs 20,000-step pilot, computes steps/sec, sets budget (200,000 steps) | ~42.1 s | 368 MB |
-| **5** | `python marl/mappo.py --resume` | Trains 5 seeds under `balanced` setting; selects checkpoints by best `rl_val` return | ~30.0 min | 410 MB |
-| **6** | `python marl/evaluate.py` | Evaluates MAPPO and baselines on SAME 500 test episodes; applies pre-registered decision rule | ~105.7 s | 360 MB |
-| **7** | `python marl/stress_test.py` | Tests policy robustness against 500 FGSM-perturbed flows ($\epsilon=0.10$) | ~107.9 s | 697 MB |
+| **3** | `python marl/baselines.py` | Benchmarks 7 baselines (Random, None, Max, Severity Rule, Budget-Aware Severity, Label-Aware Reference Rules) over 200 episodes | ~31.9 s | 129 MB |
+| **4** | `python marl/mappo.py --pilot` | Runs 20,000-step pilot, computes steps/sec, sets budget (200,000 steps) | ~97.9 s | 367 MB |
+| **5** | `python marl/mappo.py --resume` | Trains 5 seeds under `balanced` setting; selects checkpoints by best `rl_val` return | ~48.6 min | 410 MB |
+| **6** | `python marl/evaluate.py` | Evaluates MAPPO and baselines on SAME 500 test episodes; applies pre-registered decision rule | ~160.8 s | 297 MB |
+| **7** | `python marl/stress_test.py` | Paired like-for-like test of all policies against 500 clean vs FGSM-perturbed flows ($\epsilon=0.10$) | ~299.8 s | 52 MB |
 | **8** | `python alerts/generate_phase5_alerts.py` | Emits 45 alerts with MARL actions to `logs/alerts_phase5.jsonl`; executes 3-test cryptographic audit | ~2.0 s | 135 MB |
 | **9** | `python export/elk_export.py` | Exports alerts to Elastic Common Schema (`logs/alerts_phase5_ecs.ndjson`) | ~0.1 s | 60 MB |
 | **10** | `python dashboard/build_dashboard.py` | Compiles self-contained `reports/dashboard.html` with embedded Base64 PNG charts | ~1.5 s | 120 MB |
@@ -211,5 +211,5 @@ Run the Phase 5 pipeline stages in sequence. All commands execute locally in the
 | **4A** | Explainable AI (SHAP TreeExplainer) | **COMPLETE** | 2,000 stratified flows, $\rho = 0.9088$ stability, `--use-shap` LLM integration |
 | **4B** | Adversarial Robustness (ART) | **COMPLETE** | Domain constraints, zero-attack control (0.0 drift), random noise control, FGSM transfer, multi-budget HSJ & ZOO, 4-arm defense matrix |
 | **4C** | Cryptographic Alert Logging | **COMPLETE** | Flat ELK-ready schema, SHA-256 hash chaining, 100% verified tamper detection |
-| **5A** | MARL Tactical Defense (MAPPO) | **COMPLETE** | 3 cooperative agents (Triage, Containment, Escalation); paired diff +32.65 [31.05, 34.30] vs Severity Rule (**better**) |
+| **5A** | MARL Tactical Defense (MAPPO) | **COMPLETE** | 3 cooperative agents (Triage, Containment, Escalation); paired diff +21.63 [20.39, 22.85] vs best non-learned baseline (severity_rule_budget_aware) (**better**) |
 | **5B** | Autonomous SOC Dashboard & ECS Export | **COMPLETE** | Elastic Common Schema ndjson export, 3-test cryptographic log verification, standalone Base64 HTML dashboard |
