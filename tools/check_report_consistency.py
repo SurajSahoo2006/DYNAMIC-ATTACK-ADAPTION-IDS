@@ -42,6 +42,47 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from config import ENCODER_8_PATH, ENCODER_34_PATH, REPORTS_DIR
 
 
+def check_markdown_formatting_and_math(markdown_text: str) -> List[str]:
+    """
+    Checks for markdown text corruption:
+    1. Feature name corruption: 'low_duration' appearing without a leading 'f'.
+    2. Unbalanced LaTeX math delimiters: odd number of unescaped '$' signs on a line.
+    3. Truncated or empty table header cells: table header row containing cells that are only '$' or empty.
+    """
+    errors = []
+    lines = markdown_text.splitlines()
+    in_code_block = False
+
+    for i, line in enumerate(lines, 1):
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            in_code_block = not in_code_block
+            continue
+        if in_code_block:
+            continue
+
+        # 1. Feature name corruption
+        if re.search(r"(?<!f)low_duration", line):
+            errors.append(f"Line {i}: corrupted feature name 'low_duration' (missing 'f'): {stripped}")
+
+        # 2. Odd number of unescaped dollar signs on a line
+        unescaped_dollars = len(re.findall(r"(?<!\\)\$", line))
+        if unescaped_dollars % 2 != 0:
+            errors.append(f"Line {i}: odd number of unescaped dollar signs ({unescaped_dollars}): {stripped}")
+
+        # 3. Table header cells that are only '$' or empty
+        if i < len(lines):
+            next_line = lines[i].strip()
+            if stripped.startswith("|") and stripped.endswith("|") and re.match(r"^\|(?:\s*[:\-]+\s*\|)+$", next_line):
+                # This line is a table header row (split on unescaped pipes)
+                cells = [c.strip() for c in re.split(r"(?<!\\)\|", stripped)[1:-1]]
+                for c_idx, cell in enumerate(cells, 1):
+                    if cell in ["$", "$$", ""]:
+                        errors.append(f"Line {i}: table header column {c_idx} is empty or only dollar ('{cell}'): {stripped}")
+
+    return errors
+
+
 def check_fraction_percentages(markdown_text: str) -> List[str]:
     """Finds all 'k/n (pct%)' or 'k of n' instances and checks mathematical agreement."""
     errors = []
@@ -270,6 +311,15 @@ def main():
             print(f"  [ERROR] {e}")
     else:
         print("  [PASS] Encoders and class definitions verified.")
+
+    print("\n[5] Auditing markdown text formatting, table headers, and LaTeX math delimiters ...")
+    fmt_errs = check_markdown_formatting_and_math(summary_text)
+    if fmt_errs:
+        all_errors.extend(fmt_errs)
+        for e in fmt_errs:
+            print(f"  [ERROR] {e}")
+    else:
+        print("  [PASS] Markdown formatting, table headers, and math delimiters verified.")
 
     print("\n" + "=" * 76)
     if not all_errors:
