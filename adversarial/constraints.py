@@ -78,7 +78,7 @@ FEATURE_CONSTRAINTS: Dict[str, FeatureConstraint] = {
         name="ack_count",
         feature_type="count",
         min_val=0.0,
-        max_val=5.0,
+        max_val=5.7,
         modifiable=False,
         rationale="Governed strictly by TCP acknowledgment handshake mechanics."
     ),
@@ -118,7 +118,7 @@ FEATURE_CONSTRAINTS: Dict[str, FeatureConstraint] = {
         name="Tot size",
         feature_type="continuous",
         min_val=42.0,
-        max_val=5091.6,
+        max_val=5145.0,
         modifiable=True,
         rationale="Attacker can easily append arbitrary padding bytes or chunk data into custom buffer sizes."
     ),
@@ -213,9 +213,10 @@ class AdversarialConstraintEnforcer:
     ) -> np.ndarray:
         """
         Enforces constraints on perturbed scaled features:
-        1. Resets fixed features back to clean values.
-        2. Unscales to physical units, clips to [min_val, max_val], rounds counts.
-        3. Re-scales back to standardized space.
+        1. Bit-for-bit identity check for zero perturbation (epsilon = 0 control).
+        2. Resets fixed features back to clean values.
+        3. Unscales perturbed modifiable features to physical units, clips to [min_val, max_val], rounds counts.
+        4. Re-scales back to standardized space, preserving unperturbed coordinates exactly.
 
         Args:
             X_adv_scaled: array of shape (N, 19) in standardized feature space
@@ -224,6 +225,11 @@ class AdversarialConstraintEnforcer:
         Returns:
             np.ndarray of shape (N, 19) strictly compliant with realistic domain constraints.
         """
+        # Exact check for zero-attack control (epsilon = 0)
+        pert_mask = np.abs(X_adv_scaled - X_clean_scaled) > 1e-7
+        if not np.any(pert_mask):
+            return X_clean_scaled.copy()
+
         X_adv_mod = X_adv_scaled.copy()
 
         # 1. Reset non-modifiable features strictly to original clean values
@@ -240,17 +246,15 @@ class AdversarialConstraintEnforcer:
                 df_unscaled[feat] = np.clip(df_unscaled[feat], c.min_val, c.max_val)
                 if c.feature_type == "count":
                     df_unscaled[feat] = np.round(df_unscaled[feat])
-            else:
-                # Ensure clean value is untouched
-                pass
 
         # 4. Transform back to standardized feature space using scaler
-        # We need the full 46-feature array representation or transform the 19 features directly
-        # Since standard scaling is coordinate-wise: x_scaled = (x_unscaled - mean) / scale
         means = self.unscaler.means
         scales = self.unscaler.scales
         arr_unscaled = df_unscaled[self.feature_names].to_numpy(dtype=np.float32)
         X_compliant_scaled = (arr_unscaled - means) / scales
+
+        # 5. Restore unperturbed coordinates bit-for-bit to avoid numerical drift
+        X_compliant_scaled[~pert_mask] = X_clean_scaled[~pert_mask]
 
         # Final check: fixed columns must strictly match clean scaled
         X_compliant_scaled[:, self.fixed_indices] = X_clean_scaled[:, self.fixed_indices]
