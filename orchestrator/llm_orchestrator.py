@@ -3,14 +3,15 @@ orchestrator/llm_orchestrator.py
 ================================
 Phase 3 - LLM Semantic Orchestrator
 
-Sits between Feature Selection and Classifier triage in the architecture diagram:
+Sits AFTER the Ensemble Classifier in the architecture flow:
   - Consumes flow telemetry (top unscaled features), predicted class from Ensemble,
     confidence score, and deterministic severity.
-  - Queries local Ollama (Llama-3.2-3B-Instruct / Llama-3-8B-Instruct).
-  - Falls back gracefully to deterministic rule-based triage if Ollama is offline.
-  - STRICT DESIGN RULE: The ensemble determines attack_class and config determines severity.
-    The LLM never hallucinates or overrides class or severity.
-  - STRICT JSON output:
+  - Queries local Ollama (Llama-3.2-3B-Instruct).
+  - Enforces temperature 0, strict JSON format, and retry on invalid JSON.
+  - Falls back to deterministic rule-based expert knowledge if Ollama is offline or fails.
+  - Invariant: Ensemble determines attack_class and config table determines severity.
+    If the LLM outputs different values, they are overwritten and a 'model_overrode_fields' event is recorded.
+  - Output JSON:
     {
       "attack_class": str,
       "severity": str,
@@ -157,25 +158,26 @@ class FeatureUnscaler:
 class LLMSemanticOrchestrator:
     """
     Manages semantic triage, natural language explanation, and actionable mitigation
-    for classified network flows.
+    for classified network flows. Positioned AFTER the Ensemble Classifier.
     """
 
     def __init__(
         self,
         base_url: str = OLLAMA_BASE_URL,
         model_name: str = OLLAMA_MODEL,
-        request_timeout: float = 8.0,
+        request_timeout: float = 60.0,
     ):
         self.base_url = base_url.rstrip("/")
         self.model_name = model_name
         self.timeout = request_timeout
         self.unscaler = FeatureUnscaler()
         self.ollama_online = self._check_ollama_status()
+        self.model_overrode_fields_count = 0
 
     def _check_ollama_status(self) -> bool:
         """Tests whether local Ollama server is active and accessible."""
         try:
-            resp = requests.get(f"{self.base_url}/api/tags", timeout=2.0)
+            resp = requests.get(f"{self.base_url}/api/tags", timeout=5.0)
             if resp.status_code == 200:
                 models = [m.get("name") for m in resp.json().get("models", [])]
                 log.info(f"Ollama server connected at {self.base_url}. Available models: {models}")
@@ -193,6 +195,7 @@ class LLMSemanticOrchestrator:
         attack_class: str,
         confidence: float,
         severity: Optional[str] = None,
+        is_last_call: bool = False,
     ) -> Dict[str, Any]:
         """
         Generates semantic triage and mitigation recommendation for a single flow.
@@ -203,8 +206,10 @@ class LLMSemanticOrchestrator:
             "severity": str,
             "explanation": str,
             "recommended_action": str,
-            "_source": "ollama" | "rule_based_fallback",
-            "_latency_sec": float
+            "source": "ollama" | "rule_based_fallback",
+            "fallback": bool,
+            "overrode_fields": bool,
+            "latency_sec": float
           }
         """
         t0 = time.time()
@@ -212,21 +217,34 @@ class LLMSemanticOrchestrator:
 
         # Attempt Ollama inference if online
         if self.ollama_online:
-            try:
-                res = self._call_ollama(
-                    flow_features_unscaled, attack_class, confidence, det_severity
-                )
-                if res is not None:
-                    res["_source"] = "ollama"
-                    res["_latency_sec"] = round(time.time() - t0, 3)
-                    return res
-            except Exception as e:
-                log.warning(f"Ollama request failed: {e}. Falling back to rule-based triage.")
+            res, raw_source = self._query_ollama_with_retry(
+                flow_features_unscaled=flow_features_unscaled,
+                attack_class=attack_class,
+                confidence=confidence,
+                severity=det_severity,
+                is_last_call=is_last_call,
+            )
+            if res is not None:
+                overrode = False
+                # Verify non-overridable ensemble values
+                if res.get("attack_class") != attack_class or res.get("severity") != det_severity:
+                    overrode = True
+                    self.model_overrode_fields_count += 1
+                    res["attack_class"] = attack_class
+                    res["severity"] = det_severity
+
+                res["source"] = "ollama"
+                res["fallback"] = False
+                res["overrode_fields"] = overrode
+                res["latency_sec"] = round(time.time() - t0, 3)
+                return res
 
         # Deterministic rule-based fallback
         res = self._fallback_triage(attack_class, det_severity)
-        res["_source"] = "rule_based_fallback"
-        res["_latency_sec"] = round(time.time() - t0, 4)
+        res["source"] = "rule_based_fallback"
+        res["fallback"] = True
+        res["overrode_fields"] = False
+        res["latency_sec"] = round(time.time() - t0, 4)
         return res
 
     def _fallback_triage(self, attack_class: str, severity: str) -> Dict[str, str]:
@@ -245,14 +263,52 @@ class LLMSemanticOrchestrator:
             "recommended_action": knowledge["recommended_action"],
         }
 
+    def _query_ollama_with_retry(
+        self,
+        flow_features_unscaled: Dict[str, float],
+        attack_class: str,
+        confidence: float,
+        severity: str,
+        is_last_call: bool,
+    ) -> Tuple[Optional[Dict[str, str]], str]:
+        """
+        Tries to call Ollama. If response JSON is invalid, retries once.
+        Returns (parsed_dict, "ollama") or (None, "fallback").
+        """
+        # Attempt 1
+        res = self._call_ollama(
+            flow_features=flow_features_unscaled,
+            attack_class=attack_class,
+            confidence=confidence,
+            severity=severity,
+            is_last_call=is_last_call,
+        )
+        if res is not None:
+            return res, "ollama"
+
+        # Attempt 2 (Retry once on invalid JSON / error)
+        log.warning("Ollama first attempt failed for flow. Retrying once...")
+        res = self._call_ollama(
+            flow_features=flow_features_unscaled,
+            attack_class=attack_class,
+            confidence=confidence,
+            severity=severity,
+            is_last_call=is_last_call,
+        )
+        if res is not None:
+            return res, "ollama"
+
+        return None, "fallback"
+
     def _call_ollama(
         self,
         flow_features: Dict[str, float],
         attack_class: str,
         confidence: float,
         severity: str,
+        is_last_call: bool,
     ) -> Optional[Dict[str, str]]:
-        """Invokes Ollama generate API with strict JSON formatting."""
+        """Invokes Ollama generate API with temperature 0 and strict JSON formatting."""
         # Top distinctive telemetry keys to provide context without overloading token length
         context_features = {
             k: round(v, 2)
@@ -272,18 +328,21 @@ class LLMSemanticOrchestrator:
 
         prompt = (
             f"You are an expert Network Intrusion Detection Analyst.\n"
-            f"An ensemble machine learning IDS classified this network flow:\n"
+            f"The ensemble machine learning IDS classified this network flow:\n"
             f"- Classified Attack Type: {attack_class}\n"
             f"- Model Confidence: {confidence:.2%}\n"
             f"- Severity: {severity}\n"
             f"- Key Network Telemetry: {json.dumps(context_features)}\n\n"
-            f"TASK: Provide a concise executive explanation (2 sentences max) of why this attack occurs and "
-            f"a specific technical mitigation action (1-2 sentences) for network engineers.\n"
-            f"CRITICAL RULES:\n"
-            f"1. You MUST set 'attack_class' to exactly '{attack_class}'.\n"
-            f"2. You MUST set 'severity' to exactly '{severity}'.\n"
-            f"3. Respond ONLY in valid JSON matching this schema:\n"
-            f'{{"attack_class": "{attack_class}", "severity": "{severity}", "explanation": "...", "recommended_action": "..."}}'
+            f"TASK: Using ONLY the facts given above:\n"
+            f"1. Write an executive explanation (maximum 2 sentences) of what this attack means.\n"
+            f"2. Write a recommended mitigation action (maximum 1 sentence) for network operators.\n\n"
+            f"OUTPUT FORMAT: Return a valid JSON object with EXACTLY these four keys:\n"
+            f'{{\n'
+            f'  "attack_class": "{attack_class}",\n'
+            f'  "severity": "{severity}",\n'
+            f'  "explanation": "...",\n'
+            f'  "recommended_action": "..."\n'
+            f'}}'
         )
 
         payload = {
@@ -291,20 +350,26 @@ class LLMSemanticOrchestrator:
             "prompt": prompt,
             "stream": False,
             "format": "json",
-            "options": {"temperature": 0.2, "num_predict": 150},
+            "options": {
+                "temperature": 0.0,
+                "num_predict": 120,
+            },
         }
+        if is_last_call:
+            payload["keep_alive"] = 0
 
-        resp = requests.post(
-            f"{self.base_url}/api/generate",
-            json=payload,
-            timeout=self.timeout,
-        )
-        if resp.status_code == 200:
-            raw_text = resp.json().get("response", "{}")
-            parsed = json.loads(raw_text)
-            # Enforce non-overridable ensemble labels
-            parsed["attack_class"] = attack_class
-            parsed["severity"] = severity
-            if "explanation" in parsed and "recommended_action" in parsed:
-                return parsed
+        try:
+            resp = requests.post(
+                f"{self.base_url}/api/generate",
+                json=payload,
+                timeout=self.timeout,
+            )
+            if resp.status_code == 200:
+                raw_text = resp.json().get("response", "{}").strip()
+                parsed = json.loads(raw_text)
+                if isinstance(parsed, dict) and "explanation" in parsed and "recommended_action" in parsed:
+                    return parsed
+        except Exception as e:
+            log.warning(f"Ollama call exception: {e}")
+
         return None
