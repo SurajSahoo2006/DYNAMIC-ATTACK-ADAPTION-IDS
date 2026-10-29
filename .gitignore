@@ -32,6 +32,9 @@ venv/
 .venv/
 env/
 
+# Logs
+logs/*.log
+
 # IDEs
 .vscode/
 .idea/

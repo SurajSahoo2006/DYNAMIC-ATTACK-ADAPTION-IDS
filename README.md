@@ -186,18 +186,27 @@ python xai/run_phase4_shap.py
 *Computes TreeExplainer SHAP values across 2,000 stratified test flows, evaluates XGBoost vs RF stability ($\rho = 0.9088$), generates global and per-class plots, and exports `artifacts/shap_local_40flows.json`.*
 
 ### Step 5: Run Phase 4B Adversarial Robustness Assessment
+The adversarial suite supports staged modular execution (writing results immediately per stage):
 ```bash
-python adversarial/run_phase4_adversarial.py
+# Run individual stages:
+python adversarial/run_phase4_adversarial.py --stage fgsm
+python adversarial/run_phase4_adversarial.py --stage hsj --hsj2-samples 50
+python adversarial/run_phase4_adversarial.py --stage zoo --zoo-samples 40
+python adversarial/run_phase4_adversarial.py --stage defense --defense-samples 500 --defense-hsj-samples 50
+python adversarial/run_phase4_adversarial.py --stage combine
+
+# Or run complete suite:
+python adversarial/run_phase4_adversarial.py --stage all
 ```
-*Enforces domain constraints (freezes protocols/flags, bounds packet sizes/timing), verifies zero-attack pipeline invariance (0.000000 drift), evaluates FGSM transfer vs isotropic random-noise controls (+8.6% to +15.7% attack advantage), runs multi-budget black-box HopSkipJump & ZOO, and tests a 4-arm defense matrix (+42.97% gain under FGSM, +20.00% under HopSkipJump).*
+*Enforces domain constraints (freezes protocols/flags, bounds packet sizes/timing), verifies zero-attack pipeline invariance (0.000000 drift), evaluates FGSM transfer vs isotropic random-noise controls, runs multi-budget black-box HopSkipJump & ZOO, and tests a 4-arm defense matrix.*
 
 ### Step 6: Generate & Audit Forensic Alert Logs (Phase 4C)
 ```bash
-# Populate logs/alerts.jsonl and execute tamper verification tests:
+# Populate logs/alerts.jsonl and execute tamper verification tests (including tail truncation):
 python alerts/generate_and_test_alerts.py
 
-# Audit an existing log file directly:
-python alerts/verify_log.py --file logs/alerts.jsonl
+# Audit an existing log file directly against the external tail hash anchor:
+python alerts/verify_log.py --file logs/alerts.jsonl --anchor logs/alerts_tail_hash.txt
 ```
 
 ---

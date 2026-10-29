@@ -5,29 +5,29 @@
 > **Primary Classifier**: Method B2 Ensemble (Random Forest 0.60 + XGBoost 0.40 + PyTorch DNN 0.00)  
 > **Target Dataset**: CICIoT2023 (19 RFE-selected features)  
 > **Hardware Environment**: Local Windows Laptop, 8 GB RAM, CPU-only (No GPU)  
-> **Measured Peak RAM**: **987.3 MB (0.96 GB)** during SHAP TreeExplainer; **709.3 MB (0.69 GB)** during Adversarial Suite. *(Strict hardware ceiling: < 6.0 GB)*
+> **Measured Peak RAM**: **987.3 MB (0.96 GB)** during SHAP TreeExplainer; **680.9 MB (0.67 GB)** during Staged Adversarial Suite. *(Strict hardware ceiling: < 6.0 GB)*
 
 ---
 
 ## 1. Executive Summary & Flowchart Alignment
 
-Phase 4 completes three key components of the intrusion detection pipeline:
+Phase 4 covers three key boxes of the intrusion detection flowchart:
 1. **Explainable AI (SHAP TreeExplainer)**:
-   - Provides mathematically grounded Shapley feature attributions for tree components of the B2 ensemble.
+   - Provides Shapley feature attributions for the tree components of the B2 ensemble.
    - Generates global feature importance rankings, per-class top feature distributions, and local sample explanations.
-   - Verifies architectural feature stability between Random Forest (weight 0.60) and XGBoost (weight 0.40).
+   - Measures architectural feature stability between Random Forest (weight 0.60) and XGBoost (weight 0.40).
    - Integrates with the LLM Semantic Orchestrator via an opt-in `--use-shap` flag.
 2. **Adversarial Robustness Assessment (Adversarial Robustness Toolbox - ART)**:
-   - Implements **Zero-Attack Pipeline Invariance Control ($\epsilon = 0$)**: proves bit-for-bit mathematical identity ($0.000000$ drift).
-   - Implements **Random-Noise Baseline Control**: compares isotropic noise of identical $L_2$ magnitude to evaluate whether attacks beat random perturbations.
-   - Corrects **PyTorch DNN Surrogate**: properly loads trained weights, establishing a **77.60%** clean baseline (76.80% on full test set) for gradient calculation.
-   - Evaluates three attack families: **FGSM transfer** (gradient-based), **HopSkipJump** (decision-based black-box across 2 budgets), and **ZOO** (score-based black-box across 2 budgets).
-   - Executes a **4-Arm Defense Comparison**: evaluates Arm A (Original B2), Arm B (Retrained Clean 1x), Arm C (Retrained Clean 2x volume control), and Arm D (Retrained Clean + Adv) across Clean, FGSM, Random Noise, and HopSkipJump conditions.
+   - **Zero-Attack Pipeline Control ($\epsilon = 0$)**: Confirms bit-for-bit numerical identity ($0.000000$ drift).
+   - **Random-Noise Control & Fine-Grained Noise Sweep**: Measures accuracy drops at small perturbations ($L_2 \in [0.0001, 0.3000]$) and explains step-function decision boundary concentration.
+   - **PyTorch DNN Surrogate**: Re-established clean baseline at **77.60%** (388/500 flows) for black-box evasion transfer gradient generation.
+   - **Black-Box Attacks**: Measures **HopSkipJump** (Budget 1 on 100 flows, Budget 2 on 50 flows) and **ZOO** (Budget 1 & 2 on 40 flows) with exact counts and Wilson 95% confidence intervals.
+   - **4-Arm Defense Matrix**: Evaluates Arm A (Original B2), Arm B (Retrained Clean 1x), Arm C (Retrained Clean 2x volume control), and Arm D (Retrained Clean + Adv) across Clean, FGSM, Random Noise, HopSkipJump (50 flows/arm), and held-out attack conditions ($\epsilon=0.20$).
 3. **Cryptographic Tamper-Evident Forensic Alert Logging**:
    - Persists detection records to `logs/alerts.jsonl` in a flat, ELK/Kibana-ready schema.
-   - Eliminates vague "risk" labels by storing TreeExplainer `shap_value` and physical `raw_value` in distinct, explicitly typed fields.
-   - Implements cryptographic SHA-256 hash chaining (`prev_hash` -> `entry_hash`) guaranteeing tamper evidence.
-   - Validates log integrity and proves tamper detection through automated audit tests.
+   - Stores TreeExplainer `top_shap_values` and physical `top_raw_feature_values` in separate, explicitly typed fields.
+   - Implements cryptographic SHA-256 hash chaining (`prev_hash` -> `entry_hash`) and an external tail hash anchor (`logs/alerts_tail_hash.txt`) to detect file truncation.
+   - Validates log integrity across automated audit tests (pristine, mid-file modification, tail deletion).
 
 ---
 
@@ -38,7 +38,7 @@ The B2 Ensemble is a weighted soft-voting mixture:
 $$P_{\text{ens}}(y = c \mid x) = 0.60 \cdot P_{\text{RF}}(y = c \mid x) + 0.40 \cdot P_{\text{XGB}}(y = c \mid x) + 0.00 \cdot P_{\text{DNN}}(y = c \mid x)$$
 Because `shap.TreeExplainer` operates in the log-odds margin space of individual decision trees, a convex mixture of disparate probability estimators cannot be represented as a single tree. Therefore:
 - **Global & Local Explanations**: Computed on **XGBoost** (weight = 0.40), which evaluates in milliseconds per sample.
-- **Stability Cross-Check**: Evaluated against **Random Forest** (weight = 0.60) on a stratified sample to verify whether both tree models rely on identical physical features.
+- **Stability Cross-Check**: Evaluated against **Random Forest** (weight = 0.60) on a stratified sample to evaluate whether both tree models rely on similar physical features.
 
 ### Empirical Execution Telemetry
 - **Sample Size**: 1,998 stratified test flows across all 8 classes (`seed=42`).
@@ -84,13 +84,15 @@ Evaluated on a shared stratified test split (200 flows):
 - **Top-5 XGBoost Features**: `['IAT', 'Protocol Type', 'Header_Length', 'rst_count', 'urg_count']`
 - **Top-5 Random Forest Features**: `['IAT', 'rst_count', 'Variance', 'Header_Length', 'urg_count']`
 - **Top-5 Feature Overlap**: **4 / 5 (80.0%)** (`IAT`, `rst_count`, `Header_Length`, `urg_count`)
-- **Conclusion**: Both models agree on the dominant physical telemetry dimensions, confirming high ensemble stability.
+- **Conclusion**: Both models place high importance on the same underlying physical telemetry dimensions.
 
 ### LLM Telemetry Grounding & Feature Phrase Auditing
-Evaluated via `xai/compare_telemetry_grounding.py` across all 40 demo flows for both Phase 3 (static telemetry prompt) and Phase 4 (dynamic SHAP top-5 telemetry prompt):
-- **Ungrounded Numbers**: **0 / 40** in Phase 4; **1 / 40** in Phase 3 (Flow 23888 quoted confidence percentage verbatim).
-- **Unprovided Feature Phrases**: **0 / 40** in both phases. Neither run hallucinated unauthorized features.
-- **Generic Duration Fixation**: In Phase 3, the prompt always passed `flow_duration`, leading the LLM to invent generic justification phrases ("due to its low duration") in **11 / 40 (27.5%)** explanations. In Phase 4 with SHAP-driven telemetry and uncertainty guidance, generic duration claims dropped to **0 / 40 (0.0%)**, focusing explanations on real physical drivers and calibrated confidence bands.
+Audited via `xai/compare_telemetry_grounding.py` across all 40 demo flows for both Phase 3 (static telemetry prompt) and Phase 4 (dynamic SHAP top-5 telemetry prompt):
+- **Unmatched Numbers**: **0 / 40** in Phase 4; **0 / 40** in Phase 3. Both runs adhered strictly to provided numerical values.
+- **Unprovided Feature Phrases**:
+  - **Phase 3**: **0 / 40** unprovided features. `flow_duration` was provided in every prompt; Phase 3 explanations frequently cited duration ("due to its low duration" in 11/40 flows) because it was statically present in every prompt.
+  - **Phase 4**: **3 / 40** flows (Flows 11497, 25398, 20091) were flagged for using the colloquial term "volume" when `Tot size` or `Tot sum` were not in the dynamic top-5 SHAP features.
+- **Duration Fixation**: In Phase 4 with SHAP-driven dynamic feature selection, generic duration claims dropped to **0 / 40 (0.0%)**, grounding explanations in the real top contributors for that specific flow.
 - **Artifact**: Saved to `reports/telemetry_grounding_comparison.json`.
 
 ---
@@ -98,9 +100,9 @@ Evaluated via `xai/compare_telemetry_grounding.py` across all 40 demo flows for 
 ## 3. Part B: Adversarial Robustness Assessment
 
 ### Realistic Domain Constraints
-Adversarial perturbations in network intrusion detection must respect network protocol invariants. Attackers cannot arbitrarily forge TCP control flags during an active session without breaking state.
+Adversarial perturbations in network intrusion detection must respect network protocol invariants:
 
-| Feature Name | Feature Type | Empirical Range | Attacker Modifiable | Rationale / Defense Insight |
+| Feature Name | Feature Type | Empirical Range | Attacker Modifiable | Rationale / Physical Constraint |
 |:---|:---:|:---:|:---:|:---|
 | `flow_duration` | Continuous | [0.00, 99435.77] | **YES** | Attacker can delay packet transmission or hold sockets open. |
 | `Header_Length` | Continuous | [0.00, 9865998.00] | **YES** | Attacker can insert IP/TCP options or padding bytes. |
@@ -123,70 +125,95 @@ Adversarial perturbations in network intrusion detection must respect network pr
 | `Variance` | Continuous | [0.00, 1.00] | **YES** | Shaped by mixing uniform and variable-length frames. |
 
 ### Zero-Attack Pipeline Invariance Control ($\epsilon = 0$)
-To guarantee that the constraint enforcement pipeline (`unscale -> clip -> round -> rescale`) does not introduce numerical artifacts or change predictions on unperturbed traffic, the pipeline was evaluated on original clean flows:
-- **Maximum Numerical Drift ($|X_{\text{pipe}} - X_{\text{clean}}|$)**: **0.000000** (exact bit-for-bit identity across all coordinates).
-- **PyTorch DNN Accuracy**: Raw clean = **77.60%** | Pipeline-passed = **77.60%** (0.00% difference).
-- **B2 Ensemble Accuracy**: Raw clean = **95.60%** | Pipeline-passed = **95.60%** (0.00% difference).
+The constraint enforcement pipeline (`unscale -> clip -> round -> rescale`) was applied to unperturbed test flows:
+- **Maximum Numerical Drift ($|X_{\text{pipe}} - X_{\text{clean}}|$)**: **0.000000** (exact bit-for-bit identity).
+- **PyTorch DNN Accuracy**: Raw clean = **77.60% (388/500)** | Pipeline-passed = **77.60% (388/500)**.
+- **B2 Ensemble Accuracy**: Raw clean = **95.60% (478/500)** | Pipeline-passed = **95.60% (478/500)**.
 
-### FGSM Evasion Transfer vs. Random-Noise Control (500 Test Flows)
-White-box gradients were computed on the PyTorch DNN surrogate and evaluated for black-box evasion transfer against the B2 Tree Ensemble (RF + XGBoost). For each $\epsilon$, an isotropic Gaussian random noise baseline matching the exact sample-wise $L_2$ perturbation magnitude was applied under the exact same domain constraints:
+### Random Noise Sweep & Decision Boundary Fragility Audit
+To investigate why tree ensemble accuracy degrades even under small random perturbations, a fine-grained Gaussian noise sweep was executed on 500 stratified test flows:
 
-| Epsilon ($\epsilon$) | Mean Perturbation ($L_2$) | PyTorch DNN Acc (White-Box) | B2 Ensemble Acc (FGSM Transfer) | Transfer Attack Success Rate (ASR) | Ensemble Acc (Random Noise Control) | Random Noise ASR | Attack vs Noise Advantage |
-|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **$\epsilon = 0.00$** | 0.000 | 77.60% | 95.60% | 0.00% | 95.60% | 0.00% | +0.00% |
-| **$\epsilon = 0.01$** | 0.031 | 77.40% | **57.00%** | **41.00%** | 70.60% | 26.99% | **+14.01%** |
-| **$\epsilon = 0.05$** | 0.152 | 76.00% | **53.20%** | **45.82%** | 61.00% | 37.24% | **+8.58%** |
-| **$\epsilon = 0.10$** | 0.294 | 73.60% | **51.00%** | **47.91%** | 59.20% | 39.12% | **+8.79%** |
-| **$\epsilon = 0.20$** | 0.569 | 62.40% | **47.80%** | **51.67%** | 56.60% | 42.05% | **+9.62%** |
-| **$\epsilon = 0.30$** | 0.841 | 57.00% | **39.00%** | **60.88%** | 53.00% | 45.19% | **+15.69%** |
+| Noise Target $L_2$ | Measured Mean $L_2$ | Correct Flows | Accuracy (95% Wilson CI) | Absolute Drop from Clean |
+|:---:|:---:|:---:|:---:|:---:|
+| **Clean Baseline** | 0.0000 | 478 / 500 | **95.6%** [93.4%, 97.1%] | 0.0% |
+| **$L_2 = 0.0001$** | 0.0003 | 471 / 500 | **94.2%** [91.8%, 95.9%] | -1.4% |
+| **$L_2 = 0.0010$** | 0.0031 | 453 / 500 | **90.6%** [87.7%, 92.9%] | -5.0% |
+| **$L_2 = 0.0100$** | 0.0307 | 372 / 500 | **74.4%** [70.4%, 78.0%] | -21.2% |
+| **$L_2 = 0.0300$** | 0.0899 | 358 / 500 | **71.6%** [67.5%, 75.4%] | -24.0% |
+| **$L_2 = 0.1000$** | 0.2868 | 329 / 500 | **65.8%** [61.5%, 69.8%] | -29.8% |
+| **$L_2 = 0.3000$** | 0.7788 | 298 / 500 | **59.6%** [55.2%, 63.8%] | -36.0% |
 
-> **Scientific Finding**: FGSM transfer evasion clearly beats random noise across all perturbation levels by **+8.6% to +15.7% ASR**. Even small gradient-guided shifts ($\epsilon = 0.01$, mean $L_2 = 0.031$) drop tree ensemble accuracy by 38.6%, proving that gradient directions learned by the DNN surrogate expose common tabular decision vulnerabilities.
+#### Tree Split Threshold Audit (Why the Accuracy Cliff Exists)
+Auditing the Random Forest component (100 trees, max depth 20) revealed:
+1. **High Point-Mass Concentration**: **45.3% of test flows** have `flow_duration = -0.06623` (scaled value corresponding to 0.00 duration, single-packet flows). Similar mass points exist at 0 for `Covariance` and `Variance`.
+2. **Dense Tree Split Clustering**: The Random Forest has **26,914 split thresholds within $\pm 0.01$** and **45,308 split thresholds within $\pm 0.05$** of `flow_duration = -0.06623`.
+3. **Fragility Finding**: Because nearly half the dataset sits exactly on point masses adjacent to thousands of split thresholds, even isotropic noise with standard deviation 0.005 pushes thousands of single-packet flows across multiple tree thresholds simultaneously. Raw noise without domain constraints produced identical degradation, confirming that this sensitivity is an inherent mathematical property of step-function tree boundaries around discrete point masses, not an artifact of the constraint pipeline.
+
+### FGSM Transfer Evasion vs. Random-Noise Control (500 Test Flows)
+White-box gradients were computed on the PyTorch DNN surrogate (77.60% clean baseline) and evaluated for black-box transfer against the B2 Ensemble. An isotropic Gaussian noise control matching the sample-wise $L_2$ magnitude was evaluated in parallel:
+
+| Epsilon ($\epsilon$) | Mean Perturbation ($L_2$) | PyTorch DNN Acc (White-Box) | B2 Ensemble Acc (FGSM Transfer) | Transfer ASR | Ensemble Acc (Random Noise Control) | Random Noise ASR |
+|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| **$\epsilon = 0.00$** | 0.000 | 77.60% (388/500) | 95.60% (478/500) [93.4%, 97.1%] | 0.00% (0/478) | 95.60% (478/500) [93.4%, 97.1%] | 0.00% (0/478) |
+| **$\epsilon = 0.01$** | 0.031 | 77.40% (387/500) | 57.00% (285/500) [52.6%, 61.3%] | 41.00% (196/478) [36.7%, 45.5%] | 70.60% (353/500) [66.5%, 74.4%] | 26.99% (129/478) |
+| **$\epsilon = 0.05$** | 0.152 | 76.00% (380/500) | 53.20% (266/500) [48.8%, 57.5%] | 45.82% (219/478) [41.4%, 50.3%] | 61.00% (305/500) [56.7%, 65.2%] | 37.24% (178/478) |
+| **$\epsilon = 0.10$** | 0.294 | 73.60% (368/500) | 51.00% (255/500) [46.6%, 55.4%] | 47.91% (229/478) [43.5%, 52.4%] | 59.20% (296/500) [54.8%, 63.4%] | 39.12% (187/478) |
+| **$\epsilon = 0.20$** | 0.569 | 62.40% (312/500) | 47.80% (239/500) [43.5%, 52.2%] | 51.67% (247/478) [47.2%, 56.1%] | 56.60% (283/500) [52.2%, 60.9%] | 42.05% (201/478) |
+| **$\epsilon = 0.30$** | 0.841 | 57.00% (285/500) | 39.00% (195/500) [34.8%, 43.3%] | 60.88% (291/478) [56.4%, 65.2%] | 53.00% (265/500) [48.6%, 57.3%] | 45.19% (216/478) |
+
+> **Finding**: FGSM transfer evasion exceeds random noise across all evaluated perturbation levels by **+8.6% to +15.7% ASR**. Even small gradient-guided shifts ($\epsilon = 0.01$, mean $L_2 = 0.031$) drop tree ensemble accuracy to 57.0%, demonstrating that surrogate gradient directions capture shared tabular vulnerabilities.
 
 ### HopSkipJump Black-Box Attack (Multi-Budget Comparison)
 Evaluated directly on the B2 Tree Ensemble across decision boundaries under domain constraints:
 
-| Query Budget Setting | Test Flows | Max Iterations | Max Evaluations | Clean Accuracy | Perturbed Accuracy | Attack Success Rate (ASR) | Mean $L_2$ | Runtime |
+| Query Budget Setting | Sample Size | Max Iter | Max Eval | Clean Accuracy | Perturbed Accuracy | Attack Success Rate (ASR) | Mean $L_2$ | Runtime |
 |:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **Budget 1 (Low)** | 20 | 3 | 10 | **100.00%** | **30.00%** | **70.00%** | 0.7166 | 18.39 s |
-| **Budget 2 (High)** | 10 | 6 | 20 | **80.00%** | **10.00%** | **100.00%** | 0.7153 | 16.13 s |
+| **Budget 1 (Low)** | 100 flows | 3 | 10 | **93.0%** (93/100) [86.3%, 96.6%] | **29.0%** (29/100) [21.0%, 38.5%] | **72.0%** (67/93) [62.2%, 80.1%] | 0.4537 | 88.57 s |
+| **Budget 2 (High)** | 50 flows | 6 | 20 | **90.0%** (45/50) [78.6%, 95.7%] | **44.0%** (22/50) [31.2%, 57.7%] | **53.3%** (24/45) [39.1%, 67.1%] | 0.1279 | 69.75 s |
+
+*Note*: Budget 2 was evaluated on a fixed 50-flow subset to keep CPU runtime manageable. Budget 2 achieves a smaller mean $L_2$ perturbation (0.1279 vs 0.4537) by performing finer binary searches along the decision boundary.
 
 ### Zeroth-Order Optimization (ZOO) Attack (Multi-Budget Comparison)
-Score-based coordinate descent attack against B2 Ensemble probabilities (`nb_parallel = 10`):
+Score-based coordinate descent attack against B2 Ensemble probabilities on a fixed set of 40 flows:
 
-| Query Budget Setting | Test Flows | Max Iterations | Coordinate Batches | Clean Accuracy | Perturbed Accuracy | Attack Success Rate (ASR) | Mean $L_2$ | Runtime |
-|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **Budget 1 (Low)** | 10 | 4 | 10 | **90.00%** | **50.00%** | **44.44%** | 0.0979 | 18.37 s |
-| **Budget 2 (High)** | 10 | 8 | 10 | **90.00%** | **30.00%** | **66.67%** | 0.1339 | 35.70 s |
+| Query Budget Setting | Sample Size | Max Iter | Clean Accuracy | Perturbed Accuracy | Attack Success Rate (ASR) | Mean $L_2$ | Runtime |
+|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| **Budget 1 (Low: 4 iters)** | 40 flows | 4 | **90.0%** (36/40) [76.9%, 96.0%] | **80.0%** (32/40) [65.2%, 89.5%] | **11.1%** (4/36) [4.4%, 25.3%] | 0.0397 | 52.49 s |
+| **Budget 2 (High: 8 iters)** | 40 flows | 8 | **90.0%** (36/40) [76.9%, 96.0%] | **70.0%** (28/40) [54.6%, 81.9%] | **22.2%** (8/36) [11.7%, 38.1%] | 0.0632 | 104.98 s |
 
-> **Artifact**: Comparison plot saved to `reports/adversarial_accuracy_vs_epsilon.png`.
+> **Artifact**: Unified robustness comparison plot saved to `reports/adversarial_accuracy_vs_epsilon.png`.
 
 ---
 
 ## 4. Defense Experiment: 4-Arm Multi-Condition Matrix
 
-To rigorously evaluate whether adversarial retraining provides genuine robustness or merely reflects sample size variation, four model arms were evaluated on **the same fresh test split (400 flows)** under four distinct conditions:
-- **Arm A**: Original B2 Ensemble (trained on full dataset in Phase 1/2).
+Four model arms were trained and evaluated on **the same fresh test split of 500 flows** (and 50 fresh flows per arm for HopSkipJump):
+- **Arm A**: Original B2 Ensemble (trained on full dataset).
 - **Arm B**: Retrained Clean 1x (3,000 clean training flows).
 - **Arm C**: Retrained Clean 2x (6,000 clean training flows, data volume control).
 - **Arm D**: Retrained Clean + Adversarial (3,000 clean + 3,000 FGSM $\epsilon=0.10$ training flows).
 
-### 4x4 Evaluation Matrix
+### 4-Arm Benchmark Matrix
 
-| Model Arm | Clean Test Accuracy | FGSM Transfer ($\epsilon = 0.10$) | Random Noise Control ($L_2 \approx 0.29$) | HopSkipJump (Black-Box) |
-|:---|:---:|:---:|:---:|:---:|
-| **Arm A: Original B2 (Full Data)** | **96.73%** | 51.26% | 57.79% | 40.00% |
-| **Arm B: Retrained Clean 1x (3k)** | 93.97% | 40.70% | 50.25% | 40.00% |
-| **Arm C: Retrained Clean 2x (6k)** | 94.72% | 46.98% | 54.77% | 53.33% |
-| **Arm D: Retrained Clean + Adv (3k+3k)** | 91.46% | **89.95%** | **65.08%** | **73.33%** |
+| Model Arm | Clean (500 flows) | FGSM $\epsilon=0.10$ (500 flows) | Random Noise (500 flows) | HSJ Budget 1 (50 flows/arm) | Held-Out FGSM $\epsilon=0.20$ (500 flows) |
+|:---|:---:|:---:|:---:|:---:|:---:|
+| **Arm A: Original B2** | **95.6%** (478/500) [93.4%, 97.1%] | 52.6% (263/500) [48.2%, 56.9%] | 61.6% (308/500) [57.3%, 65.8%] | 42.0% (21/50) [29.4%, 55.8%] | 49.6% (248/500) [45.2%, 54.0%] |
+| **Arm B: Retrained 1x (3k)** | 92.0% (460/500) [89.3%, 94.1%] | 44.4% (222/500) [40.1%, 48.8%] | 57.0% (285/500) [52.6%, 61.3%] | 34.0% (17/50) [22.4%, 47.9%] | 42.2% (211/500) [38.0%, 46.6%] |
+| **Arm C: Retrained 2x (6k)** | 91.6% (458/500) [88.8%, 93.7%] | 48.2% (241/500) [43.9%, 52.6%] | 58.0% (290/500) [53.6%, 62.3%] | 30.0% (15/50) [19.1%, 43.8%] | 45.4% (227/500) [41.1%, 49.8%] |
+| **Arm D: Retrained Clean+Adv** | 89.4% (447/500) [86.4%, 91.8%] | **88.8%** (444/500) [85.7%, 91.3%] | **69.0%** (345/500) [64.8%, 72.9%] | **52.0%** (26/50) [38.5%, 65.2%] | **63.0%** (315/500) [58.7%, 67.1%] |
 
-### Defense Insights:
-1. **Adversarial Hardening Under FGSM**: Arm D raised accuracy under FGSM evasion from 46.98% (Arm C) up to **89.95%** (+42.97% gain).
-2. **Generalization Beyond FGSM**: Arm D also resisted non-gradient attacks better than clean models, raising HopSkipJump accuracy from 53.33% to **73.33%** (+20.00% gain) and Random Noise accuracy from 54.77% to **65.08%** (+10.31% gain).
-3. **The "Robustness Tax"**: Arm D incurred a modest **-3.26%** drop in clean traffic accuracy (94.72% -> 91.46%), a well-documented phenomenon in adversarial defense literature where robust decision boundaries sacrifice slight precision on standard boundary margins.
+### Honest Defense Assessment
+1. **Specific Hardening on Trained Attack**: Arm D hardened effectively against the exact attack family it was trained on (FGSM $\epsilon=0.10$), reaching **88.8% accuracy** (compared to 48.2% for Arm C).
+2. **Limited Generalization**: Arm D **does not generalize broadly** across arbitrary perturbations:
+   - Under isotropic random noise of matching $L_2$, accuracy drops to **69.0%**.
+   - Under held-out FGSM at doubled magnitude ($\epsilon=0.20$), accuracy drops to **63.0%**.
+   - Under black-box HopSkipJump, accuracy drops to **52.0% [38.5%, 65.2%]**.
+   Arm D hardened specifically against the perturbation vector it observed during training.
+3. **The Robustness Tax**: Arm D exhibits a **-2.2% drop** in clean test accuracy (89.4% vs 91.6% for Arm C, and 95.6% for full-data Arm A).
 
 ---
 
-## 5. Part C: Cryptographic Forensic Alert Logging
+## 5. Part C: Cryptographic Forensic Alert Logging & External Anchor
 
 ### Schema Specification (`logs/alerts.jsonl`)
 Alerts are written as JSON Lines in a flattened, schema-uniform structure:
@@ -235,34 +262,47 @@ Alerts are written as JSON Lines in a flattened, schema-uniform structure:
 }
 ```
 
-### Verification & Tamper Evidence Test Results
-- **Pristine Log Verification**: Evaluated 45 records (40 standard test flows + 5 adversarial flows).
-  - Result: **100% PASS** (`[SUCCESS] Verified 45 alerts. Cryptographic hash chain is 100% intact.`).
-- **Tampered Copy Verification**: Altered line 15's severity field in an exact duplicate log file.
-  - Result: **CORRECTLY DETECTED TAMPER**
+### Threat Model & Anchor Mechanics
+- **Mid-Stream Modification**: Detected by verifying that `recompute_hash(entry) == entry['entry_hash']` and `entry['prev_hash'] == previous_entry['entry_hash']`.
+- **Tail Deletion / Truncation**: A naive hash chain cannot detect tail deletion (truncating the last $N$ lines still leaves a valid self-consistent chain). To prevent this, the latest hash is recorded in an external anchor file: [`logs/alerts_tail_hash.txt`](file:///d:/IROP%20MODEL/DYNAMIC-ATTACK-ADAPTION-IDS/logs/alerts_tail_hash.txt). If the log's terminal hash does not match the external anchor, truncation is flagged immediately.
+- **HMAC Consideration**: If an adversary possesses local filesystem write permissions to both `alerts.jsonl` and `alerts_tail_hash.txt`, they could rewrite the entire log and recompute all hashes. To defend against this higher threat model, HMAC-SHA256 with a secret key held in a Hardware Security Module (HSM), TPM, or remote syslog server would be required so that attackers cannot forge valid MAC tags.
+
+### Verification Audit Results
+- **Pristine Log**: 45/45 records verified (**100% PASS**).
+- **Mid-File Tamper**: Modifying line 15 severity triggered immediate detection:
   ```
   [TAMPER DETECTED] Content modification at Line 15 (Alert ALT-55BDF1481737):
     Recorded entry_hash:   fb021f008035ef463ff71ee13eba0f634c5e5a5e96046ed65bd428197d3acc43
     Recomputed entry_hash: 2162037c1e26a21fe40b34e028c9e9aa77de4f9709ee5c0baed407738d42c039
-    Payload was altered or forged after hashing.
+  ```
+- **Tail Truncation**: Truncating the last 5 records was detected against `logs/alerts_tail_hash.txt`:
+  ```
+  [TAIL TRUNCATION DETECTED] Terminal alert entry_hash does not match external anchor!
+    Log tail hash:    7cfb2ff608c792aa...
+    Anchor file hash: 395c1097fa3d2ea5...
   ```
 
 ---
 
-## 6. Hardware & Resource Telemetry (8 GB Laptop Constraint)
+## 6. Hardware & Resource Telemetry
 
-All experiments were executed on local Windows hardware without GPU acceleration:
-- **Phase 4 SHAP Analysis Peak RAM**: **987.3 MB (0.96 GB)** (runtime: 94.29 s)
-- **Phase 4 Adversarial Suite Peak RAM**: **709.3 MB (0.69 GB)** (runtime: 113.27 s)
-- **Phase 4 LLM Demo (`--use-shap`) Peak RAM**: **315.4 MB (0.31 GB)** (runtime: 481.6 s)
-- **Ceiling Compliance**: Peak RAM across Phase 4 never exceeded **0.99 GB**, leaving > 5.0 GB free memory.
+All stages were evaluated on a local Windows laptop without GPU acceleration:
+- **SHAP Analysis Peak RAM**: **987.3 MB (0.96 GB)**
+- **Adversarial Suite Peak RAM**: **680.9 MB (0.67 GB)**
+- **Staged Suite Runtimes**:
+  - Stage 1 (FGSM & Controls): **1.97 s**
+  - Stage 2 (HopSkipJump, 100+50 flows): **158.32 s** (~2.6 min)
+  - Stage 3 (ZOO, 40 flows): **157.47 s** (~2.6 min)
+  - Stage 4 (Defense Matrix, 4 arms, 500 flows): **99.62 s** (~1.6 min)
+  - Stage 5 (Combine & Plot): **0.45 s**
+  - **Total Suite Execution Time**: **417.83 s (~7.0 minutes)**.
+- **Hardware Safety Ceiling**: Maintained under 1.0 GB RAM throughout (safety ceiling: < 6.0 GB).
 
 ---
 
-## 7. Honest Limitations & Threat Validity
+## 7. Honest Limitations
 
-1. **Surrogate Gradient Transferability**: Because tree ensembles are non-differentiable step functions, white-box FGSM attacks rely on the PyTorch DNN surrogate. Although transfer drops tree accuracy by up to 56.6%, the attack is not computing the exact subgradient of the ensemble's tree leaves.
-2. **Computational Query Budgets in Black-Box Attacks**: Due to single-threaded CPU constraints, HopSkipJump and ZOO were evaluated with small query budgets (3-8 iterations) on modest stratified samples (10-20 flows). Higher budgets would likely achieve higher ASR but exceed interactive execution time limits.
-3. **Simulated Domain Constraints**: While our constraints freeze protocol flags and bound timing/size metrics, real operational networks impose stateful TCP window dynamics, retransmissions, and Middlebox packet normalization that are not captured in static CSV flow records.
-4. **No Native Timestamps in Benchmark**: CICIoT2023 lacks ground-truth packet capture timestamps. All alert timestamps represent local engine processing time (UTC).
-5. **Robustness Trade-Off**: While adversarial retraining significantly hardens models against evasion (+42.97% under FGSM, +20.00% under HopSkipJump), it introduces a standard 3.26% reduction in clean classification accuracy. In production, this trade-off must be calibrated to organizational false-positive tolerances.
+1. **Demonstration Sample Sizes**: Evaluations on 40 to 100 flows (such as ZOO on 40 flows and HopSkipJump on 50–100 flows) are small-sample demonstrations. While Wilson 95% confidence intervals are reported, the error margins remain wide ($\pm 10–15\%$).
+2. **Surrogate Transferability**: White-box FGSM attacks rely on the differentiable PyTorch DNN surrogate. Although the transfer drops ensemble accuracy by up to 56.6%, the gradients are approximations of the decision landscape of the tree ensemble rather than true subgradients.
+3. **Static Tabular Simplification**: Real operational networks feature stateful TCP retransmissions, middlebox normalization, and dynamic round-trip pacing that static tabular CSV records cannot fully capture.
+4. **LLM Explanations Are Unverified Text**: Explanations generated by the LLM are synthetic narrative text grounded in classifier outputs; they do not represent verified ground-truth attack semantics or causal forensics.
