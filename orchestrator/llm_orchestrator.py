@@ -204,6 +204,7 @@ class LLMSemanticOrchestrator:
           {
             "attack_class": str,
             "severity": str,
+            "confidence_band": str,
             "explanation": str,
             "recommended_action": str,
             "source": "ollama" | "rule_based_fallback",
@@ -214,6 +215,7 @@ class LLMSemanticOrchestrator:
         """
         t0 = time.time()
         det_severity = severity or get_flow_severity(attack_class, confidence)
+        conf_band = "low" if confidence < 0.60 else ("medium" if confidence < 0.85 else "high")
 
         # Attempt Ollama inference if online
         if self.ollama_online:
@@ -233,6 +235,7 @@ class LLMSemanticOrchestrator:
                     res["attack_class"] = attack_class
                     res["severity"] = det_severity
 
+                res["confidence_band"] = conf_band
                 res["source"] = "ollama"
                 res["fallback"] = False
                 res["overrode_fields"] = overrode
@@ -240,14 +243,15 @@ class LLMSemanticOrchestrator:
                 return res
 
         # Deterministic rule-based fallback
-        res = self._fallback_triage(attack_class, det_severity)
+        res = self._fallback_triage(attack_class, det_severity, confidence)
+        res["confidence_band"] = conf_band
         res["source"] = "rule_based_fallback"
         res["fallback"] = True
         res["overrode_fields"] = False
         res["latency_sec"] = round(time.time() - t0, 4)
         return res
 
-    def _fallback_triage(self, attack_class: str, severity: str) -> Dict[str, str]:
+    def _fallback_triage(self, attack_class: str, severity: str, confidence: float = 1.0) -> Dict[str, str]:
         """Generates deterministic expert triage from internal knowledge base."""
         knowledge = RULE_BASED_KNOWLEDGE.get(
             attack_class,
@@ -256,10 +260,13 @@ class LLMSemanticOrchestrator:
                 "recommended_action": "Inspect packet headers and isolate source host if malicious behavior persists.",
             },
         )
+        explanation = knowledge["explanation"]
+        if confidence < 0.60:
+            explanation = f"Result uncertain (classifier confidence is low; potential false positive). {explanation}"
         return {
             "attack_class": attack_class,
             "severity": severity,
-            "explanation": knowledge["explanation"],
+            "explanation": explanation,
             "recommended_action": knowledge["recommended_action"],
         }
 
@@ -326,16 +333,36 @@ class LLMSemanticOrchestrator:
             ]
         }
 
+        # Determine confidence band
+        if confidence < 0.60:
+            confidence_band = "low"
+        elif confidence < 0.85:
+            confidence_band = "medium"
+        else:
+            confidence_band = "high"
+
+        # Low confidence uncertainty instruction
+        uncertainty_instruction = ""
+        if confidence < 0.60:
+            uncertainty_instruction = (
+                "\nCRITICAL: The classifier is NOT confident. "
+                "Say the result is uncertain and may be a false positive. "
+                "Do not describe the attack as certain.\n"
+            )
+
         prompt = (
             f"You are an expert Network Intrusion Detection Analyst.\n"
             f"The ensemble machine learning IDS classified this network flow:\n"
             f"- Classified Attack Type: {attack_class}\n"
             f"- Model Confidence: {confidence:.2%}\n"
+            f"- Confidence Band: {confidence_band}\n"
             f"- Severity: {severity}\n"
             f"- Key Network Telemetry: {json.dumps(context_features)}\n\n"
             f"TASK: Using ONLY the facts given above:\n"
-            f"1. Write an executive explanation (maximum 2 sentences) of what this attack means.\n"
-            f"2. Write a recommended mitigation action (maximum 1 sentence) for network operators.\n\n"
+            f"1. Write an executive explanation (maximum 2 sentences) of what this classification means. "
+            f"Do not name or invent any feature values or attributes that were not provided in Key Network Telemetry.\n"
+            f"2. Write a recommended mitigation action (maximum 1 sentence) for network operators.\n"
+            f"{uncertainty_instruction}\n"
             f"OUTPUT FORMAT: Return a valid JSON object with EXACTLY these four keys:\n"
             f'{{\n'
             f'  "attack_class": "{attack_class}",\n'

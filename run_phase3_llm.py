@@ -194,12 +194,14 @@ def run_llm_demo(sample_size: int = LLM_DEMO_SAMPLE_SIZE) -> None:
         current_ram = proc.memory_info().rss / (1024.0 * 1024.0)
         peak_ram_mb = max(peak_ram_mb, current_ram)
 
+        conf_band = res.get("confidence_band", "low" if conf < 0.60 else ("medium" if conf < 0.85 else "high"))
         records.append({
             "flow_index": idx,
             "true_8class": row["true_class"],
             "true_34class": row["true_34_class"],
             "ensemble_predicted_class": pred_class,
             "confidence": conf,
+            "confidence_band": conf_band,
             "severity": sev,
             "explanation": res["explanation"],
             "recommended_action": res["recommended_action"],
@@ -225,10 +227,12 @@ def run_llm_demo(sample_size: int = LLM_DEMO_SAMPLE_SIZE) -> None:
     ollama_json_validity_rate = (ollama_valid_json_count / max(1, ollama_count)) * 100.0 if ollama_count > 0 else 0.0
     field_override_count = orchestrator.model_overrode_fields_count
 
+    low_conf_count = sum(1 for r in records if r["confidence"] < 0.60)
     print("\n" + "=" * 70)
     print("  LLM SEMANTIC ORCHESTRATOR DEMO METRICS")
     print("=" * 70)
     print(f"Total Flows Processed:          {n_flows}")
+    print(f"Low-Confidence Flows (< 0.60):  {low_conf_count} ({low_conf_count / n_flows * 100:.1f}%)")
     print(f"Real Ollama Outputs:            {ollama_count} ({ollama_count / n_flows * 100:.1f}%)")
     print(f"Fallback Outputs:               {fallback_count} ({fallback_count / n_flows * 100:.1f}%)")
     print(f"Ollama JSON Validity Rate:      {ollama_json_validity_rate:.1f}% ({ollama_valid_json_count}/{ollama_count})")
@@ -249,6 +253,7 @@ def run_llm_demo(sample_size: int = LLM_DEMO_SAMPLE_SIZE) -> None:
     # Save metrics JSON
     llm_metrics = {
         "flows_processed": n_flows,
+        "low_confidence_count": low_conf_count,
         "ollama_count": ollama_count,
         "fallback_count": fallback_count,
         "ollama_json_validity_rate": round(ollama_json_validity_rate, 2),
