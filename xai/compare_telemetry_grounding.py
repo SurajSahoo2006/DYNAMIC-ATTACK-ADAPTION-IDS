@@ -154,6 +154,24 @@ def main():
     res_p3 = audit_run_grounding(df3, is_shap=False, shap_data=shap_data)
     res_p4 = audit_run_grounding(df4, is_shap=True, shap_data=shap_data)
 
+    print(f"\n--- Phase 3 Static Telemetry Audit ({res_p3['total_flows']} flows) ---")
+    print(f"  Flagged flows count: {res_p3['flagged_flows_count']}")
+    print(f"  Total unmatched numbers: {res_p3['total_unmatched_numbers']}")
+    print(f"  Total unprovided phrases: {res_p3['total_unprovided_phrases']}")
+
+    print(f"\n--- Phase 4 Dynamic SHAP Telemetry Audit ({res_p4['total_flows']} flows) ---")
+    print(f"  Flagged flows count: {res_p4['flagged_flows_count']}")
+    print(f"  Total unmatched numbers: {res_p4['total_unmatched_numbers']}")
+    print(f"  Total unprovided phrases: {res_p4['total_unprovided_phrases']}")
+    if res_p4["flagged_flows"]:
+        print("\nFlagged Flows in Phase 4:")
+        for fl in res_p4["flagged_flows"]:
+            print(f"  Flow Index {fl['flow_index']}:")
+            print(f"    Explanation: \"{fl['explanation']}\"")
+            print(f"    Flagged Phrase(s): {fl['unprovided_phrases']}")
+            top_feats = [item["feature"] for item in shap_data.get(str(fl["flow_index"]), {}).get("top_shap_features", [])]
+            print(f"    Provided SHAP Features: {top_feats}")
+
     summary = {
         "phase3_static_telemetry": {
             "total_flows": res_p3["total_flows"],
@@ -168,16 +186,26 @@ def main():
             "total_unmatched_numbers": res_p4["total_unmatched_numbers"],
             "total_unprovided_phrases": res_p4["total_unprovided_phrases"],
             "term_frequencies": res_p4["term_frequencies"],
+            "flagged_flows_detail": [
+                {
+                    "flow_index": fl["flow_index"],
+                    "unprovided_phrases": fl["unprovided_phrases"],
+                    "explanation": fl["explanation"],
+                }
+                for fl in res_p4["flagged_flows"]
+            ],
         },
         "comparison_observations": {
             "duration_mentions": {"phase3": res_p3["term_frequencies"].get("duration", 0), "phase4": res_p4["term_frequencies"].get("duration", 0)},
             "packet_size_mentions": {"phase3": res_p3["term_frequencies"].get("packet size", 0), "phase4": res_p4["term_frequencies"].get("packet size", 0)},
             "volume_mentions": {"phase3": res_p3["term_frequencies"].get("volume", 0), "phase4": res_p4["term_frequencies"].get("volume", 0)},
             "verdict": (
-                "Both pipelines maintain strong telemetry grounding without inventing unauthorized feature names "
-                "or ungrounded numeric values (0 unprovided phrases in both). "
-                "Phase 3 frequently relied on generic 'duration' statements (11/40 flows), whereas Phase 4 "
-                "with dynamic SHAP attributions and uncertainty framing completely eliminated generic duration claims (0/40 flows)."
+                "Neither run invented hallucinated numeric values (0 unmatched numbers in both runs). "
+                "In Phase 3, flow_duration was always provided in the static 9-feature context, and the LLM frequently "
+                "reused it as a template justification ('due to its low duration' in 11/40 flows). "
+                "In Phase 4, dynamic SHAP context eliminated generic duration claims (0/40), but 3 flows were flagged "
+                "for using the colloquial phrase 'volume' (e.g., 'high volume of login attempts') when Tot size or Tot sum "
+                "were not among that specific flow's top 5 SHAP drivers."
             ),
         },
     }
