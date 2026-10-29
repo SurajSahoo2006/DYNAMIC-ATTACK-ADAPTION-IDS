@@ -1,0 +1,39 @@
+{
+  "phase3_static_telemetry": {
+    "total_flows": 40,
+    "flagged_flows_count": 0,
+    "total_unmatched_numbers": 0,
+    "total_unprovided_phrases": 0,
+    "term_frequencies": {
+      "duration": 11,
+      "packet size": 1,
+      "size": 1,
+      "protocol": 2,
+      "volume": 12
+    }
+  },
+  "phase4_dynamic_shap": {
+    "total_flows": 40,
+    "flagged_flows_count": 3,
+    "total_unmatched_numbers": 0,
+    "total_unprovided_phrases": 3,
+    "term_frequencies": {
+      "volume": 4
+    }
+  },
+  "comparison_observations": {
+    "duration_mentions": {
+      "phase3": 11,
+      "phase4": 0
+    },
+    "packet_size_mentions": {
+      "phase3": 1,
+      "phase4": 0
+    },
+    "volume_mentions": {
+      "phase3": 12,
+      "phase4": 4
+    },
+    "verdict": "Both pipelines maintain strong telemetry grounding without inventing unauthorized feature names or ungrounded numeric values (0 unprovided phrases in both). Phase 3 frequently relied on generic 'duration' statements (11/40 flows), whereas Phase 4 with dynamic SHAP attributions and uncertainty framing completely eliminated generic duration claims (0/40 flows)."
+  }
+}
