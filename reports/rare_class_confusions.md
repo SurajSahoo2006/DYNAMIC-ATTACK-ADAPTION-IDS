@@ -56,7 +56,7 @@ The tables below show what the ensemble predicted for each true instance of thes
 | `BrowserHijacking` | Web-based | 1 | 1.69% | Cross-family confusion |
 | `XSS` | Web-based | 1 | 1.69% | Cross-family confusion |
 
-> **Observation**: `Recon-PingSweep` is heavily confused with `Recon-OSScan` (13.6%) and `Recon-PortScan` (5.1%). Both involve sending lightweight probe packets across subnet hosts with minimal payload size, resulting in near-identical flow statistics in the top 19 features.
+> **Observation**: `Recon-PingSweep` is heavily confused with `Recon-OSScan` (13.6%) and `Recon-PortScan` (5.1%). *(Hypothesis, not a measured fact)*: It is hypothesized that both involve sending lightweight probe packets across subnet hosts with minimal payload size, which would produce near-identical flow statistics in the top 19 features without deep payload inspection.
 
 ---
 
