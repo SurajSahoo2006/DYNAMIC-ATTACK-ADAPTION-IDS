@@ -425,6 +425,66 @@ def check_readme_commands_exist() -> List[str]:
     return errors
 
 
+def check_manifest_artifacts() -> Tuple[List[str], List[str]]:
+    """
+    CHECK 9 — manifest_artifact_check:
+    Open artifacts/model_manifest.json.
+    For every file listed under "missing_artifacts": emit a WARNING line
+    "WARN manifest: <file> listed as missing".
+    Pass if missing_artifacts is empty; WARN (not FAIL) otherwise.
+    """
+    errors = []
+    warnings = []
+    manifest_path = PROJECT_ROOT / "artifacts" / "model_manifest.json"
+    if not manifest_path.exists():
+        errors.append("artifacts/model_manifest.json is missing entirely.")
+        return errors, warnings
+
+    try:
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            manifest = json.load(f)
+        missing_list = manifest.get("missing_artifacts", [])
+        for item in missing_list:
+            warnings.append(f"WARN manifest: {item} listed as missing")
+    except Exception as e:
+        errors.append(f"Error parsing artifacts/model_manifest.json: {e}")
+
+    return errors, warnings
+
+
+def check_reward_settings_coverage() -> Tuple[List[str], List[str]]:
+    """
+    CHECK 10 — reward_settings_coverage:
+    Open marl/results/reward_settings_comparison.json if it exists.
+    Confirm all three settings are present as keys.
+    If any setting has truncated=true, emit a WARNING.
+    FAIL only if the file is absent entirely.
+    """
+    errors = []
+    warnings = []
+    comparison_path = PROJECT_ROOT / "marl" / "results" / "reward_settings_comparison.json"
+    if not comparison_path.exists():
+        errors.append("marl/results/reward_settings_comparison.json is absent entirely.")
+        return errors, warnings
+
+    try:
+        with open(comparison_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        expected_settings = ["balanced", "security_first", "availability_first"]
+        for s in expected_settings:
+            if s not in data:
+                errors.append(f"Setting '{s}' missing from reward_settings_comparison.json keys: {list(data.keys())}")
+            else:
+                entry = data[s]
+                if isinstance(entry, dict) and entry.get("truncated") is True:
+                    warnings.append(f"WARN reward_settings: Setting '{s}' has truncated=true")
+    except Exception as e:
+        errors.append(f"Error parsing marl/results/reward_settings_comparison.json: {e}")
+
+    return errors, warnings
+
+
 def main():
     print("=" * 76)
     print("  PHASE 4 & 5 REPORT & CODEBASE CONSISTENCY AUDITOR")
@@ -446,6 +506,7 @@ def main():
     readme_text = readme_file.read_text(encoding="utf-8")
 
     all_errors = []
+    all_warnings = []
 
     print("[1] Auditing mathematical agreement of recomputed percentages ...")
     frac_p4 = check_fraction_percentages(p4_text, "phase4_summary.md")
@@ -525,9 +586,40 @@ def main():
     else:
         print("  [PASS] All documented README script commands exist.")
 
+    print("\n[9] Auditing model manifest artifact integrity (manifest_artifact_check) ...")
+    m_errs, m_warns = check_manifest_artifacts()
+    if m_errs:
+        all_errors.extend(m_errs)
+        for e in m_errs:
+            print(f"  [ERROR] {e}")
+    elif m_warns:
+        all_warnings.extend(m_warns)
+        for w in m_warns:
+            print(f"  {w}")
+        print(f"  [WARN] Manifest contains {len(m_warns)} missing artifact(s).")
+    else:
+        print("  [PASS] artifacts/model_manifest.json verified (0 missing artifacts).")
+
+    print("\n[10] Auditing MARL reward settings coverage (reward_settings_coverage) ...")
+    r_errs, r_warns = check_reward_settings_coverage()
+    if r_errs:
+        all_errors.extend(r_errs)
+        for e in r_errs:
+            print(f"  [ERROR] {e}")
+    elif r_warns:
+        all_warnings.extend(r_warns)
+        for w in r_warns:
+            print(f"  {w}")
+        print("  [WARN] Settings present with truncated=true.")
+    else:
+        print("  [PASS] All 3 reward settings present with truncated=false.")
+
     print("\n" + "=" * 76)
     if not all_errors:
-        print("  AUDIT RESULT: 100% PASS (0 mismatches detected)")
+        if all_warnings:
+            print(f"  AUDIT RESULT: 100% PASS with {len(all_warnings)} WARNING(S) (0 errors)")
+        else:
+            print("  AUDIT RESULT: 100% PASS (0 mismatches detected)")
         print("=" * 76)
         sys.exit(0)
     else:

@@ -1,0 +1,68 @@
+{
+  "reward_setting": "availability-first",
+  "seed": 42,
+  "total_steps": 15000,
+  "runtime_seconds": 37.0,
+  "peak_ram_mb": 400.66,
+  "best_val_return": -32.87,
+  "final_val_return": -32.87,
+  "truncated": false,
+  "learning_curve": [
+    {
+      "step": 2500,
+      "elapsed_sec": 8.02,
+      "rl_val_return": -117.445,
+      "rl_val_attacks_contained_pct": 82.68,
+      "rl_val_benigns_disrupted_pct": 100.0,
+      "actor_loss": -0.0262,
+      "critic_loss": 209.9934
+    },
+    {
+      "step": 5000,
+      "elapsed_sec": 13.76,
+      "rl_val_return": -97.67,
+      "rl_val_attacks_contained_pct": 100.0,
+      "rl_val_benigns_disrupted_pct": 100.0,
+      "actor_loss": -0.0231,
+      "critic_loss": 346.9421
+    },
+    {
+      "step": 7500,
+      "elapsed_sec": 19.54,
+      "rl_val_return": -85.465,
+      "rl_val_attacks_contained_pct": 99.02,
+      "rl_val_benigns_disrupted_pct": 100.0,
+      "actor_loss": -0.0197,
+      "critic_loss": 296.5973
+    },
+    {
+      "step": 10000,
+      "elapsed_sec": 25.25,
+      "rl_val_return": -75.87,
+      "rl_val_attacks_contained_pct": 86.27,
+      "rl_val_benigns_disrupted_pct": 99.71,
+      "actor_loss": -0.0275,
+      "critic_loss": 192.2999
+    },
+    {
+      "step": 12500,
+      "elapsed_sec": 31.09,
+      "rl_val_return": -85.52,
+      "rl_val_attacks_contained_pct": 59.15,
+      "rl_val_benigns_disrupted_pct": 96.83,
+      "actor_loss": -0.0241,
+      "critic_loss": 162.0096
+    },
+    {
+      "step": 15000,
+      "elapsed_sec": 36.98,
+      "rl_val_return": -32.87,
+      "rl_val_attacks_contained_pct": 76.47,
+      "rl_val_benigns_disrupted_pct": 3.89,
+      "actor_loss": -0.0273,
+      "critic_loss": 46.9846
+    }
+  ],
+  "best_checkpoint": "models/marl/mappo_availability-first_seed42_best.pt",
+  "final_checkpoint": "models/marl/mappo_availability-first_seed42_final.pt"
+}

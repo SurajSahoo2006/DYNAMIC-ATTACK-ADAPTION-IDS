@@ -1,0 +1,50 @@
+{
+  "Budget 1 (Low: 4 iters)": {
+    "samples": 40,
+    "max_iter": 4,
+    "clean_accuracy": 0.9,
+    "clean_count": "36/40",
+    "clean_ci_95": [
+      0.7695,
+      0.9604
+    ],
+    "adversarial_accuracy": 0.8,
+    "adversarial_count": "32/40",
+    "adversarial_ci_95": [
+      0.6524,
+      0.895
+    ],
+    "attack_success_rate": 0.1111,
+    "attack_success_count": "4/36",
+    "asr_ci_95": [
+      0.0441,
+      0.2531
+    ],
+    "mean_l2_perturbation": 0.0397,
+    "runtime_sec": 52.49
+  },
+  "Budget 2 (High: 8 iters)": {
+    "samples": 40,
+    "max_iter": 8,
+    "clean_accuracy": 0.9,
+    "clean_count": "36/40",
+    "clean_ci_95": [
+      0.7695,
+      0.9604
+    ],
+    "adversarial_accuracy": 0.7,
+    "adversarial_count": "28/40",
+    "adversarial_ci_95": [
+      0.5457,
+      0.8193
+    ],
+    "attack_success_rate": 0.2222,
+    "attack_success_count": "8/36",
+    "asr_ci_95": [
+      0.1172,
+      0.3808
+    ],
+    "mean_l2_perturbation": 0.0632,
+    "runtime_sec": 104.98
+  }
+}

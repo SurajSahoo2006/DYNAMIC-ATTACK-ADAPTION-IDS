@@ -22,9 +22,11 @@ Generates:
 
 from __future__ import annotations
 
+import argparse
 import collections
 import json
 import logging
+import os
 import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -250,6 +252,76 @@ def generate_plots(eval_results: Dict, active_settings: List[str]):
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Stage 5 Final Test Evaluation")
+    parser.add_argument("--reward_setting", type=str, default=None, help="Target reward setting")
+    parser.add_argument("--policy", type=str, default=None, help="Path to checkpoint .pt or mappo_<setting>.json")
+    parser.add_argument("--out", type=str, default=None, help="Output JSON path")
+    parser.add_argument("--episodes", type=int, default=FINAL_EVAL_EPISODES, help="Number of evaluation episodes")
+    args = parser.parse_args()
+
+    # Single policy evaluation mode
+    if args.policy or args.reward_setting:
+        raw_setting = args.reward_setting or "balanced"
+        canonical_setting = raw_setting.replace("_", "-")
+        from config_marl import REWARD_SETTINGS
+        if canonical_setting not in REWARD_SETTINGS:
+            raise ValueError(f"Unknown reward setting '{raw_setting}'. Available: {list(REWARD_SETTINGS.keys())}")
+
+        truncated = False
+        if args.policy:
+            policy_p = Path(args.policy)
+            if not policy_p.is_absolute():
+                policy_p = PROJECT_ROOT / policy_p
+            if policy_p.suffix == ".json":
+                with open(policy_p, "r", encoding="utf-8") as f:
+                    policy_meta = json.load(f)
+                ckpt_str = policy_meta.get("best_checkpoint") or policy_meta.get("final_checkpoint")
+                ckpt_p = PROJECT_ROOT / ckpt_str if not Path(ckpt_str).is_absolute() else Path(ckpt_str)
+                truncated = bool(policy_meta.get("truncated", False))
+            else:
+                ckpt_p = policy_p
+        else:
+            ckpt_p = MARL_MODELS_DIR / f"mappo_{canonical_setting}_seed42_best.pt"
+
+        log.info(f"Evaluating policy from {ckpt_p} under setting '{canonical_setting}' ({args.episodes} episodes) ...")
+        mappo_policy = MAPPOEvaluatorPolicy(ckpt_p)
+        env = TacticalDefenseEnv(cache_mode="test", reward_setting=canonical_setting, seed=42)
+        eval_res = run_evaluation_on_test(mappo_policy, env, num_episodes=args.episodes, base_seed=3000)
+
+        record = {
+            "reward_setting": raw_setting,
+            "reward_setting_canonical": canonical_setting,
+            "aggregate_return": eval_res["mean_return"],
+            "return_ci_lower": eval_res["return_ci_lower"],
+            "return_ci_upper": eval_res["return_ci_upper"],
+            "return_std": eval_res["return_std"],
+            "attacks_contained_pct": eval_res["attacks_contained"]["percentage"],
+            "attacks_contained": eval_res["attacks_contained"],
+            "benign_disrupted_pct": eval_res["benigns_disrupted"]["percentage"],
+            "benigns_disrupted": eval_res["benigns_disrupted"],
+            "notifications_per_episode": eval_res["notifications_per_episode"],
+            "truncated": truncated,
+            "episodes_evaluated": len(eval_res["episode_returns"]),
+            "checkpoint": os.path.relpath(ckpt_p, PROJECT_ROOT).replace("\\", "/"),
+            "eval_details": eval_res,
+        }
+
+        out_path = Path(args.out) if args.out else PROJECT_ROOT / "marl" / "results" / f"eval_{raw_setting.replace('-', '_')}.json"
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(out_path, "w", encoding="utf-8") as f:
+            json.dump(record, f, indent=2)
+        log.info(f"Saved evaluation result to {out_path}")
+        print("\n" + "=" * 60)
+        print(f"EVALUATION RESULT: {raw_setting.upper()}")
+        print("=" * 60)
+        print(f"Aggregate Return:     {record['aggregate_return']:.2f} [{record['return_ci_lower']:.2f}, {record['return_ci_upper']:.2f}]")
+        print(f"Attacks Contained:    {record['attacks_contained']['formatted']}")
+        print(f"Benign Disrupted:     {record['benigns_disrupted']['formatted']}")
+        print(f"Notifications/Ep:     {record['notifications_per_episode']:.2f}")
+        print(f"Truncated:            {record['truncated']}")
+        print("=" * 60 + "\n")
+        return
+
     start_time = time.time()
     log.info("Starting Stage 5 Final Test Cache Evaluation...")
 

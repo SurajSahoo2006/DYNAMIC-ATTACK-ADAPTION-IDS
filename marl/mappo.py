@@ -525,11 +525,25 @@ def run_pilot() -> Dict:
 # -----------------------------------------------------------------------------
 # 7. MAPPO Training Loop
 # -----------------------------------------------------------------------------
+class WallclockCallback:
+    """Monitors elapsed wallclock time and raises StopIteration if limit is reached."""
+
+    def __init__(self, limit_seconds: float = 900.0):
+        self.limit_seconds = limit_seconds
+        self.start_time = time.time()
+
+    def check(self):
+        if time.time() - self.start_time >= self.limit_seconds:
+            raise StopIteration(f"Wallclock limit of {self.limit_seconds}s reached.")
+
+
 def train_mappo_seed(
     reward_setting: str,
     seed: int,
     total_steps: int,
     eval_interval: int = EVAL_INTERVAL_STEPS,
+    time_limit_sec: float = 900.0,
+    out_path: Optional[Path] = None,
 ) -> Dict:
     log.info(f"=== Starting MAPPO Training: Setting '{reward_setting}', Seed {seed} ({total_steps} steps) ===")
     start_time = time.time()
@@ -548,60 +562,81 @@ def train_mappo_seed(
     obs = env.reset(seed=seed)
     step_count = 0
     learning_curve = []
+    eval_step = min(eval_interval, max(500, total_steps // 6))
+    wallclock = WallclockCallback(limit_seconds=time_limit_sec)
+    truncated = False
+    a_loss, c_loss = 0.0, 0.0
 
-    while step_count < total_steps:
-        joint_obs = obs.reshape(-1)
-        actions, logprobs, value = team.select_actions(obs)
-        next_obs, reward, done, info = env.step(actions)
-        buffer.add(obs, joint_obs, actions, logprobs, reward, value, done)
+    try:
+        while step_count < total_steps:
+            wallclock.check()
+            joint_obs = obs.reshape(-1)
+            actions, logprobs, value = team.select_actions(obs)
+            next_obs, reward, done, info = env.step(actions)
+            buffer.add(obs, joint_obs, actions, logprobs, reward, value, done)
 
-        step_count += 1
+            step_count += 1
 
-        if buffer.is_full() or done:
-            if done:
-                last_v = 0.0
-                obs = env.reset()
+            if buffer.is_full() or done:
+                if done:
+                    last_v = 0.0
+                    obs = env.reset()
+                else:
+                    _, _, last_v = team.select_actions(next_obs)
+                    obs = next_obs
+
+                a_loss, c_loss = update_mappo(team, buffer, last_v)
+                buffer.clear()
             else:
-                _, _, last_v = team.select_actions(next_obs)
                 obs = next_obs
 
-            a_loss, c_loss = update_mappo(team, buffer, last_v)
-            buffer.clear()
-        else:
-            obs = next_obs
-
-        # Periodic evaluation on rl_val partition
-        if step_count % eval_interval == 0 or step_count >= total_steps:
-            val_res = evaluate_mappo_on_val(team, reward_setting, num_episodes=20, base_seed=5000 + seed)
-            entry = {
-                "step": step_count,
-                "elapsed_sec": round(time.time() - start_time, 2),
-                "rl_val_return": val_res["mean_return"],
-                "rl_val_attacks_contained_pct": val_res["attacks_contained_pct"],
-                "rl_val_benigns_disrupted_pct": val_res["benigns_disrupted_pct"],
-                "actor_loss": round(a_loss, 4),
-                "critic_loss": round(c_loss, 4),
-            }
-            learning_curve.append(entry)
-            log.info(
-                f"[{reward_setting} | Seed {seed}] Step {step_count:>6}/{total_steps} | "
-                f"rl_val Return: {val_res['mean_return']:>8.2f} (best: {best_val_return:>8.2f}) | "
-                f"Attacks: {val_res['attacks_contained_pct']:>5.1f}% | Disrupted: {val_res['benigns_disrupted_pct']:>5.1f}%"
-            )
-
-            # Checkpoint selection strictly on BEST rl_val return
-            if val_res["mean_return"] > best_val_return:
-                best_val_return = val_res["mean_return"]
-                team.save_checkpoint(
-                    best_checkpoint_path,
-                    extra_meta={
-                        "step": step_count,
-                        "reward_setting": reward_setting,
-                        "seed": seed,
-                        "best_val_return": best_val_return,
-                    },
+            # Periodic evaluation on rl_val partition
+            if step_count % eval_step == 0 or step_count >= total_steps:
+                val_res = evaluate_mappo_on_val(team, reward_setting, num_episodes=20, base_seed=5000 + seed)
+                entry = {
+                    "step": step_count,
+                    "elapsed_sec": round(time.time() - start_time, 2),
+                    "rl_val_return": val_res["mean_return"],
+                    "rl_val_attacks_contained_pct": val_res["attacks_contained_pct"],
+                    "rl_val_benigns_disrupted_pct": val_res["benigns_disrupted_pct"],
+                    "actor_loss": round(a_loss, 4),
+                    "critic_loss": round(c_loss, 4),
+                }
+                learning_curve.append(entry)
+                log.info(
+                    f"[{reward_setting} | Seed {seed}] Step {step_count:>6}/{total_steps} | "
+                    f"rl_val Return: {val_res['mean_return']:>8.2f} (best: {best_val_return:>8.2f}) | "
+                    f"Attacks: {val_res['attacks_contained_pct']:>5.1f}% | Disrupted: {val_res['benigns_disrupted_pct']:>5.1f}%"
                 )
-                log.info(f"  -> Saved new best checkpoint to {best_checkpoint_path}")
+
+                # Checkpoint selection strictly on BEST rl_val return
+                if val_res["mean_return"] > best_val_return:
+                    best_val_return = val_res["mean_return"]
+                    team.save_checkpoint(
+                        best_checkpoint_path,
+                        extra_meta={
+                            "step": step_count,
+                            "reward_setting": reward_setting,
+                            "seed": seed,
+                            "best_val_return": best_val_return,
+                        },
+                    )
+                    log.info(f"  -> Saved new best checkpoint to {best_checkpoint_path}")
+    except (StopIteration, KeyboardInterrupt) as e:
+        log.warning(f"Training stopped prematurely: {e}")
+        truncated = True
+
+    # Save best checkpoint if not already saved
+    if not best_checkpoint_path.exists():
+        team.save_checkpoint(
+            best_checkpoint_path,
+            extra_meta={
+                "step": step_count,
+                "reward_setting": reward_setting,
+                "seed": seed,
+                "best_val_return": best_val_return if best_val_return != -1e9 else 0.0,
+            },
+        )
 
     # Save final model
     team.save_checkpoint(
@@ -610,18 +645,20 @@ def train_mappo_seed(
             "step": step_count,
             "reward_setting": reward_setting,
             "seed": seed,
-            "final_val_return": learning_curve[-1]["rl_val_return"],
+            "final_val_return": learning_curve[-1]["rl_val_return"] if learning_curve else 0.0,
         },
     )
 
+    final_val = learning_curve[-1]["rl_val_return"] if learning_curve else None
     training_record = {
         "reward_setting": reward_setting,
         "seed": seed,
         "total_steps": step_count,
         "runtime_seconds": round(time.time() - start_time, 2),
         "peak_ram_mb": round(get_peak_ram_mb(), 2),
-        "best_val_return": round(best_val_return, 4),
-        "final_val_return": learning_curve[-1]["rl_val_return"],
+        "best_val_return": round(best_val_return, 4) if best_val_return != -1e9 else None,
+        "final_val_return": final_val,
+        "truncated": truncated,
         "learning_curve": learning_curve,
         "best_checkpoint": f"models/marl/{best_checkpoint_path.name}",
         "final_checkpoint": f"models/marl/{final_checkpoint_path.name}",
@@ -630,6 +667,13 @@ def train_mappo_seed(
     with open(train_log_path, "w", encoding="utf-8") as f:
         json.dump(training_record, f, indent=2)
     log.info(f"Saved training log to {train_log_path}")
+
+    if out_path:
+        out_p = Path(out_path)
+        out_p.parent.mkdir(parents=True, exist_ok=True)
+        with open(out_p, "w", encoding="utf-8") as f:
+            json.dump(training_record, f, indent=2)
+        log.info(f"Saved output metadata to {out_p}")
 
     return training_record
 
@@ -640,12 +684,41 @@ def train_mappo_seed(
 def main():
     parser = argparse.ArgumentParser(description="MAPPO Pilot and Training Suite")
     parser.add_argument("--pilot", action="store_true", help="Run 20k steps pilot only")
-    parser.add_argument("--setting", choices=["balanced", "security-first", "availability-first", "all"], default="all")
+    parser.add_argument("--setting", choices=["balanced", "security-first", "availability-first", "all"], default=None)
+    parser.add_argument("--reward_setting", type=str, default=None, help="Reward setting name (e.g. security_first, availability_first)")
+    parser.add_argument("--episodes", type=int, default=None, help="Number of training episodes (50 steps per episode)")
+    parser.add_argument("--seed", type=int, default=42, help="Random seed for single run")
+    parser.add_argument("--out", type=str, default=None, help="Custom output JSON path")
+    parser.add_argument("--time_limit_sec", type=float, default=900.0, help="Wallclock time limit in seconds")
     parser.add_argument("--steps", type=int, default=None, help="Override training steps per seed")
     parser.add_argument("--resume", action="store_true", help="Skip already trained seeds")
     args = parser.parse_args()
 
-    # Always check pilot first or load existing pilot
+    # Single-run mode if --reward_setting is provided
+    target_setting = args.reward_setting or args.setting
+    if target_setting and target_setting != "all":
+        canonical_setting = target_setting.replace("_", "-")
+        if canonical_setting not in REWARD_SETTINGS:
+            raise ValueError(f"Unknown reward setting '{target_setting}'. Available: {list(REWARD_SETTINGS.keys())}")
+
+        if args.episodes is not None:
+            budget = args.episodes * 50
+        elif args.steps is not None:
+            budget = args.steps
+        else:
+            budget = 15000
+
+        out_path = Path(args.out) if args.out else PROJECT_ROOT / "marl" / "results" / f"mappo_{target_setting.replace('-', '_')}.json"
+        train_mappo_seed(
+            reward_setting=canonical_setting,
+            seed=args.seed,
+            total_steps=budget,
+            time_limit_sec=args.time_limit_sec,
+            out_path=out_path,
+        )
+        return
+
+    # Multi-run mode using pilot plan
     if args.pilot or not PILOT_JSON_PATH.exists():
         pilot_meta = run_pilot()
         if args.pilot:
@@ -660,13 +733,7 @@ def main():
     if training_plan is None:
         training_plan = {s: TRAIN_SEEDS for s in pilot_meta.get("active_settings", ["balanced"])}
 
-    if args.setting != "all":
-        seeds_to_run = TRAIN_SEEDS if args.setting == "balanced" else TRAIN_SEEDS[:3]
-        target_plan = {args.setting: seeds_to_run}
-    else:
-        target_plan = training_plan
-
-    for setting, seeds in target_plan.items():
+    for setting, seeds in training_plan.items():
         for seed in seeds:
             train_log_path = REPORTS_DIR / f"marl_train_{setting}_seed{seed}.json"
             best_ckpt = MARL_MODELS_DIR / f"mappo_{setting}_seed{seed}_best.pt"
@@ -674,7 +741,7 @@ def main():
                 log.info(f"Seed {seed} for setting '{setting}' already trained. Skipping due to --resume.")
                 continue
             # Train seed
-            train_mappo_seed(reward_setting=setting, seed=seed, total_steps=budget)
+            train_mappo_seed(reward_setting=setting, seed=seed, total_steps=budget, time_limit_sec=args.time_limit_sec)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,68 @@
+{
+  "reward_setting": "security-first",
+  "seed": 42,
+  "total_steps": 15000,
+  "runtime_seconds": 39.21,
+  "peak_ram_mb": 397.08,
+  "best_val_return": -39.59,
+  "final_val_return": -39.59,
+  "truncated": false,
+  "learning_curve": [
+    {
+      "step": 2500,
+      "elapsed_sec": 9.89,
+      "rl_val_return": -113.66,
+      "rl_val_attacks_contained_pct": 100.0,
+      "rl_val_benigns_disrupted_pct": 100.0,
+      "actor_loss": -0.0285,
+      "critic_loss": 183.2657
+    },
+    {
+      "step": 5000,
+      "elapsed_sec": 15.67,
+      "rl_val_return": -100.355,
+      "rl_val_attacks_contained_pct": 82.68,
+      "rl_val_benigns_disrupted_pct": 100.0,
+      "actor_loss": -0.0276,
+      "critic_loss": 269.018
+    },
+    {
+      "step": 7500,
+      "elapsed_sec": 21.47,
+      "rl_val_return": -73.91,
+      "rl_val_attacks_contained_pct": 100.0,
+      "rl_val_benigns_disrupted_pct": 100.0,
+      "actor_loss": -0.0243,
+      "critic_loss": 436.1436
+    },
+    {
+      "step": 10000,
+      "elapsed_sec": 27.51,
+      "rl_val_return": -48.265,
+      "rl_val_attacks_contained_pct": 100.0,
+      "rl_val_benigns_disrupted_pct": 100.0,
+      "actor_loss": -0.0264,
+      "critic_loss": 56.4066
+    },
+    {
+      "step": 12500,
+      "elapsed_sec": 33.31,
+      "rl_val_return": -42.4975,
+      "rl_val_attacks_contained_pct": 100.0,
+      "rl_val_benigns_disrupted_pct": 100.0,
+      "actor_loss": -0.0247,
+      "critic_loss": 33.6963
+    },
+    {
+      "step": 15000,
+      "elapsed_sec": 39.2,
+      "rl_val_return": -39.59,
+      "rl_val_attacks_contained_pct": 100.0,
+      "rl_val_benigns_disrupted_pct": 100.0,
+      "actor_loss": -0.0185,
+      "critic_loss": 21.9988
+    }
+  ],
+  "best_checkpoint": "models/marl/mappo_security-first_seed42_best.pt",
+  "final_checkpoint": "models/marl/mappo_security-first_seed42_final.pt"
+}
