@@ -1,0 +1,38 @@
+{
+  "client_models": [
+    {
+      "client_id": 0,
+      "test_accuracy": 0.905979,
+      "test_macro_f1": 0.78062
+    },
+    {
+      "client_id": 1,
+      "test_accuracy": 0.908261,
+      "test_macro_f1": 0.783641
+    },
+    {
+      "client_id": 2,
+      "test_accuracy": 0.910239,
+      "test_macro_f1": 0.792123
+    },
+    {
+      "client_id": 3,
+      "test_accuracy": 0.902936,
+      "test_macro_f1": 0.778591
+    },
+    {
+      "client_id": 4,
+      "test_accuracy": 0.871596,
+      "test_macro_f1": 0.728615
+    }
+  ],
+  "global_federated_model": {
+    "test_accuracy": 0.915488,
+    "test_macro_f1": 0.804953,
+    "n_trees_total": 250
+  },
+  "centralized_baseline": {
+    "test_accuracy": 0.952343,
+    "test_macro_f1": 0.869726
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "n_clients": 5,
+  "max_rows_per_client": 8000,
+  "partition_strategy": "non-iid class dominance",
+  "clients": [
+    {
+      "client_id": 0,
+      "dominant_class": "DDoS",
+      "n_rows": 8000,
+      "class_distribution": {
+        "DDoS": 4800,
+        "Web-based": 808,
+        "Recon": 746,
+        "DoS": 580,
+        "Mirai": 455,
+        "Spoofing": 296,
+        "BruteForce": 171,
+        "Benign": 144
+      }
+    },
+    {
+      "client_id": 1,
+      "dominant_class": "DoS",
+      "n_rows": 8000,
+      "class_distribution": {
+        "DoS": 4800,
+        "DDoS": 1268,
+        "Web-based": 578,
+        "Recon": 523,
+        "Mirai": 355,
+        "Spoofing": 243,
+        "BruteForce": 123,
+        "Benign": 110
+      }
+    },
+    {
+      "client_id": 2,
+      "dominant_class": "Recon",
+      "n_rows": 8000,
+      "class_distribution": {
+        "Recon": 4800,
+        "DDoS": 1331,
+        "Web-based": 666,
+        "Mirai": 359,
+        "DoS": 338,
+        "Spoofing": 249,
+        "Benign": 132,
+        "BruteForce": 125
+      }
+    },
+    {
+      "client_id": 3,
+      "dominant_class": "Balanced",
+      "n_rows": 8000,
+      "class_distribution": {
+        "Benign": 1000,
+        "BruteForce": 1000,
+        "DDoS": 1000,
+        "DoS": 1000,
+        "Mirai": 1000,
+        "Recon": 1000,
+        "Spoofing": 1000,
+        "Web-based": 1000
+      }
+    },
+    {
+      "client_id": 4,
+      "dominant_class": "Benign",
+      "n_rows": 4000,
+      "class_distribution": {
+        "Benign": 2400,
+        "DDoS": 646,
+        "Web-based": 309,
+        "Mirai": 185,
+        "Recon": 184,
+        "DoS": 137,
+        "Spoofing": 103,
+        "BruteForce": 36
+      }
+    }
+  ]
+}

@@ -376,7 +376,7 @@ def check_requirements_completeness() -> List[str]:
         "models", "ingest", "preprocess", "xai", "adversarial", "alerts", "orchestrator",
         "config", "predict", "tools", "__future__", "dataclasses", "gc", "uuid", "experiments",
         "run_phase3_llm", "scapy", "concurrent", "marl", "export", "dashboard", "config_marl",
-        "io", "base64", "tempfile", "urllib", "subprocess", "drift",
+        "io", "base64", "tempfile", "urllib", "subprocess", "drift", "federated", "copy",
     }
 
     missing = []
@@ -529,6 +529,43 @@ def check_phase8_drift() -> Tuple[List[str], List[str]]:
     return errors, warnings
 
 
+def check_phase9_federated() -> Tuple[List[str], List[str]]:
+    """
+    CHECK 12 — phase9_federated_check:
+    Open federated/results/fedavg_results.json.
+    Confirm "global_federated_model" key exists.
+    Confirm "centralized_baseline" key exists.
+    FAIL only if the file is missing entirely.
+    WARN if global_federated_model.test_accuracy < 0.70
+    (suspiciously low, likely a bug).
+    """
+    errors = []
+    warnings = []
+    res_path = PROJECT_ROOT / "federated" / "results" / "fedavg_results.json"
+    if not res_path.exists():
+        errors.append("federated/results/fedavg_results.json is missing entirely.")
+        return errors, warnings
+
+    try:
+        with open(res_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        if "global_federated_model" not in data:
+            errors.append("'global_federated_model' key missing from federated/results/fedavg_results.json")
+        else:
+            g_model = data["global_federated_model"]
+            acc = g_model.get("test_accuracy", 0.0)
+            if acc < 0.70:
+                warnings.append(f"WARN phase9_federated: global_federated_model test_accuracy ({acc:.4f}) < 0.70")
+
+        if "centralized_baseline" not in data:
+            errors.append("'centralized_baseline' key missing from federated/results/fedavg_results.json")
+    except Exception as e:
+        errors.append(f"Error parsing federated/results/fedavg_results.json: {e}")
+
+    return errors, warnings
+
+
 def main():
     print("=" * 76)
     print("  PHASE 4 & 5 REPORT & CODEBASE CONSISTENCY AUDITOR")
@@ -671,6 +708,20 @@ def main():
         print("  [WARN] Phase 8 drift check completed with warnings.")
     else:
         print("  [PASS] Phase 8 drift detection and retraining artifacts verified.")
+
+    print("\n[12] Auditing Phase 9 federated learning artifacts (phase9_federated_check) ...")
+    f_errs, f_warns = check_phase9_federated()
+    if f_errs:
+        all_errors.extend(f_errs)
+        for e in f_errs:
+            print(f"  [ERROR] {e}")
+    elif f_warns:
+        all_warnings.extend(f_warns)
+        for w in f_warns:
+            print(f"  {w}")
+        print("  [WARN] Phase 9 federated check completed with warnings.")
+    else:
+        print("  [PASS] Phase 9 federated learning artifacts verified.")
 
     print("\n" + "=" * 76)
     if not all_errors:
