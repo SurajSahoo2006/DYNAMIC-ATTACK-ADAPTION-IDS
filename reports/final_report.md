@@ -11,8 +11,13 @@
 - **Preprocessing & Normalization**: Median imputation, protocol categorical encoding, standard z-score scaling, and bounded SMOTE interpolation for minor attack classes.
 
 ## 3. Phase 3: Ensemble + LLM
-- **8-Class Test Accuracy**: **95.53%** (B2 Ensemble: RF 0.60 + XGBoost 0.40).
-- **34-Class Test Accuracy**: **93.19%** (Macro F1: **0.8540**).
+- **Original Baseline Ensemble (`rf_8class_baseline 0.20 + xgb_8class_baseline 0.80`)** [Source: `reports/phase3_metrics.json`]:
+  - **8-Class Test Accuracy**: **95.53%** (Macro F1: **0.8766**).
+  - **34-Class Test Accuracy**: **93.19%** (Macro F1: **0.8540**).
+- **B2 Optimized Ensemble (`rf_8class_b2 0.60 + xgb_8class_b2 0.40`)** [Source: `models/ensemble_weights_8class_b2.json` / `models/ensemble_weights_34class_b2.json`]:
+  - **8-Class Test Accuracy**: **95.36%**.
+  - **34-Class Test Accuracy**: **93.43%** (Macro F1: **0.8597**).
+- **Downstream Pipeline Execution**: Phase 4-6 downstream pipelines (`predict.py`, `xai/run_phase4_shap.py`, `adversarial/run_phase4_adversarial.py`, and `marl/build_cache.py`) explicitly loaded and evaluated the **B2 Optimized Ensemble** (`rf_8class_b2 0.60 + xgb_8class_b2 0.40`, wired as default in `models/rf_8class.joblib` and `models/xgb_8class.joblib`).
 - **LLM Orchestrator**: Local SLM (Llama 3.2 3B via Ollama) consumes structured ensemble telemetry and SHAP explanations to output human-interpretable incident narrative briefs with fixed severity classification.
 - **Empirical Limitation**: Rare attack classes (`Uploading_Attack`, `Recon-PingSweep`, `Backdoor_Malware`) achieve sub-60% F1 scores due to extreme dataset scarcity in network traffic samples.
 

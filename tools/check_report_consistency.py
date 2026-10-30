@@ -745,6 +745,169 @@ def check_phase11_edge() -> Tuple[List[str], List[str]]:
     return errors, warnings
 
 
+
+def check_ensemble_labels_accuracy() -> Tuple[List[str], List[str]]:
+    """
+    CHECK 15 - ensemble_label_accuracy_check:
+    Verifies that every accuracy quoted next to an ensemble label in
+    reports/final_report.md and reports/phase11_summary.md exactly matches
+    the underlying JSON artifact for THAT label. FAIL if mismatched.
+    """
+    errors = []
+    warnings = []
+
+    # 1. Manifest verification
+    manifest_path = PROJECT_ROOT / "artifacts" / "model_manifest.json"
+    if not manifest_path.exists():
+        errors.append("artifacts/model_manifest.json is missing.")
+        return errors, warnings
+
+    with open(manifest_path, "r", encoding="utf-8") as f:
+        manifest = json.load(f)
+
+    p3_block = manifest.get("phase3", {})
+    b2_label = p3_block.get("ensemble")
+    b2_source = p3_block.get("source_file")
+    b2_acc_8 = p3_block.get("test_acc_8class")
+    b2_acc_34 = p3_block.get("test_acc_34class")
+
+    orig_block = p3_block.get("original_ensemble", {})
+    orig_label = orig_block.get("ensemble")
+    orig_source = orig_block.get("source_file")
+    orig_acc_8 = orig_block.get("test_acc_8class")
+    orig_acc_34 = orig_block.get("test_acc_34class")
+
+    if b2_label != "rf_8class_b2 0.60 + xgb_8class_b2 0.40":
+        errors.append(f"Manifest phase3.ensemble is '{b2_label}', expected 'rf_8class_b2 0.60 + xgb_8class_b2 0.40'")
+    if b2_source != "models/ensemble_weights_8class_b2.json":
+        errors.append(f"Manifest phase3.source_file is '{b2_source}', expected 'models/ensemble_weights_8class_b2.json'")
+    if orig_label != "rf_8class_baseline 0.20 + xgb_8class_baseline 0.80":
+        errors.append(f"Manifest phase3.original_ensemble.ensemble is '{orig_label}', expected 'rf_8class_baseline 0.20 + xgb_8class_baseline 0.80'")
+    if orig_source != "reports/phase3_metrics.json":
+        errors.append(f"Manifest phase3.original_ensemble.source_file is '{orig_source}', expected 'reports/phase3_metrics.json'")
+
+    # Ground truth values from JSON files
+    p3_metrics_path = REPORTS_DIR / "phase3_metrics.json"
+    with open(p3_metrics_path, "r", encoding="utf-8") as f:
+        p3_metrics = json.load(f)
+    gt_orig_acc_8 = p3_metrics["8class"]["models"]["weighted"]["accuracy"]
+    gt_orig_acc_34 = p3_metrics["34class"]["models"]["weighted"]["accuracy"]
+
+    b2_8_path = PROJECT_ROOT / "models" / "ensemble_weights_8class_b2.json"
+    with open(b2_8_path, "r", encoding="utf-8") as f:
+        b2_8_data = json.load(f)
+    gt_b2_acc_8 = b2_8_data["telemetry"]["test_acc"]
+
+    b2_34_path = PROJECT_ROOT / "models" / "ensemble_weights_34class_b2.json"
+    with open(b2_34_path, "r", encoding="utf-8") as f:
+        b2_34_data = json.load(f)
+    gt_b2_acc_34 = b2_34_data["telemetry"]["test_acc"]
+
+    # Manifest numbers match ground truth
+    if orig_acc_8 is not None and abs(orig_acc_8 - gt_orig_acc_8) > 1e-4:
+        errors.append(f"Manifest original_ensemble test_acc_8class ({orig_acc_8}) does not match {orig_source} ({gt_orig_acc_8})")
+    if orig_acc_34 is not None and abs(orig_acc_34 - gt_orig_acc_34) > 1e-4:
+        errors.append(f"Manifest original_ensemble test_acc_34class ({orig_acc_34}) does not match {orig_source} ({gt_orig_acc_34})")
+    if b2_acc_8 is not None and abs(b2_acc_8 - gt_b2_acc_8) > 1e-4:
+        errors.append(f"Manifest test_acc_8class ({b2_acc_8}) does not match {b2_source} ({gt_b2_acc_8})")
+    if b2_acc_34 is not None and abs(b2_acc_34 - gt_b2_acc_34) > 1e-4:
+        errors.append(f"Manifest test_acc_34class ({b2_acc_34}) does not match models/ensemble_weights_34class_b2.json ({gt_b2_acc_34})")
+
+    # 2. Check final_report.md
+    final_report_path = REPORTS_DIR / "final_report.md"
+    if not final_report_path.exists():
+        errors.append("reports/final_report.md is missing.")
+    else:
+        report_text = final_report_path.read_text(encoding="utf-8")
+
+        m_orig_8 = re.search(r"Original Baseline Ensemble.*?8-Class Test Accuracy\*\*:\s*\*\*([\d\.]+)%", report_text, re.DOTALL)
+        m_orig_34 = re.search(r"Original Baseline Ensemble.*?34-Class Test Accuracy\*\*:\s*\*\*([\d\.]+)%", report_text, re.DOTALL)
+        if not m_orig_8 or not m_orig_34:
+            errors.append("reports/final_report.md: Could not locate Original Baseline Ensemble accuracy lines.")
+        else:
+            rep_orig_8 = float(m_orig_8.group(1))
+            rep_orig_34 = float(m_orig_34.group(1))
+            if abs(rep_orig_8 - gt_orig_acc_8 * 100) > 0.05:
+                errors.append(f"reports/final_report.md: Original ensemble 8-class accuracy {rep_orig_8}% does not match ground truth {gt_orig_acc_8 * 100:.2f}%")
+            if abs(rep_orig_34 - gt_orig_acc_34 * 100) > 0.05:
+                errors.append(f"reports/final_report.md: Original ensemble 34-class accuracy {rep_orig_34}% does not match ground truth {gt_orig_acc_34 * 100:.2f}%")
+
+        m_b2_8 = re.search(r"B2 Optimized Ensemble.*?8-Class Test Accuracy\*\*:\s*\*\*([\d\.]+)%", report_text, re.DOTALL)
+        m_b2_34 = re.search(r"B2 Optimized Ensemble.*?34-Class Test Accuracy\*\*:\s*\*\*([\d\.]+)%", report_text, re.DOTALL)
+        if not m_b2_8 or not m_b2_34:
+            errors.append("reports/final_report.md: Could not locate B2 Optimized Ensemble accuracy lines.")
+        else:
+            rep_b2_8 = float(m_b2_8.group(1))
+            rep_b2_34 = float(m_b2_34.group(1))
+            if abs(rep_b2_8 - gt_b2_acc_8 * 100) > 0.05:
+                errors.append(f"reports/final_report.md: B2 ensemble 8-class accuracy {rep_b2_8}% does not match ground truth {gt_b2_acc_8 * 100:.2f}%")
+            if abs(rep_b2_34 - gt_b2_acc_34 * 100) > 0.05:
+                errors.append(f"reports/final_report.md: B2 ensemble 34-class accuracy {rep_b2_34}% does not match ground truth {gt_b2_acc_34 * 100:.2f}%")
+
+    # 3. Check phase11_summary.md
+    p11_summary_path = REPORTS_DIR / "phase11_summary.md"
+    if not p11_summary_path.exists():
+        errors.append("reports/phase11_summary.md is missing.")
+    else:
+        p11_lines = p11_summary_path.read_text(encoding="utf-8").splitlines()
+        final_comp_path = PROJECT_ROOT / "edge" / "results" / "final_comparison.json"
+        if final_comp_path.exists():
+            with open(final_comp_path, "r", encoding="utf-8") as f:
+                fcomp = json.load(f)
+            t_evals = fcomp.get("test_evaluations", {})
+            gt_test_acc = t_evals.get("baseline", {}).get("test_accuracy", 0.9542)
+
+            in_table_1 = False
+            in_table_2 = False
+
+            for line in p11_lines:
+                sline = line.strip()
+                if "## Table 1" in sline:
+                    in_table_1 = True
+                    in_table_2 = False
+                elif "## Table 2" in sline:
+                    in_table_1 = False
+                    in_table_2 = True
+                elif sline.startswith("## ") and not ("Table 1" in sline or "Table 2" in sline):
+                    in_table_1 = False
+                    in_table_2 = False
+
+                if "Phase 3 Manifest" in sline:
+                    cells = [c.strip() for c in sline.split("|") if c.strip()]
+                    if len(cells) >= 5:
+                        p3_acc = float(cells[4])
+                        if abs(p3_acc - gt_orig_acc_8) > 1e-4:
+                            errors.append(f"reports/phase11_summary.md: Phase 3 Manifest test accuracy {p3_acc} does not match ground truth {gt_orig_acc_8}")
+
+                if "Phase 11 Baseline (B2)" in sline:
+                    cells = [c.strip() for c in sline.split("|") if c.strip()]
+                    if len(cells) >= 5:
+                        p11_b2_acc = float(cells[4])
+                        if abs(p11_b2_acc - gt_test_acc) > 1e-4:
+                            errors.append(f"reports/phase11_summary.md: Phase 11 Baseline (B2) test accuracy {p11_b2_acc} does not match {gt_test_acc}")
+
+                if in_table_1 and sline.startswith("|") and "**Baseline (B2)**" in sline:
+                    cells = [c.strip() for c in sline.split("|") if c.strip()]
+                    # Column: Val Accuracy is cells[-2]
+                    t1_val_acc = float(cells[-2])
+                    base_json_path = PROJECT_ROOT / "edge" / "results" / "baseline.json"
+                    if base_json_path.exists():
+                        with open(base_json_path, "r", encoding="utf-8") as f:
+                            bdata = json.load(f)
+                        gt_val_acc = bdata.get("accuracy", 0.9645)
+                        if abs(t1_val_acc - gt_val_acc) > 1e-4:
+                            errors.append(f"reports/phase11_summary.md Table 1: Baseline (B2) val accuracy {t1_val_acc} does not match baseline.json ({gt_val_acc})")
+
+                if in_table_2 and sline.startswith("|") and "**Baseline (B2)**" in sline:
+                    cells = [c.strip() for c in sline.split("|") if c.strip()]
+                    # Column: Test Accuracy is cells[6]
+                    t2_test_acc = float(cells[6])
+                    if abs(t2_test_acc - gt_test_acc) > 1e-4:
+                        errors.append(f"reports/phase11_summary.md Table 2: Baseline (B2) test accuracy {t2_test_acc} does not match final_comparison.json ({gt_test_acc})")
+
+    return errors, warnings
+
+
 def main():
     print("=" * 76)
     print("  PHASE 4 & 5 REPORT & CODEBASE CONSISTENCY AUDITOR")
@@ -929,6 +1092,20 @@ def main():
         print("  [WARN] Phase 11 edge check completed with warnings.")
     else:
         print("  [PASS] Phase 11 edge compression and latency artifacts verified.")
+
+    print("\n[15] Auditing ensemble labels and quoted accuracies against underlying JSON artifacts (ensemble_label_accuracy_check) ...")
+    lbl_errs, lbl_warns = check_ensemble_labels_accuracy()
+    if lbl_errs:
+        all_errors.extend(lbl_errs)
+        for e in lbl_errs:
+            print(f"  [ERROR] {e}")
+    elif lbl_warns:
+        all_warnings.extend(lbl_warns)
+        for w in lbl_warns:
+            print(f"  {w}")
+        print("  [WARN] Ensemble label accuracy check completed with warnings.")
+    else:
+        print("  [PASS] All ensemble labels and accuracies match underlying JSON artifacts.")
 
     print("\n" + "=" * 76)
     if not all_errors:

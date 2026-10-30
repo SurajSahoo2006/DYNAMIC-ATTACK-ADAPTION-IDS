@@ -41,14 +41,33 @@ def main():
     features_list = p12.get("feature_list", [])
 
     # 3. Phase 3 metrics
+    # Original baseline ensemble metrics from reports/phase3_metrics.json
     p3_file = REPORTS_DIR / "phase3_metrics.json"
     with open(p3_file, "r", encoding="utf-8") as f:
         p3 = json.load(f)
 
-    acc_8 = p3.get("8class", {}).get("models", {}).get("weighted", {}).get("accuracy", 0.0) * 100
+    orig_acc_8 = p3.get("8class", {}).get("models", {}).get("weighted", {}).get("accuracy", 0.0) * 100
+    orig_f1_8 = p3.get("8class", {}).get("models", {}).get("weighted", {}).get("macro_f1", 0.0)
     c34_models = p3.get("34class", {}).get("models", {})
-    acc_34 = (c34_models.get("weighted", {}).get("accuracy") or c34_models.get("xgb", {}).get("accuracy", 0.0)) * 100
-    f1_34 = c34_models.get("weighted", {}).get("macro_f1") or c34_models.get("xgb", {}).get("macro_f1", 0.0)
+    orig_acc_34 = (c34_models.get("weighted", {}).get("accuracy") or c34_models.get("xgb", {}).get("accuracy", 0.0)) * 100
+    orig_f1_34 = c34_models.get("weighted", {}).get("macro_f1") or c34_models.get("xgb", {}).get("macro_f1", 0.0)
+
+    # B2 optimized ensemble metrics from models/ensemble_weights_*.json
+    p3_b2_8_file = PROJECT_ROOT / "models" / "ensemble_weights_8class_b2.json"
+    b2_acc_8 = 0.0
+    if p3_b2_8_file.exists():
+        with open(p3_b2_8_file, "r", encoding="utf-8") as f:
+            b2_8_data = json.load(f)
+        b2_acc_8 = b2_8_data.get("telemetry", {}).get("test_acc", 0.0) * 100
+
+    p3_b2_34_file = PROJECT_ROOT / "models" / "ensemble_weights_34class_b2.json"
+    b2_acc_34 = 0.0
+    b2_f1_34 = 0.0
+    if p3_b2_34_file.exists():
+        with open(p3_b2_34_file, "r", encoding="utf-8") as f:
+            b2_34_data = json.load(f)
+        b2_acc_34 = b2_34_data.get("telemetry", {}).get("test_acc", 0.0) * 100
+        b2_f1_34 = b2_34_data.get("telemetry", {}).get("test_macro_f1", 0.0)
 
     # 4. Phase 4 adversarial summary & SHAP
     adv_file = PROJECT_ROOT / "adversarial" / "results" / "adversarial_summary.json"
@@ -103,8 +122,13 @@ def main():
         "- **Preprocessing & Normalization**: Median imputation, protocol categorical encoding, standard z-score scaling, and bounded SMOTE interpolation for minor attack classes.",
         "",
         "## 3. Phase 3: Ensemble + LLM",
-        f"- **8-Class Test Accuracy**: **{acc_8:.2f}%** (B2 Ensemble: RF 0.60 + XGBoost 0.40).",
-        f"- **34-Class Test Accuracy**: **{acc_34:.2f}%** (Macro F1: **{f1_34:.4f}**).",
+        f"- **Original Baseline Ensemble (`rf_8class_baseline 0.20 + xgb_8class_baseline 0.80`)** [Source: `reports/phase3_metrics.json`]:",
+        f"  - **8-Class Test Accuracy**: **{orig_acc_8:.2f}%** (Macro F1: **{orig_f1_8:.4f}**).",
+        f"  - **34-Class Test Accuracy**: **{orig_acc_34:.2f}%** (Macro F1: **{orig_f1_34:.4f}**).",
+        f"- **B2 Optimized Ensemble (`rf_8class_b2 0.60 + xgb_8class_b2 0.40`)** [Source: `models/ensemble_weights_8class_b2.json` / `models/ensemble_weights_34class_b2.json`]:",
+        f"  - **8-Class Test Accuracy**: **{b2_acc_8:.2f}%**.",
+        f"  - **34-Class Test Accuracy**: **{b2_acc_34:.2f}%** (Macro F1: **{b2_f1_34:.4f}**).",
+        "- **Downstream Pipeline Execution**: Phase 4-6 downstream pipelines (`predict.py`, `xai/run_phase4_shap.py`, `adversarial/run_phase4_adversarial.py`, and `marl/build_cache.py`) explicitly loaded and evaluated the **B2 Optimized Ensemble** (`rf_8class_b2 0.60 + xgb_8class_b2 0.40`, wired as default in `models/rf_8class.joblib` and `models/xgb_8class.joblib`).",
         "- **LLM Orchestrator**: Local SLM (Llama 3.2 3B via Ollama) consumes structured ensemble telemetry and SHAP explanations to output human-interpretable incident narrative briefs with fixed severity classification.",
         "- **Empirical Limitation**: Rare attack classes (`Uploading_Attack`, `Recon-PingSweep`, `Backdoor_Malware`) achieve sub-60% F1 scores due to extreme dataset scarcity in network traffic samples.",
         "",
