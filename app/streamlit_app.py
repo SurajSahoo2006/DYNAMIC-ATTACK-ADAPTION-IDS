@@ -43,21 +43,20 @@ from app.data_access import (
     load_zeroday_results,
 )
 
-# Navigation definition with icons and descriptions
+# Navigation definition with numerical index and descriptions (zero emojis)
 PAGE_DEFINITIONS = [
-    ("System Overview", "🛡️", "Subsystem health, model manifest & multi-stage pipeline flow"),
-    ("Live Triage", "⚡", "Flow telemetry scoring, calibration, SHAP & LLM briefing"),
-    ("Batch Analysis", "📊", "Bulk CSV telemetry classification & MARL tactical defense"),
-    ("Alert Log", "📜", "Forensic audit ledger & SHA-256 cryptographic verification"),
-    ("Results", "🔬", "Empirical findings & validated metrics across Phases 4 through 12"),
-    ("Downloads", "💾", "Technical summaries, manifests & processed datasets"),
+    ("System Overview", "01", "Subsystem health, model manifest & multi-stage pipeline flow"),
+    ("Live Triage", "02", "Flow telemetry scoring, calibration, SHAP & LLM briefing"),
+    ("Batch Analysis", "03", "Bulk CSV telemetry classification & MARL tactical defense"),
+    ("Alert Log", "04", "Forensic audit ledger & SHA-256 cryptographic verification"),
+    ("Results", "05", "Empirical findings & validated metrics across Phases 4 through 12"),
+    ("Downloads", "06", "Technical summaries, manifests & processed datasets"),
 ]
 PAGE_NAMES = [p[0] for p in PAGE_DEFINITIONS]
 
 # Page configuration
 st.set_page_config(
     page_title="Autonomous Threat Detection & Defense Console",
-    page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -97,7 +96,7 @@ def render_footer():
     st.markdown(
         """
         <div class="soc-footer">
-            🛡️ <strong>Autonomous Threat Detection & Adaptive Defense Console</strong><br>
+            <strong>Autonomous Threat Detection & Adaptive Defense Console</strong><br>
             <span>Simulated and offline evaluation on CICIoT2023 - not a production deployment</span>
         </div>
         """,
@@ -109,7 +108,7 @@ def render_footer():
 # Page 1: System Overview
 # =====================================================================
 def page_system_overview(pipeline: IDSPipeline):
-    st.title("🛡️ System Overview & Architecture")
+    st.title("System Overview & Architecture")
     st.markdown(
         "Consolidated autonomous intrusion detection, probability calibration, zero-day anomaly detection, "
         "explainable AI (SHAP), semantic LLM triage, and multi-agent tactical response (MARL)."
@@ -125,7 +124,7 @@ def page_system_overview(pipeline: IDSPipeline):
         col_h1, col_h2 = st.columns(2)
         with col_h1:
             if overall_status == "OK":
-                st.success(f"Pipeline Status: **{overall_status}** • All Components Verified")
+                st.success(f"Pipeline Status: **{overall_status}** (All Subsystems Operational)")
             else:
                 st.warning(f"Pipeline Status: **{overall_status}**")
         with col_h2:
@@ -135,10 +134,10 @@ def page_system_overview(pipeline: IDSPipeline):
         comp_rows = []
         for name, details in comp_dict.items():
             status_val = details.get("status", "unknown").upper()
-            status_badge = "🟢 OK" if status_val == "OK" else f"🔴 {status_val}"
+            status_display = "OK" if status_val == "OK" else status_val
             comp_rows.append({
                 "Component": name,
-                "Status": status_badge,
+                "Status": status_display,
                 "Required Artifact": details.get("file", "N/A"),
                 "Phase Generator Script": details.get("phase_script", "N/A"),
             })
@@ -202,7 +201,7 @@ def page_system_overview(pipeline: IDSPipeline):
 # Page 2: Live Triage
 # =====================================================================
 def page_live_triage(pipeline: IDSPipeline):
-    st.title("⚡ Live Telemetry Triage & Threat Inspection")
+    st.title("Live Telemetry Triage & Threat Inspection")
     st.markdown(
         "Inspect individual network telemetry flows, execute single-flow inference and probability calibration, "
         "inspect local SHAP feature attributions, request LLM incident briefs, and commit alerts to the tamper-evident audit log."
@@ -295,9 +294,9 @@ def page_live_triage(pipeline: IDSPipeline):
 
         # Anomaly Status Banner
         if is_unknown:
-            st.error(f"⚠️ **OUT-OF-DISTRIBUTION / ZERO-DAY ALERT**: Flagged as UNKNOWN. Notes: {notes}")
+            st.error(f"[ALERT] OUT-OF-DISTRIBUTION / ZERO-DAY DETECTED: Flagged as UNKNOWN. Notes: {notes}")
         else:
-            st.success(f"Classification Posture: Standard traffic envelope. Notes: {notes}")
+            st.success(f"[STANDARD] Traffic envelope normal. Notes: {notes}")
 
         # Show true label AFTER prediction
         saved_true = st.session_state.get("current_true_label")
@@ -391,7 +390,7 @@ def page_live_triage(pipeline: IDSPipeline):
 # Page 3: Batch Analysis
 # =====================================================================
 def page_batch_analysis(pipeline: IDSPipeline):
-    st.title("📊 Batch Telemetry Ingestion & Response")
+    st.title("Batch Telemetry Ingestion & Response")
     st.markdown(
         "Upload a batch CSV file of raw network flows for automated processing, "
         "OOD zero-day flagging, and multi-agent tactical response (MARL)."
@@ -473,7 +472,7 @@ def page_batch_analysis(pipeline: IDSPipeline):
 # Page 4: Alert Log
 # =====================================================================
 def page_alert_log(pipeline: IDSPipeline):
-    st.title("📜 Forensic Alert Log & Cryptographic Ledger")
+    st.title("Forensic Alert Log & Cryptographic Ledger")
     st.markdown(
         "Audit cryptographic hash continuity across recorded intrusion events. "
         "Verifies tamper-evidence using SHA-256 block chaining and external tail hash anchors."
@@ -545,7 +544,7 @@ def page_alert_log(pipeline: IDSPipeline):
 # Page 5: Results & Empirical Evaluation
 # =====================================================================
 def page_results():
-    st.title("📈 Empirical Results & Phase Benchmarks")
+    st.title("Empirical Results & Phase Benchmarks")
     st.markdown("Examine empirical findings across experimental phases directly from underlying JSON evaluation records.")
 
     tabs = st.tabs([
@@ -683,7 +682,7 @@ def page_results():
 # Page 6: Downloads & Artifact Export
 # =====================================================================
 def page_downloads():
-    st.title("💾 Research Artifacts & Technical Documentation")
+    st.title("Research Artifacts & Technical Documentation")
     st.markdown("Export validated research summaries, manifest records, and processed flow data.")
 
     available_files = load_downloadable_files()
@@ -721,38 +720,39 @@ def main():
     if "selected_page" not in st.session_state:
         st.session_state["selected_page"] = "System Overview"
 
-    # Top SOC Navbar
+    # Top SOC Header Navbar
     st.markdown(
         """
         <div class="soc-navbar">
             <div class="soc-brand">
-                <span style="font-size: 1.8rem;">🛡️</span>
+                <div class="soc-logo-badge">IDS</div>
                 <div>
                     <div class="soc-brand-title">AUTONOMOUS THREAT DEFENSE CONSOLE</div>
-                    <div class="soc-brand-subtitle">UNIFIED MULTI-AGENT INTRUSION DETECTION SYSTEM</div>
+                    <div class="soc-brand-subtitle">UNIFIED MULTI-AGENT INTRUSION DETECTION & RESPONSE</div>
                 </div>
             </div>
             <div class="status-pill">
                 <span class="status-dot"></span>
-                <span>PIPELINE ONLINE</span>
+                <span>SYSTEM ONLINE // AUTONOMOUS MODE</span>
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    # 3-Bars Hamburger Popover Menu and Active View Bar
+    # 3-Bars Hamburger Popover Menu & View Indicator
     col_menu, col_active, col_stat = st.columns([1, 3, 2])
 
     with col_menu:
         with st.popover("☰ MENU", help="Click to open navigation drawer", use_container_width=True):
-            st.markdown("### 🧭 Navigation")
-            st.caption("Select a system console view:")
-            for p_name, p_icon, p_desc in PAGE_DEFINITIONS:
+            st.markdown("#### NAVIGATION MENU")
+            st.caption("Select system console view:")
+            for p_name, p_code, p_desc in PAGE_DEFINITIONS:
                 is_active = st.session_state.get("selected_page") == p_name
-                prefix = "▶ " if is_active else ""
+                prefix = "> " if is_active else ""
+                btn_label = f"{prefix}[{p_code}] {p_name.upper()}\n\n{p_desc}"
                 if st.button(
-                    f"{prefix}{p_icon} **{p_name}**\n\n_{p_desc}_",
+                    btn_label,
                     key=f"pop_btn_{p_name}",
                     use_container_width=True,
                 ):
@@ -762,21 +762,21 @@ def main():
 
     with col_active:
         active_view = st.session_state.get("selected_page", "System Overview")
-        st.markdown(f"**Console View:** <span style='color: #38bdf8; font-weight: 700;'>{active_view}</span>", unsafe_allow_html=True)
+        st.markdown(f"**ACTIVE VIEW:** <span style='color: #38bdf8; font-weight: 700; font-family: monospace;'>[{active_view.upper()}]</span>", unsafe_allow_html=True)
 
     with col_stat:
         try:
             h = pipeline.health()
             stat = h.get("overall_status", "OK").upper()
             rss = h.get("process_rss_mb", "N/A")
-            st.caption(f"Status: **{stat}** | RSS: **{rss} MB**")
+            st.caption(f"STATUS: {stat} | RSS: {rss} MB")
         except Exception:
-            st.caption("Status: **ONLINE**")
+            st.caption("STATUS: ONLINE")
 
     st.markdown("<div style='margin-bottom: 16px;'></div>", unsafe_allow_html=True)
 
-    # Synchronized Sidebar Navigation (supports toggle and automated tests)
-    st.sidebar.markdown("### 🛡️ Autonomous IDS")
+    # Synchronized Sidebar Navigation (for testing and direct sidebar access)
+    st.sidebar.markdown("### AUTONOMOUS IDS")
     st.sidebar.caption("Unified Detection & Defense Console")
     st.sidebar.markdown("---")
 
@@ -794,7 +794,6 @@ def main():
         key="sidebar_nav_radio",
         on_change=on_radio_change,
     )
-    # Ensure active view reflects choice
     st.session_state["selected_page"] = sidebar_choice
     active_choice = st.session_state["selected_page"]
 
