@@ -264,7 +264,7 @@
       "p95_ms": 94.0707
     },
     "phase11_baseline_p95_ms": 37.755,
-    "latency_difference_explanation": "Random Forest inference accounts for over 90% of main path latency. The main path sequential latency aligns with the Phase 11 B2 baseline (p95: 37.755 ms) which evaluates the same Random Forest model."
+    "latency_difference_explanation": "Main-path p95 latency is 64.198 ms versus a Phase 11 baseline p95 of 37.755 ms; the Random Forest stage alone has p95 59.324 ms. Timings varied between repeated runs on this laptop, so they are indicative rather than exact."
   },
   "performance": {
     "throughput_fps": 20043.8,

@@ -93,8 +93,8 @@ Per-stage sequential latency measured on 200 test flows after 20 warm-up flows:
 | **Total Main Path** | **45.834 ms** | **64.198 ms** | Single-thread sequential end-to-end |
 | *SHAP explain() (On-Demand)* | *69.058 ms* | *94.071 ms* | Local feature attribution (measured separately) |
 
-The Random Forest stage dominates the main path execution time (over 90% of total latency).
-Random Forest inference accounts for over 90% of main path latency. The main path sequential latency aligns with the Phase 11 B2 baseline (p95: 37.755 ms) which evaluates the same Random Forest model.
+The Random Forest stage dominates the main path execution time (91.7% of total latency).
+Main-path p95 latency is 64.198 ms versus a Phase 11 baseline p95 of 37.755 ms; the Random Forest stage alone has p95 59.324 ms. Timings varied between repeated runs on this laptop, so they are indicative rather than exact.
 
 ## 5. UNKNOWN Flagging Rate by Attack Class
 

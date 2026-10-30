@@ -626,7 +626,11 @@ def run_end_to_end_integration() -> Dict[str, Any]:
             "p95_ms": round(float(np.percentile(shap_times, 95)), 4),
         },
         "phase11_baseline_p95_ms": p11_base_p95,
-        "latency_difference_explanation": "Random Forest inference accounts for over 90% of main path latency. The main path sequential latency aligns with the Phase 11 B2 baseline (p95: 37.755 ms) which evaluates the same Random Forest model.",
+        "latency_difference_explanation": (
+            f"Main-path p95 latency is {float(np.percentile(total_main, 95)):.3f} ms versus a Phase 11 baseline p95 of {p11_base_p95:.3f} ms; "
+            f"the Random Forest stage alone has p95 {float(np.percentile(rf_times, 95)):.3f} ms. "
+            "Timings varied between repeated runs on this laptop, so they are indicative rather than exact."
+        ),
     }
 
     # MARL Tactical Response Simulation on 500 consecutive flows
