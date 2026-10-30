@@ -27,6 +27,9 @@ pytest>=7.0
 # Phase 8 (Concept Drift Detection & Adaptation)
 river>=0.21.0
 
+# Phase 14 (Frontend)
+streamlit>=1.30
+
 # Phase 5+ Future Modules
 # ray[rllib]>=2.9
 # elasticsearch>=8.0

@@ -1,0 +1,427 @@
+/* =====================================================================
+   Autonomous Threat Defense Console - Enterprise SOC Theme
+   ===================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+:root {
+    --bg-base: #070a13;
+    --bg-surface: #0f172a;
+    --bg-surface-elevated: #1e293b;
+    --border-subtle: rgba(56, 189, 248, 0.2);
+    --border-accent: #0284c7;
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+    --accent-cyan: #38bdf8;
+    --accent-neon: #00f2fe;
+    --accent-emerald: #10b981;
+    --accent-amber: #f59e0b;
+    --accent-rose: #f43f5e;
+    --glow-cyan-intense: 0 0 25px rgba(0, 242, 254, 0.65), inset 0 0 15px rgba(56, 189, 248, 0.15), 0 8px 30px rgba(0, 0, 0, 0.6);
+}
+
+/* Global resets for pure dark mode */
+html, body, [class*="css"], .stApp {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    background-color: var(--bg-base) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Force dark header */
+header[data-testid="stHeader"] {
+    background-color: var(--bg-base) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Typography overrides for extreme contrast */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--text-primary) !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.02em !important;
+}
+
+p, span, label, li {
+    color: var(--text-secondary) !important;
+}
+
+.stMarkdown p {
+    color: var(--text-secondary) !important;
+    line-height: 1.6 !important;
+}
+
+code, pre, [class*="stCode"] {
+    font-family: 'JetBrains Mono', monospace !important;
+    background-color: #0b1120 !important;
+    color: #38bdf8 !important;
+    border: 1px solid rgba(56, 189, 248, 0.25) !important;
+    border-radius: 6px !important;
+}
+
+/* Top SOC Navbar */
+.soc-navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(11, 17, 32, 0.98) 100%);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    margin-bottom: 24px;
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.7);
+    transition: all 0.25s ease-in-out;
+}
+
+.soc-navbar:hover {
+    border-color: rgba(56, 189, 248, 0.4);
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.2), 0 10px 30px rgba(0, 0, 0, 0.8);
+}
+
+.soc-brand {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.soc-logo-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    border: 1px solid #38bdf8;
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 800;
+    font-size: 0.95rem;
+    color: #ffffff !important;
+    letter-spacing: 0.05em;
+    box-shadow: 0 0 18px rgba(2, 132, 199, 0.6);
+}
+
+.soc-brand-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: #ffffff !important;
+    text-transform: uppercase;
+    margin: 0;
+}
+
+.soc-brand-subtitle {
+    font-size: 0.72rem;
+    color: var(--text-muted) !important;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 16px;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    border-radius: 9999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #34d399 !important;
+    letter-spacing: 0.08em;
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #10b981;
+    box-shadow: 0 0 10px #10b981;
+    animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.35; transform: scale(0.85); }
+}
+
+/* 3-Bars Hamburger Popover Button */
+div[data-testid="stPopover"] > button {
+    background: #0f172a !important;
+    border: 1px solid rgba(56, 189, 248, 0.4) !important;
+    color: #38bdf8 !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.08em !important;
+    border-radius: 8px !important;
+    padding: 10px 22px !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+div[data-testid="stPopover"] > button:hover {
+    background: #1e293b !important;
+    border-color: #00f2fe !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 20px rgba(0, 242, 254, 0.5) !important;
+    transform: translateY(-2px);
+}
+
+div[data-testid="stPopoverBody"] {
+    background: #0b1120 !important;
+    border: 1px solid rgba(56, 189, 248, 0.4) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.9), 0 0 25px rgba(56, 189, 248, 0.2) !important;
+    padding: 16px !important;
+    min-width: 320px !important;
+}
+
+/* Popover Menu item buttons */
+div[data-testid="stPopoverBody"] .stButton > button {
+    width: 100% !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+    background: #0f172a !important;
+    border: 1px solid rgba(56, 189, 248, 0.15) !important;
+    color: #f8fafc !important;
+    border-radius: 8px !important;
+    padding: 12px 16px !important;
+    margin-bottom: 8px !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    transition: all 0.2s ease !important;
+}
+
+div[data-testid="stPopoverBody"] .stButton > button:hover {
+    background: #1e293b !important;
+    border-color: #00f2fe !important;
+    color: #00f2fe !important;
+    transform: translateX(4px);
+    box-shadow: 0 0 14px rgba(0, 242, 254, 0.3) !important;
+}
+
+/* Sidebar Customization */
+section[data-testid="stSidebar"] {
+    background-color: #0b1120 !important;
+    border-right: 1px solid rgba(56, 189, 248, 0.15) !important;
+}
+
+section[data-testid="stSidebar"] h1,
+section[data-testid="stSidebar"] h2,
+section[data-testid="stSidebar"] h3 {
+    color: #ffffff !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    letter-spacing: 0.05em !important;
+}
+
+section[data-testid="stSidebar"] p,
+section[data-testid="stSidebar"] span,
+section[data-testid="stSidebar"] label {
+    color: #cbd5e1 !important;
+}
+
+/* Radio button text in sidebar */
+section[data-testid="stSidebar"] div[data-testid="stRadio"] label span {
+    color: #e2e8f0 !important;
+    font-size: 0.92rem !important;
+}
+
+/* =====================================================================
+   Streamlit Metric Cards with Glowing Border on Hover (e.g. RSS / Acc)
+   ===================================================================== */
+div[data-testid="stMetric"] {
+    background: #0f172a !important;
+    border: 1px solid rgba(56, 189, 248, 0.25) !important;
+    border-left: 4px solid var(--accent-cyan) !important;
+    border-radius: 10px !important;
+    padding: 16px 20px !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    cursor: pointer !important;
+}
+
+div[data-testid="stMetric"]:hover {
+    border-color: #00f2fe !important;
+    border-left: 4px solid #00f2fe !important;
+    box-shadow: var(--glow-cyan-intense) !important;
+    transform: translateY(-3px) scale(1.01) !important;
+}
+
+div[data-testid="stMetricLabel"] p {
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    color: var(--text-muted) !important;
+    transition: color 0.2s ease !important;
+}
+
+div[data-testid="stMetric"]:hover div[data-testid="stMetricLabel"] p {
+    color: #38bdf8 !important;
+}
+
+div[data-testid="stMetricValue"] {
+    font-size: 1.85rem !important;
+    font-weight: 800 !important;
+    color: #ffffff !important;
+    letter-spacing: -0.02em !important;
+}
+
+/* Dataframe containers - Pure dark theme with border glow on hover */
+div[data-testid="stDataFrame"],
+div[data-testid="stTable"] {
+    background-color: #0f172a !important;
+    border: 1px solid var(--border-subtle) !important;
+    border-radius: 10px !important;
+    overflow: hidden !important;
+    transition: all 0.25s ease !important;
+}
+
+div[data-testid="stDataFrame"]:hover,
+div[data-testid="stTable"]:hover {
+    border-color: rgba(56, 189, 248, 0.45) !important;
+    box-shadow: 0 0 18px rgba(56, 189, 248, 0.25) !important;
+}
+
+table {
+    background-color: #0f172a !important;
+    color: #f1f5f9 !important;
+}
+
+th {
+    background-color: #1e293b !important;
+    color: #38bdf8 !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 0.8rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    border-bottom: 1px solid rgba(56, 189, 248, 0.2) !important;
+    padding: 10px 14px !important;
+}
+
+td {
+    color: #e2e8f0 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    padding: 10px 14px !important;
+}
+
+/* Tabs */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 8px;
+    background-color: #0b1120;
+    border: 1px solid var(--border-subtle);
+    padding: 6px;
+    border-radius: 10px;
+}
+
+.stTabs [data-baseweb="tab"] {
+    border-radius: 6px !important;
+    padding: 8px 18px !important;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+    color: var(--text-muted) !important;
+    border: none !important;
+    background: transparent !important;
+    transition: all 0.2s ease !important;
+}
+
+.stTabs [data-baseweb="tab"]:hover {
+    color: #f8fafc !important;
+    background: rgba(30, 41, 59, 0.6) !important;
+}
+
+.stTabs [aria-selected="true"] {
+    background: #1e293b !important;
+    color: #38bdf8 !important;
+    border: 1px solid rgba(56, 189, 248, 0.4) !important;
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.2) !important;
+}
+
+/* Action Buttons */
+.stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+    border: 1px solid #38bdf8 !important;
+    color: #ffffff !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.04em !important;
+    border-radius: 8px !important;
+    padding: 10px 24px !important;
+    box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4) !important;
+    transition: all 0.25s ease !important;
+}
+
+.stButton > button[kind="primary"]:hover {
+    border-color: #00f2fe !important;
+    box-shadow: 0 0 24px rgba(0, 242, 254, 0.7) !important;
+    transform: translateY(-2px);
+}
+
+/* Threat Severity Badges */
+.threat-chip {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.threat-critical {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171 !important;
+    border: 1px solid rgba(239, 68, 68, 0.6);
+}
+
+.threat-high {
+    background: rgba(249, 115, 22, 0.15);
+    color: #fb923c !important;
+    border: 1px solid rgba(249, 115, 22, 0.6);
+}
+
+.threat-medium {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24 !important;
+    border: 1px solid rgba(245, 158, 11, 0.6);
+}
+
+.threat-low {
+    background: rgba(6, 182, 212, 0.15);
+    color: #38bdf8 !important;
+    border: 1px solid rgba(6, 182, 212, 0.6);
+}
+
+.threat-benign {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399 !important;
+    border: 1px solid rgba(16, 185, 129, 0.6);
+}
+
+/* Expander Containers with Border Glow on Hover */
+div[data-testid="stExpander"] {
+    background: #0f172a !important;
+    border: 1px solid var(--border-subtle) !important;
+    border-radius: 10px !important;
+    transition: all 0.25s ease !important;
+}
+
+div[data-testid="stExpander"]:hover {
+    border-color: rgba(56, 189, 248, 0.45) !important;
+    box-shadow: 0 0 16px rgba(56, 189, 248, 0.2) !important;
+}
+
+/* Footer styling */
+.soc-footer {
+    text-align: center;
+    padding: 28px 0 14px 0;
+    color: #64748b !important;
+    font-size: 0.78rem;
+    font-family: 'JetBrains Mono', monospace;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    margin-top: 48px;
+}

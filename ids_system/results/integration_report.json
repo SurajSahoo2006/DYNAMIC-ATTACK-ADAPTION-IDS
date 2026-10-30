@@ -1,0 +1,300 @@
+{
+  "timestamp_utc": "2026-10-30 17:25:53",
+  "health": {
+    "overall_status": "ok",
+    "process_rss_mb": 368.57,
+    "components": {
+      "scaler": {
+        "status": "ok",
+        "file": "artifacts/standard_scaler.pkl",
+        "phase_script": "models/train_phase2.py"
+      },
+      "selected_features": {
+        "status": "ok",
+        "file": "artifacts/selected_features.json",
+        "phase_script": "models/feature_selection.py"
+      },
+      "b2_ensemble": {
+        "status": "ok",
+        "file": "models/rf_8class_b2.joblib",
+        "phase_script": "models/wire_b2_models.py"
+      },
+      "calibrator": {
+        "status": "ok",
+        "file": "calibration/models/chosen_calibrator.joblib",
+        "phase_script": "calibration/fit.py"
+      },
+      "autoencoder": {
+        "status": "ok",
+        "file": "zeroday/models/autoencoder.pt",
+        "phase_script": "zeroday/train_autoencoder.py"
+      },
+      "shap_explainer": {
+        "status": "ok",
+        "file": "models/xgb_8class_b2.joblib",
+        "phase_script": "xai/shap_explain.py"
+      },
+      "llm_orchestrator": {
+        "status": "ok",
+        "file": "orchestrator/llm_orchestrator.py",
+        "phase_script": "orchestrator/llm_orchestrator.py",
+        "ollama_reachable": true
+      },
+      "marl_policy": {
+        "status": "ok",
+        "file": "models/marl/mappo_balanced_seed42_best.pt",
+        "phase_script": "marl/train.py"
+      },
+      "marl_cache": {
+        "status": "ok",
+        "file": "data/processed/marl_cache_test.parquet",
+        "phase_script": "marl/build_cache.py"
+      },
+      "alert_logger": {
+        "status": "ok",
+        "file": "logs/alerts_live.jsonl",
+        "phase_script": "alerts/alert_logger.py"
+      }
+    }
+  },
+  "parity_tests": {
+    "P1": {
+      "name": "Pipeline Raw Probabilities == predict.py Output",
+      "status": "passed",
+      "max_diff": 0.0,
+      "tolerance": 1e-06,
+      "n_samples": 500
+    },
+    "P2": {
+      "name": "Pipeline Calibrated Confidence == Calibration Code Output",
+      "status": "passed",
+      "max_diff": 0.0,
+      "tolerance": 1e-06,
+      "n_samples": 500
+    },
+    "P3": {
+      "name": "Pipeline AE Score == Phase 10 AE Scoring Output",
+      "status": "passed",
+      "max_diff": 0.0,
+      "tolerance": 1e-06,
+      "n_samples": 500
+    },
+    "P4": {
+      "name": "Severity == Phase 3 Deterministic Severity Table",
+      "status": "passed",
+      "matched_count": 500,
+      "total_count": 500
+    },
+    "P5": {
+      "name": "Pipeline SHAP Top-5 Feature Names == xai/shap_explain.py Output (20 rows)",
+      "status": "passed",
+      "tested_rows": 20,
+      "mismatches": 0
+    },
+    "P6": {
+      "name": "Forensic Alert Logger Pass on Chain & Rejection on Tampered Copy",
+      "status": "passed",
+      "clean_log_valid": true,
+      "tampered_copy_rejected": true
+    },
+    "P7": {
+      "name": "analyze_batch Rejects Missing Feature and Names Missing Column",
+      "status": "passed",
+      "dropped_column": "flow_duration",
+      "named_in_error": true
+    }
+  },
+  "metrics_2000_test": {
+    "n_samples": 2000,
+    "accuracy": 0.955,
+    "accuracy_wilson_ci": [
+      94.5,
+      96.32
+    ],
+    "accuracy_formatted": "1910 of 2000 (95.50%) [94.50%, 96.32%]",
+    "macro_f1": 0.8701,
+    "phase11_baseline_accuracy": 0.9542,
+    "phase11_baseline_macro_f1": 0.8728,
+    "accuracy_difference_vs_phase11": 0.0008,
+    "macro_f1_difference_vs_phase11": -0.0027,
+    "accuracy_difference_explanation": "Evaluated on 2,000 stratified samples (test.parquet) versus full 26,292 test split in Phase 11."
+  },
+  "unknown_flagging_by_class": {
+    "Benign": {
+      "n_samples": 76,
+      "n_unknown": 10,
+      "rate_pct": 13.16,
+      "ci_lower": 7.31,
+      "ci_upper": 22.55,
+      "formatted": "10 of 76 (13.16%) [7.31%, 22.55%]",
+      "phase10_control_pct": 8.0,
+      "phase12_control_pct": 12.2,
+      "ci_contains_phase10": "yes"
+    },
+    "BruteForce": {
+      "n_samples": 27,
+      "n_unknown": 5,
+      "rate_pct": 18.52,
+      "ci_lower": 8.18,
+      "ci_upper": 36.7,
+      "formatted": "5 of 27 (18.52%) [8.18%, 36.70%]",
+      "phase10_control_pct": 19.83,
+      "phase12_control_pct": 22.07,
+      "ci_contains_phase10": "yes"
+    },
+    "DDoS": {
+      "n_samples": 863,
+      "n_unknown": 391,
+      "rate_pct": 45.31,
+      "ci_lower": 42.01,
+      "ci_upper": 48.64,
+      "formatted": "391 of 863 (45.31%) [42.01%, 48.64%]",
+      "phase10_control_pct": 44.84,
+      "phase12_control_pct": 0.02,
+      "ci_contains_phase10": "yes"
+    },
+    "DoS": {
+      "n_samples": 302,
+      "n_unknown": 104,
+      "rate_pct": 34.44,
+      "ci_lower": 29.3,
+      "ci_upper": 39.96,
+      "formatted": "104 of 302 (34.44%) [29.30%, 39.96%]",
+      "phase10_control_pct": 31.88,
+      "phase12_control_pct": 0.1,
+      "ci_contains_phase10": "yes"
+    },
+    "Mirai": {
+      "n_samples": 225,
+      "n_unknown": 162,
+      "rate_pct": 72.0,
+      "ci_lower": 65.8,
+      "ci_upper": 77.46,
+      "formatted": "162 of 225 (72.00%) [65.80%, 77.46%]",
+      "phase10_control_pct": 69.83,
+      "phase12_control_pct": 0.0,
+      "ci_contains_phase10": "yes"
+    },
+    "Recon": {
+      "n_samples": 304,
+      "n_unknown": 77,
+      "rate_pct": 25.33,
+      "ci_lower": 20.77,
+      "ci_upper": 30.5,
+      "formatted": "77 of 304 (25.33%) [20.77%, 30.50%]",
+      "phase10_control_pct": 24.91,
+      "phase12_control_pct": 7.35,
+      "ci_contains_phase10": "yes"
+    },
+    "Spoofing": {
+      "n_samples": 152,
+      "n_unknown": 43,
+      "rate_pct": 28.29,
+      "ci_lower": 21.73,
+      "ci_upper": 35.92,
+      "formatted": "43 of 152 (28.29%) [21.73%, 35.92%]",
+      "phase10_control_pct": 24.61,
+      "phase12_control_pct": 8.59,
+      "ci_contains_phase10": "yes"
+    },
+    "Web-based": {
+      "n_samples": 51,
+      "n_unknown": 10,
+      "rate_pct": 19.61,
+      "ci_lower": 11.02,
+      "ci_upper": 32.46,
+      "formatted": "10 of 51 (19.61%) [11.02%, 32.46%]",
+      "phase10_control_pct": 17.71,
+      "phase12_control_pct": 23.81,
+      "ci_contains_phase10": "yes"
+    }
+  },
+  "full_benign_evaluation": {
+    "n_total": 1000,
+    "n_unknown": 138,
+    "rate_pct": 13.8,
+    "ci_lower": 11.8,
+    "ci_upper": 16.08,
+    "formatted": "138 of 1000 (13.80%) [11.80%, 16.08%]",
+    "split": {
+      "ae_only": 16,
+      "ae_only_pct": 1.6,
+      "low_conf_only": 121,
+      "low_conf_only_pct": 12.1,
+      "both": 1,
+      "both_pct": 0.1
+    }
+  },
+  "latency_breakdown": {
+    "n_benchmark_flows": 200,
+    "n_warmup_flows": 20,
+    "stages": {
+      "scaling": {
+        "mean_ms": 0.6907,
+        "p95_ms": 1.0794
+      },
+      "b2_rf": {
+        "mean_ms": 42.0344,
+        "p95_ms": 59.3243
+      },
+      "b2_xgb": {
+        "mean_ms": 1.4592,
+        "p95_ms": 2.3002
+      },
+      "calibration": {
+        "mean_ms": 1.2984,
+        "p95_ms": 2.473
+      },
+      "autoencoder": {
+        "mean_ms": 0.3411,
+        "p95_ms": 0.5225
+      },
+      "decide": {
+        "mean_ms": 0.0105,
+        "p95_ms": 0.0165
+      }
+    },
+    "total_main_path": {
+      "mean_ms": 45.8344,
+      "p95_ms": 64.1976
+    },
+    "dominating_stage": "Random Forest (b2_rf)",
+    "shap_explain_on_demand": {
+      "mean_ms": 69.0583,
+      "p95_ms": 94.0707
+    },
+    "phase11_baseline_p95_ms": 37.755,
+    "latency_difference_explanation": "Main-path p95 latency is 64.198 ms versus a Phase 11 baseline p95 of 37.755 ms; the Random Forest stage alone has p95 59.324 ms. Timings varied between repeated runs on this laptop, so they are indicative rather than exact."
+  },
+  "performance": {
+    "throughput_fps": 20043.8,
+    "latency_p50_ms": 40.683,
+    "latency_p95_ms": 50.504,
+    "rss_before_mb": 368.57,
+    "peak_rss_mb": 721.9,
+    "execution_threads": 1
+  },
+  "marl_response_500_flows": {
+    "n_flows": 500,
+    "n_accept_verdict": 500,
+    "triage_statement": "Triage did not change any verdict in this run; containment and escalation decisions carry the response.",
+    "triage_action_shares": {
+      "accept_verdict": 1.0
+    },
+    "containment_action_shares": {
+      "isolate": 0.224,
+      "none": 0.722,
+      "rate_limit": 0.054
+    },
+    "escalation_action_shares": {
+      "notify_analyst": 0.144,
+      "none": 0.856
+    }
+  },
+  "forensic_alert_logging_200_flows": {
+    "n_logged": 200,
+    "verification_status": "PASS",
+    "lines_verified": 200,
+    "tail_hash": "3f0b0408b2729c925bdf47ba17b907c56f384aaff73f6e81594a6b51a819359d"
+  }
+}

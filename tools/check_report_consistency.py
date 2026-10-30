@@ -373,10 +373,10 @@ def check_requirements_completeness() -> List[str]:
     standard_or_local = {
         "sys", "os", "json", "time", "logging", "argparse", "hashlib", "pathlib", "typing",
         "shutil", "datetime", "re", "warnings", "collections", "ast", "glob", "math",
-        "models", "ingest", "preprocess", "xai", "adversarial", "alerts", "orchestrator",
+        "models", "ingest", "preprocess", "xai", "adversarial", "alerts", "orchestrator", "ids_system", "app",
         "config", "predict", "tools", "__future__", "dataclasses", "gc", "uuid", "experiments",
         "run_phase3_llm", "scapy", "concurrent", "marl", "export", "dashboard", "config_marl",
-        "io", "base64", "tempfile", "urllib", "subprocess", "drift", "federated", "copy", "zeroday", "edge", "calibration", "platform", "threading",
+        "io", "base64", "tempfile", "urllib", "subprocess", "drift", "federated", "copy", "zeroday", "edge", "calibration", "platform", "threading", "importlib",
     }
 
     missing = []
@@ -1024,6 +1024,117 @@ def check_phase12_calibration() -> Tuple[List[str], List[str]]:
     return errors, warnings
 
 
+
+
+def check_phase13_pipeline() -> Tuple[List[str], List[str]]:
+    """
+    CHECK 17 - phase13_pipeline_check:
+    FAIL if ids_system/results/integration_report.json is missing,
+    if any parity test is neither 'passed' nor 'known_mismatch',
+    or if percentages in phase13_summary.md do not recompute from JSON.
+    """
+    errors = []
+    warnings = []
+
+    report_json_path = PROJECT_ROOT / "ids_system" / "results" / "integration_report.json"
+    p13_md_path = REPORTS_DIR / "phase13_summary.md"
+
+    # 1. File existence
+    if not report_json_path.exists():
+        errors.append("ids_system/results/integration_report.json is missing.")
+        return errors, warnings
+
+    if not p13_md_path.exists():
+        errors.append("reports/phase13_summary.md is missing.")
+        return errors, warnings
+
+    # 2. Check JSON contents & parity tests
+    try:
+        with open(report_json_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        parity = data.get("parity_tests", {})
+        for tid, pinfo in parity.items():
+            status = pinfo.get("status", "")
+            if status not in ("passed", "known_mismatch"):
+                errors.append(f"Parity test {tid} status is '{status}', expected 'passed' or 'known_mismatch'.")
+
+        # 3. Check phase13_summary.md percentages against JSON
+        p13_text = p13_md_path.read_text(encoding="utf-8")
+
+        # Check fraction percentages within 0.15% tolerance
+        frac_errs = check_fraction_percentages(p13_text, "phase13_summary.md")
+        if frac_errs:
+            errors.extend(frac_errs)
+
+        # Check key accuracy percentage in summary markdown
+        metrics = data.get("metrics_2000_test", {})
+        acc_pct = metrics.get("accuracy", 0.0) * 100.0
+        acc_str = f"{acc_pct:.2f}%"
+        if acc_str not in p13_text:
+            errors.append(f"Quoted accuracy {acc_str} not found in reports/phase13_summary.md")
+
+        # Check UNKNOWN rate per class in summary markdown
+        unknown_by_class = data.get("unknown_flagging_by_class", {})
+        for cname, cdata in unknown_by_class.items():
+            rate_str = f"{cdata.get('rate_pct', 0.0):.2f}%"
+            if rate_str not in p13_text:
+                errors.append(f"Class '{cname}' UNKNOWN rate {rate_str} not found in reports/phase13_summary.md")
+
+        # 4. Check full_benign_evaluation and latency_breakdown in integration_report.json
+        full_benign = data.get("full_benign_evaluation")
+        if not full_benign or "rate_pct" not in full_benign or "split" not in full_benign:
+            errors.append("full_benign_evaluation measurement missing from ids_system/results/integration_report.json")
+
+        lat_break = data.get("latency_breakdown")
+        if not lat_break or "stages" not in lat_break or "dominating_stage" not in lat_break or "shap_explain_on_demand" not in lat_break:
+            errors.append("latency_breakdown measurement missing from ids_system/results/integration_report.json")
+
+    except Exception as e:
+        errors.append(f"Error checking Phase 13 pipeline consistency: {e}")
+
+    return errors, warnings
+
+
+
+
+def check_frontend() -> Tuple[List[str], List[str]]:
+    r"""
+    CHECK 18 - frontend_check:
+    FAIL on numeric metric literals in app/*.py (regex like \d+\.\d{2,}%? outside comments
+    and an allow-list of layout constants inside the checker) or on direct model imports.
+    """
+    errors = []
+    warnings = []
+
+    app_dir = PROJECT_ROOT / "app"
+    if not app_dir.exists():
+        errors.append("app/ directory is missing.")
+        return errors, warnings
+
+    banned_imports = ["joblib.load", "xgboost", "torch.load", "sklearn"]
+    allowed_numbers = {"0.7"}
+
+    for py_file in app_dir.glob("*.py"):
+        text = py_file.read_text(encoding="utf-8")
+
+        # 1. Direct model imports check
+        for b in banned_imports:
+            if b in text:
+                errors.append(f"Forbidden direct model import/usage '{b}' detected in app/{py_file.name}")
+
+        # 2. Numeric metric literals check
+        lines = text.splitlines()
+        for i, line in enumerate(lines):
+            line_no_comment = line.split("#")[0]
+            matches = re.findall(r"\b\d+\.\d{2,}%?", line_no_comment)
+            for m in matches:
+                if m not in allowed_numbers:
+                    errors.append(f"Hardcoded numeric metric literal '{m}' found in app/{py_file.name}:{i+1}")
+
+    return errors, warnings
+
+
 def main():
     print("=" * 76)
     print("  PHASE 4 & 5 REPORT & CODEBASE CONSISTENCY AUDITOR")
@@ -1236,6 +1347,34 @@ def main():
         print("  [WARN] Phase 12 calibration check completed with warnings.")
     else:
         print("  [PASS] Phase 12 calibration artifacts and report verified.")
+
+    print("\n[17] Auditing Phase 13 unified pipeline artifacts (phase13_pipeline_check) ...")
+    p13_errs, p13_warns = check_phase13_pipeline()
+    if p13_errs:
+        all_errors.extend(p13_errs)
+        for e in p13_errs:
+            print(f"  [ERROR] {e}")
+    elif p13_warns:
+        all_warnings.extend(p13_warns)
+        for w in p13_warns:
+            print(f"  {w}")
+        print("  [WARN] Phase 13 pipeline check completed with warnings.")
+    else:
+        print("  [PASS] Phase 13 unified pipeline artifacts and parity tests verified.")
+
+    print("\n[18] Auditing Phase 14 frontend code (frontend_check) ...")
+    f_errs, f_warns = check_frontend()
+    if f_errs:
+        all_errors.extend(f_errs)
+        for e in f_errs:
+            print(f"  [ERROR] {e}")
+    elif f_warns:
+        all_warnings.extend(f_warns)
+        for w in f_warns:
+            print(f"  {w}")
+        print("  [WARN] Phase 14 frontend check completed with warnings.")
+    else:
+        print("  [PASS] Phase 14 frontend verified (no hardcoded metric literals or direct model imports).")
 
     print("\n" + "=" * 76)
     if not all_errors:
