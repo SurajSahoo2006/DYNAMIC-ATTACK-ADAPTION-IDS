@@ -1,0 +1,62 @@
+{
+  "phase3_static_telemetry": {
+    "total_flows": 40,
+    "flagged_flows_count": 0,
+    "total_unmatched_numbers": 0,
+    "total_unprovided_phrases": 0,
+    "term_frequencies": {
+      "duration": 11,
+      "packet size": 1,
+      "size": 1,
+      "protocol": 2,
+      "volume": 12
+    }
+  },
+  "phase4_dynamic_shap": {
+    "total_flows": 40,
+    "flagged_flows_count": 3,
+    "total_unmatched_numbers": 0,
+    "total_unprovided_phrases": 3,
+    "term_frequencies": {
+      "volume": 4
+    },
+    "flagged_flows_detail": [
+      {
+        "flow_index": 11497,
+        "unprovided_phrases": [
+          "volume"
+        ],
+        "explanation": "The network flow is classified as benign due to its low traffic volume and lack of suspicious activity, indicating a normal or expected network behavior."
+      },
+      {
+        "flow_index": 25398,
+        "unprovided_phrases": [
+          "volume"
+        ],
+        "explanation": "The network flow is classified as a BruteForce attack, indicating a high volume of login attempts from a single IP address within a short time frame, suggesting a potential unauthorized access attempt."
+      },
+      {
+        "flow_index": 20091,
+        "unprovided_phrases": [
+          "volume"
+        ],
+        "explanation": "The network flow has been classified as a BruteForce attack, indicating a high volume of login attempts from a single source, with a moderate level of confidence in the classification."
+      }
+    ]
+  },
+  "comparison_observations": {
+    "duration_mentions": {
+      "phase3": 11,
+      "phase4": 0
+    },
+    "packet_size_mentions": {
+      "phase3": 1,
+      "phase4": 0
+    },
+    "volume_mentions": {
+      "phase3": 12,
+      "phase4": 4
+    },
+    "verdict": "Neither run invented hallucinated numeric values (0 unmatched numbers in both runs). In Phase 3, flow_duration was always provided in the static 9-feature context, and the LLM frequently reused it as a template justification ('due to its low duration' in 11/40 flows). In Phase 4, dynamic SHAP context eliminated generic duration claims (0/40), but 3 flows were flagged for using the colloquial phrase 'volume' (e.g., 'high volume of login attempts') when Tot size or Tot sum were not among that specific flow's top 5 SHAP drivers."
+  }
+}

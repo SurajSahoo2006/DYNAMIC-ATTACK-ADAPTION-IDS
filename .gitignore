@@ -32,6 +32,11 @@ venv/
 .venv/
 env/
 
+# Logs & Test artifacts
+logs/*.log
+logs/*_test.jsonl
+reports/*_partial.json
+
 # IDEs
 .vscode/
 .idea/

@@ -1,0 +1,110 @@
+{
+  "n_samples": 2000,
+  "rf_sample_size": 200,
+  "runtime_sec": 94.29,
+  "peak_ram_mb": 987.3,
+  "global_importance": {
+    "IAT": 2.6828761100769043,
+    "Protocol Type": 0.4732111692428589,
+    "Header_Length": 0.4396786391735077,
+    "rst_count": 0.42128369212150574,
+    "urg_count": 0.3675019443035126,
+    "flow_duration": 0.3236512243747711,
+    "Min": 0.30339178442955017,
+    "Variance": 0.2932225465774536,
+    "syn_count": 0.2764965295791626,
+    "Tot size": 0.23435598611831665,
+    "Magnitue": 0.16383884847164154,
+    "Tot sum": 0.1398136466741562,
+    "AVG": 0.13560368120670319,
+    "Covariance": 0.12398583441972733,
+    "Max": 0.12298240512609482,
+    "ack_count": 0.0717642530798912,
+    "ICMP": 0.012924247421324253,
+    "syn_flag_number": 0.01246037520468235,
+    "fin_flag_number": 0.006503361742943525
+  },
+  "per_class_summary": {
+    "Benign": {
+      "IAT": 2.9046571254730225,
+      "rst_count": 0.7439160346984863,
+      "urg_count": 0.6694074869155884,
+      "Tot size": 0.42042121291160583,
+      "Header_Length": 0.40683695673942566
+    },
+    "BruteForce": {
+      "IAT": 2.557556629180908,
+      "Header_Length": 0.5293411016464233,
+      "syn_count": 0.5289740562438965,
+      "urg_count": 0.4449475109577179,
+      "flow_duration": 0.442518413066864
+    },
+    "DDoS": {
+      "IAT": 4.733676433563232,
+      "Variance": 0.5251684188842773,
+      "flow_duration": 0.3908354938030243,
+      "urg_count": 0.3834351897239685,
+      "Tot sum": 0.36678463220596313
+    },
+    "DoS": {
+      "IAT": 4.3730854988098145,
+      "urg_count": 0.71791011095047,
+      "Magnitue": 0.5572438836097717,
+      "flow_duration": 0.5444912314414978,
+      "Variance": 0.4925515055656433
+    },
+    "Mirai": {
+      "Protocol Type": 2.5092966556549072,
+      "IAT": 1.5308682918548584,
+      "Min": 1.4533395767211914,
+      "rst_count": 0.6911320686340332,
+      "Variance": 0.45590439438819885
+    },
+    "Recon": {
+      "IAT": 1.0278161764144897,
+      "syn_count": 0.6948097944259644,
+      "rst_count": 0.5113534927368164,
+      "Header_Length": 0.3837035000324249,
+      "flow_duration": 0.2450753152370453
+    },
+    "Spoofing": {
+      "IAT": 2.7280044555664062,
+      "Header_Length": 0.9720443487167358,
+      "rst_count": 0.2354012280702591,
+      "AVG": 0.20230858027935028,
+      "flow_duration": 0.15823490917682648
+    },
+    "Web-based": {
+      "IAT": 1.6073817014694214,
+      "Header_Length": 0.5704457759857178,
+      "Tot size": 0.3070991337299347,
+      "flow_duration": 0.30568549036979675,
+      "urg_count": 0.2646736204624176
+    }
+  },
+  "stability": {
+    "spearman_rho": 0.9088,
+    "spearman_pval": 0.0,
+    "top5_xgb": [
+      "IAT",
+      "Protocol Type",
+      "Header_Length",
+      "rst_count",
+      "urg_count"
+    ],
+    "top5_rf": [
+      "IAT",
+      "rst_count",
+      "Variance",
+      "Header_Length",
+      "urg_count"
+    ],
+    "top5_overlap": [
+      "rst_count",
+      "IAT",
+      "Header_Length",
+      "urg_count"
+    ],
+    "top5_overlap_count": 4
+  }
+}

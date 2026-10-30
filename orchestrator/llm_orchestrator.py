@@ -196,6 +196,7 @@ class LLMSemanticOrchestrator:
         confidence: float,
         severity: Optional[str] = None,
         is_last_call: bool = False,
+        shap_top_features: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """
         Generates semantic triage and mitigation recommendation for a single flow.
@@ -210,7 +211,9 @@ class LLMSemanticOrchestrator:
             "source": "ollama" | "rule_based_fallback",
             "fallback": bool,
             "overrode_fields": bool,
-            "latency_sec": float
+            "latency_sec": float,
+            "used_shap": bool,
+            "telemetry_provided": dict
           }
         """
         t0 = time.time()
@@ -225,6 +228,7 @@ class LLMSemanticOrchestrator:
                 confidence=confidence,
                 severity=det_severity,
                 is_last_call=is_last_call,
+                shap_top_features=shap_top_features,
             )
             if res is not None:
                 overrode = False
@@ -239,6 +243,7 @@ class LLMSemanticOrchestrator:
                 res["source"] = "ollama"
                 res["fallback"] = False
                 res["overrode_fields"] = overrode
+                res["used_shap"] = bool(shap_top_features)
                 res["latency_sec"] = round(time.time() - t0, 3)
                 return res
 
@@ -248,6 +253,7 @@ class LLMSemanticOrchestrator:
         res["source"] = "rule_based_fallback"
         res["fallback"] = True
         res["overrode_fields"] = False
+        res["used_shap"] = bool(shap_top_features)
         res["latency_sec"] = round(time.time() - t0, 4)
         return res
 
@@ -277,6 +283,7 @@ class LLMSemanticOrchestrator:
         confidence: float,
         severity: str,
         is_last_call: bool,
+        shap_top_features: Optional[List[Dict[str, Any]]] = None,
     ) -> Tuple[Optional[Dict[str, str]], str]:
         """
         Tries to call Ollama. If response JSON is invalid, retries once.
@@ -289,6 +296,7 @@ class LLMSemanticOrchestrator:
             confidence=confidence,
             severity=severity,
             is_last_call=is_last_call,
+            shap_top_features=shap_top_features,
         )
         if res is not None:
             return res, "ollama"
@@ -301,6 +309,7 @@ class LLMSemanticOrchestrator:
             confidence=confidence,
             severity=severity,
             is_last_call=is_last_call,
+            shap_top_features=shap_top_features,
         )
         if res is not None:
             return res, "ollama"
@@ -314,24 +323,32 @@ class LLMSemanticOrchestrator:
         confidence: float,
         severity: str,
         is_last_call: bool,
+        shap_top_features: Optional[List[Dict[str, Any]]] = None,
     ) -> Optional[Dict[str, str]]:
         """Invokes Ollama generate API with temperature 0 and strict JSON formatting."""
-        # Top distinctive telemetry keys to provide context without overloading token length
-        context_features = {
-            k: round(v, 2)
-            for k, v in flow_features.items()
-            if k in [
-                "flow_duration",
-                "Header_Length",
-                "Protocol Type",
-                "Tot size",
-                "AVG",
-                "syn_count",
-                "ack_count",
-                "ICMP",
-                "IAT",
-            ]
-        }
+        if shap_top_features:
+            # Use real top SHAP features and their unscaled physical values
+            context_features = {
+                item["feature"]: round(float(item["unscaled_value"]), 2)
+                for item in shap_top_features
+            }
+        else:
+            # Top distinctive telemetry keys to provide context without overloading token length
+            context_features = {
+                k: round(v, 2)
+                for k, v in flow_features.items()
+                if k in [
+                    "flow_duration",
+                    "Header_Length",
+                    "Protocol Type",
+                    "Tot size",
+                    "AVG",
+                    "syn_count",
+                    "ack_count",
+                    "ICMP",
+                    "IAT",
+                ]
+            }
 
         # Determine confidence band
         if confidence < 0.60:

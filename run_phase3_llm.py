@@ -107,12 +107,17 @@ def select_balanced_random_flows(
     return df_test.loc[selected_indices].copy()
 
 
-def run_llm_demo(sample_size: int = LLM_DEMO_SAMPLE_SIZE) -> None:
+def run_llm_demo(
+    sample_size: int = LLM_DEMO_SAMPLE_SIZE,
+    use_shap: bool = False,
+    out_csv_path: Optional[Path] = None,
+) -> None:
     proc = psutil.Process(os.getpid())
     init_ram_mb = proc.memory_info().rss / (1024.0 * 1024.0)
 
     print("=" * 70)
-    print("  PHASE 3: LLM SEMANTIC ORCHESTRATOR DEMO RUN")
+    print("  PHASE 3 / 4: LLM SEMANTIC ORCHESTRATOR DEMO RUN")
+    print(f"  Mode: {'SHAP Top Features Active (--use-shap)' if use_shap else 'Standard Fixed Telemetry'}")
     print("=" * 70)
     print(f"Initial Process RAM: {init_ram_mb:.1f} MB")
 
@@ -124,6 +129,18 @@ def run_llm_demo(sample_size: int = LLM_DEMO_SAMPLE_SIZE) -> None:
     classes_34 = list(le_34.classes_)
     with open(SELECTED_FEATURES_PATH, "r", encoding="utf-8") as f:
         selected_features = json.load(f)
+
+    # Load local SHAP attributions if requested
+    shap_local_dict = {}
+    if use_shap:
+        shap_file = Path(__file__).parent / "artifacts" / "shap_local_40flows.json"
+        if not shap_file.exists():
+            from xai.run_phase4_shap import run_shap_analysis
+            print("\n[SHAP] artifacts/shap_local_40flows.json not found. Computing SHAP first ...")
+            run_shap_analysis(n_samples=2000, rf_sample_size=200)
+        with open(shap_file, "r", encoding="utf-8") as f:
+            shap_local_dict = json.load(f)
+        print(f"[SHAP] Loaded local SHAP explanations for {len(shap_local_dict)} demo flows.")
 
     # 2. Select 40 balanced flows randomly with seed 42
     df_sample = select_balanced_random_flows(df_test, seed=RANDOM_SEED, samples_per_family=5)
@@ -150,7 +167,7 @@ def run_llm_demo(sample_size: int = LLM_DEMO_SAMPLE_SIZE) -> None:
     unscaled_df = orchestrator.unscaler.unscale(df_sample[selected_features])
 
     # 5. Process flows
-    print(f"\n[ORCHESTRATOR] Generating semantic summaries for {len(df_sample)} flows ...")
+    print(f"\n[ORCHESTRATOR] Generating semantic summaries for {len(df_sample)} flows (use_shap={use_shap}) ...")
     records = []
     ollama_latencies = []
     ollama_valid_json_count = 0
@@ -168,12 +185,18 @@ def run_llm_demo(sample_size: int = LLM_DEMO_SAMPLE_SIZE) -> None:
         conf = float(row["confidence"])
         sev = row["severity"]
 
+        # If use_shap is True, pass the flow's top SHAP features
+        flow_shap = None
+        if use_shap:
+            flow_shap = shap_local_dict.get(str(idx), {}).get("top_shap_features", None)
+
         res = orchestrator.generate_flow_summary(
             flow_features_unscaled=flow_telemetry,
             attack_class=pred_class,
             confidence=conf,
             severity=sev,
             is_last_call=is_last,
+            shap_top_features=flow_shap,
         )
 
         source = res.get("source", "unknown")
@@ -208,6 +231,7 @@ def run_llm_demo(sample_size: int = LLM_DEMO_SAMPLE_SIZE) -> None:
             "source": source,
             "fallback": res.get("fallback", False),
             "overrode_fields": res.get("overrode_fields", False),
+            "used_shap": res.get("used_shap", False),
             "latency_sec": lat,
         })
 
@@ -217,10 +241,11 @@ def run_llm_demo(sample_size: int = LLM_DEMO_SAMPLE_SIZE) -> None:
     total_llm_time = time.time() - total_llm_start
 
     # 6. Save results to CSV
+    target_csv = out_csv_path or (REPORTS_DIR / "llm_demo_outputs_shap.csv" if use_shap else LLM_OUTPUTS_CSV)
     res_df = pd.DataFrame(records)
-    LLM_OUTPUTS_CSV.parent.mkdir(parents=True, exist_ok=True)
-    res_df.to_csv(LLM_OUTPUTS_CSV, index=False)
-    print(f"\n[SAVE] Overwritten demo outputs --> {LLM_OUTPUTS_CSV.name}")
+    target_csv.parent.mkdir(parents=True, exist_ok=True)
+    res_df.to_csv(target_csv, index=False)
+    print(f"\n[SAVE] Saved demo outputs --> {target_csv.name}")
 
     # 7. Metrics calculation
     avg_sec_ollama = float(np.mean(ollama_latencies)) if ollama_latencies else 0.0
@@ -229,7 +254,7 @@ def run_llm_demo(sample_size: int = LLM_DEMO_SAMPLE_SIZE) -> None:
 
     low_conf_count = sum(1 for r in records if r["confidence"] < 0.60)
     print("\n" + "=" * 70)
-    print("  LLM SEMANTIC ORCHESTRATOR DEMO METRICS")
+    print(f"  LLM SEMANTIC ORCHESTRATOR DEMO METRICS (use_shap={use_shap})")
     print("=" * 70)
     print(f"Total Flows Processed:          {n_flows}")
     print(f"Low-Confidence Flows (< 0.60):  {low_conf_count} ({low_conf_count / n_flows * 100:.1f}%)")
@@ -251,8 +276,10 @@ def run_llm_demo(sample_size: int = LLM_DEMO_SAMPLE_SIZE) -> None:
         print(f"  Action:      {r['recommended_action']}")
 
     # Save metrics JSON
+    metrics_filename = "llm_metrics_shap.json" if use_shap else "llm_metrics.json"
     llm_metrics = {
         "flows_processed": n_flows,
+        "use_shap": use_shap,
         "low_confidence_count": low_conf_count,
         "ollama_count": ollama_count,
         "fallback_count": fallback_count,
@@ -264,14 +291,17 @@ def run_llm_demo(sample_size: int = LLM_DEMO_SAMPLE_SIZE) -> None:
         "model_overrode_fields_count": field_override_count,
         "rare_classes_tested": rare_counts,
     }
-    with open(REPORTS_DIR / "llm_metrics.json", "w", encoding="utf-8") as f:
+    with open(REPORTS_DIR / metrics_filename, "w", encoding="utf-8") as f:
         json.dump(llm_metrics, f, indent=2)
-    print(f"[SAVE] Overwritten metrics --> {REPORTS_DIR / 'llm_metrics.json'}")
+    print(f"[SAVE] Metrics written --> {REPORTS_DIR / metrics_filename}")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run LLM Semantic Orchestrator Demo")
     parser.add_argument("--samples", type=int, default=LLM_DEMO_SAMPLE_SIZE, help="Number of test flows to process")
+    parser.add_argument("--use-shap", action="store_true", default=False, help="Use top SHAP features in prompt")
+    parser.add_argument("--out-csv", type=str, default=None, help="Custom output CSV path")
     args = parser.parse_args()
 
-    run_llm_demo(sample_size=args.samples)
+    out_p = Path(args.out_csv) if args.out_csv else None
+    run_llm_demo(sample_size=args.samples, use_shap=args.use_shap, out_csv_path=out_p)

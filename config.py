@@ -13,11 +13,12 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent.resolve()
 
 # Where the raw CICIoT2023 CSVs live.
+# Configurable via environment variable CIC_DATA_RAW_DIR (default: repo-relative data/raw)
 # Structure expected:
 #   DATA_RAW_DIR/train/train.csv
 #   DATA_RAW_DIR/test/test.csv
 #   DATA_RAW_DIR/validation/validation.csv   (used only in Phase 3+)
-DATA_RAW_DIR = Path(r"D:\IROP MODEL\CICIOT23")
+DATA_RAW_DIR = Path(os.getenv("CIC_DATA_RAW_DIR", str(PROJECT_ROOT / "data" / "raw")))
 
 DATA_PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
 ARTIFACTS_DIR      = PROJECT_ROOT / "artifacts"

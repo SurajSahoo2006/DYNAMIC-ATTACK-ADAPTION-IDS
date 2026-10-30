@@ -1,0 +1,163 @@
+{
+  "zero_attack_control": {
+    "samples": 500,
+    "max_numerical_drift": 0.0,
+    "dnn_clean_raw_acc": 0.776,
+    "dnn_clean_pipeline_acc": 0.776,
+    "ensemble_clean_raw_acc": 0.956,
+    "ensemble_clean_pipeline_acc": 0.956
+  },
+  "fgsm_and_random_noise_results": [
+    {
+      "epsilon": 0.01,
+      "mean_l2_fgsm": 0.0313,
+      "mean_l2_random": 0.0291,
+      "dnn_clean_acc": 0.776,
+      "dnn_adversarial_acc": 0.774,
+      "ensemble_clean_acc": 0.956,
+      "ensemble_clean_count": "478/500",
+      "ensemble_adversarial_acc": 0.57,
+      "ensemble_adversarial_count": "285/500",
+      "ensemble_adversarial_ci_95": [
+        0.5262,
+        0.6127
+      ],
+      "transfer_asr": 0.41,
+      "transfer_asr_count": "196/478",
+      "transfer_asr_ci_95": [
+        0.3668,
+        0.4547
+      ],
+      "ensemble_random_noise_acc": 0.706,
+      "ensemble_random_noise_count": "353/500",
+      "ensemble_random_noise_ci_95": [
+        0.6646,
+        0.7442
+      ],
+      "random_noise_asr": 0.2699,
+      "random_noise_asr_count": "129/478",
+      "runtime_sec": 0.22
+    },
+    {
+      "epsilon": 0.05,
+      "mean_l2_fgsm": 0.1515,
+      "mean_l2_random": 0.1342,
+      "dnn_clean_acc": 0.776,
+      "dnn_adversarial_acc": 0.76,
+      "ensemble_clean_acc": 0.956,
+      "ensemble_clean_count": "478/500",
+      "ensemble_adversarial_acc": 0.532,
+      "ensemble_adversarial_count": "266/500",
+      "ensemble_adversarial_ci_95": [
+        0.4882,
+        0.5753
+      ],
+      "transfer_asr": 0.4582,
+      "transfer_asr_count": "219/478",
+      "transfer_asr_ci_95": [
+        0.414,
+        0.503
+      ],
+      "ensemble_random_noise_acc": 0.61,
+      "ensemble_random_noise_count": "305/500",
+      "ensemble_random_noise_ci_95": [
+        0.5666,
+        0.6518
+      ],
+      "random_noise_asr": 0.3724,
+      "random_noise_asr_count": "178/478",
+      "runtime_sec": 0.16
+    },
+    {
+      "epsilon": 0.1,
+      "mean_l2_fgsm": 0.2943,
+      "mean_l2_random": 0.256,
+      "dnn_clean_acc": 0.776,
+      "dnn_adversarial_acc": 0.736,
+      "ensemble_clean_acc": 0.956,
+      "ensemble_clean_count": "478/500",
+      "ensemble_adversarial_acc": 0.51,
+      "ensemble_adversarial_count": "255/500",
+      "ensemble_adversarial_ci_95": [
+        0.4663,
+        0.5536
+      ],
+      "transfer_asr": 0.4791,
+      "transfer_asr_count": "229/478",
+      "transfer_asr_ci_95": [
+        0.4346,
+        0.5239
+      ],
+      "ensemble_random_noise_acc": 0.592,
+      "ensemble_random_noise_count": "296/500",
+      "ensemble_random_noise_ci_95": [
+        0.5484,
+        0.6342
+      ],
+      "random_noise_asr": 0.3912,
+      "random_noise_asr_count": "187/478",
+      "runtime_sec": 0.15
+    },
+    {
+      "epsilon": 0.2,
+      "mean_l2_fgsm": 0.5689,
+      "mean_l2_random": 0.4756,
+      "dnn_clean_acc": 0.776,
+      "dnn_adversarial_acc": 0.624,
+      "ensemble_clean_acc": 0.956,
+      "ensemble_clean_count": "478/500",
+      "ensemble_adversarial_acc": 0.478,
+      "ensemble_adversarial_count": "239/500",
+      "ensemble_adversarial_ci_95": [
+        0.4346,
+        0.5218
+      ],
+      "transfer_asr": 0.5167,
+      "transfer_asr_count": "247/478",
+      "transfer_asr_ci_95": [
+        0.472,
+        0.5612
+      ],
+      "ensemble_random_noise_acc": 0.566,
+      "ensemble_random_noise_count": "283/500",
+      "ensemble_random_noise_ci_95": [
+        0.5222,
+        0.6088
+      ],
+      "random_noise_asr": 0.4205,
+      "random_noise_asr_count": "201/478",
+      "runtime_sec": 0.16
+    },
+    {
+      "epsilon": 0.3,
+      "mean_l2_fgsm": 0.8413,
+      "mean_l2_random": 0.6992,
+      "dnn_clean_acc": 0.776,
+      "dnn_adversarial_acc": 0.57,
+      "ensemble_clean_acc": 0.956,
+      "ensemble_clean_count": "478/500",
+      "ensemble_adversarial_acc": 0.39,
+      "ensemble_adversarial_count": "195/500",
+      "ensemble_adversarial_ci_95": [
+        0.3482,
+        0.4334
+      ],
+      "transfer_asr": 0.6088,
+      "transfer_asr_count": "291/478",
+      "transfer_asr_ci_95": [
+        0.5643,
+        0.6515
+      ],
+      "ensemble_random_noise_acc": 0.53,
+      "ensemble_random_noise_count": "265/500",
+      "ensemble_random_noise_ci_95": [
+        0.4862,
+        0.5734
+      ],
+      "random_noise_asr": 0.4519,
+      "random_noise_asr_count": "216/478",
+      "runtime_sec": 0.15
+    }
+  ],
+  "runtime_sec": 1.97
+}
