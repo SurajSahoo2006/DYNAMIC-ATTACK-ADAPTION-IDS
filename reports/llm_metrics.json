@@ -1,0 +1,17 @@
+{
+  "flows_processed": 40,
+  "low_confidence_count": 8,
+  "ollama_count": 40,
+  "fallback_count": 0,
+  "ollama_json_validity_rate": 100.0,
+  "ollama_avg_seconds_per_flow": 11.19,
+  "total_triage_generation_sec": 447.47,
+  "peak_ram_mb": 356.1,
+  "peak_ram_gb": 0.35,
+  "model_overrode_fields_count": 0,
+  "rare_classes_tested": {
+    "Backdoor_Malware": 1,
+    "Recon-PingSweep": 1,
+    "Uploading_Attack": 1
+  }
+}
