@@ -1,0 +1,29 @@
+{
+  "clients": [
+    {
+      "client_id": 0,
+      "n_rows": 8000,
+      "local_train_accuracy": 0.970625
+    },
+    {
+      "client_id": 1,
+      "n_rows": 8000,
+      "local_train_accuracy": 0.9885
+    },
+    {
+      "client_id": 2,
+      "n_rows": 8000,
+      "local_train_accuracy": 0.89225
+    },
+    {
+      "client_id": 3,
+      "n_rows": 8000,
+      "local_train_accuracy": 0.936
+    },
+    {
+      "client_id": 4,
+      "n_rows": 4000,
+      "local_train_accuracy": 0.94575
+    }
+  ]
+}

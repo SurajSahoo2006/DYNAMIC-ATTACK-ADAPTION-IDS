@@ -1,0 +1,16 @@
+{
+  "epochs_run": 150,
+  "best_val_loss": 0.152915,
+  "threshold": 0.37417,
+  "thresholds_by_percentile": {
+    "95.0": 0.37417,
+    "97.5": 0.534869,
+    "99.0": 0.926735
+  },
+  "n_train_benign": 3998,
+  "train_cap": 100000,
+  "train_below_cap": true,
+  "train_cap_note": "Real Benign training rows (3,998) are fewer than the 100,000 cap.",
+  "n_val_benign": 4996,
+  "seed": 42
+}

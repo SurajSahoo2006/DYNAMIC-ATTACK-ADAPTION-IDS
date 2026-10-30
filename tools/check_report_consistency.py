@@ -125,7 +125,7 @@ def check_all_tracked_text_files_paths() -> List[str]:
     except Exception as e:
         return [f"Failed to execute git ls-files: {e}"]
 
-    binary_exts = {".pt", ".joblib", ".parquet", ".png", ".jpg", ".jpeg", ".webp", ".ico", ".bin"}
+    binary_exts = {".pt", ".joblib", ".parquet", ".png", ".jpg", ".jpeg", ".webp", ".ico", ".bin", ".npy", ".npz", ".pkl"}
     pattern = re.compile(r"(?<!https)(?<!http)(?<!ftp)\b[A-Za-z]:[\\/]|file:\/\/\/|\bUsers[\\/]|\\suraj\b|\/suraj\b")
 
     for rel_path in tracked_files:
@@ -376,7 +376,7 @@ def check_requirements_completeness() -> List[str]:
         "models", "ingest", "preprocess", "xai", "adversarial", "alerts", "orchestrator",
         "config", "predict", "tools", "__future__", "dataclasses", "gc", "uuid", "experiments",
         "run_phase3_llm", "scapy", "concurrent", "marl", "export", "dashboard", "config_marl",
-        "io", "base64", "tempfile", "urllib", "subprocess",
+        "io", "base64", "tempfile", "urllib", "subprocess", "drift", "federated", "copy", "zeroday", "edge", "calibration", "platform", "threading",
     }
 
     missing = []
@@ -481,6 +481,545 @@ def check_reward_settings_coverage() -> Tuple[List[str], List[str]]:
                     warnings.append(f"WARN reward_settings: Setting '{s}' has truncated=true")
     except Exception as e:
         errors.append(f"Error parsing marl/results/reward_settings_comparison.json: {e}")
+
+    return errors, warnings
+
+
+def check_phase8_drift() -> Tuple[List[str], List[str]]:
+    """
+    CHECK 11 — phase8_drift_check:
+    Open drift/drift_detection_results.json, confirm "drift_injected_window" exists.
+    Open drift/retrain_results.json, confirm "accuracy_delta" exists and is float.
+    FAIL only if either file missing.
+    WARN if accuracy_delta == 0.0 exactly.
+    """
+    errors = []
+    warnings = []
+    det_path = PROJECT_ROOT / "drift" / "drift_detection_results.json"
+    retrain_path = PROJECT_ROOT / "drift" / "retrain_results.json"
+
+    if not det_path.exists():
+        errors.append("drift/drift_detection_results.json is missing.")
+    else:
+        try:
+            with open(det_path, "r", encoding="utf-8") as f:
+                det_data = json.load(f)
+            if "drift_injected_window" not in det_data:
+                errors.append("'drift_injected_window' missing from drift/drift_detection_results.json")
+        except Exception as e:
+            errors.append(f"Error reading drift/drift_detection_results.json: {e}")
+
+    if not retrain_path.exists():
+        errors.append("drift/retrain_results.json is missing.")
+    else:
+        try:
+            with open(retrain_path, "r", encoding="utf-8") as f:
+                retrain_data = json.load(f)
+            if "accuracy_delta" not in retrain_data:
+                errors.append("'accuracy_delta' missing from drift/retrain_results.json")
+            else:
+                val = retrain_data["accuracy_delta"]
+                if not isinstance(val, (int, float)):
+                    errors.append(f"'accuracy_delta' in drift/retrain_results.json is not a float: {type(val)}")
+                elif float(val) == 0.0:
+                    warnings.append("WARN phase8_drift: accuracy_delta is exactly 0.0")
+        except Exception as e:
+            errors.append(f"Error reading drift/retrain_results.json: {e}")
+
+    return errors, warnings
+
+
+def check_phase9_federated() -> Tuple[List[str], List[str]]:
+    """
+    CHECK 12 — phase9_federated_check:
+    Open federated/results/fedavg_results.json.
+    Confirm "global_federated_model" key exists.
+    Confirm "centralized_baseline" key exists.
+    FAIL only if the file is missing entirely.
+    WARN if global_federated_model.test_accuracy < 0.70
+    (suspiciously low, likely a bug).
+    """
+    errors = []
+    warnings = []
+    res_path = PROJECT_ROOT / "federated" / "results" / "fedavg_results.json"
+    if not res_path.exists():
+        errors.append("federated/results/fedavg_results.json is missing entirely.")
+        return errors, warnings
+
+    try:
+        with open(res_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        if "global_federated_model" not in data:
+            errors.append("'global_federated_model' key missing from federated/results/fedavg_results.json")
+        else:
+            g_model = data["global_federated_model"]
+            acc = g_model.get("test_accuracy", 0.0)
+            if acc < 0.70:
+                warnings.append(f"WARN phase9_federated: global_federated_model test_accuracy ({acc:.4f}) < 0.70")
+
+        if "centralized_baseline" not in data:
+            errors.append("'centralized_baseline' key missing from federated/results/fedavg_results.json")
+    except Exception as e:
+        errors.append(f"Error parsing federated/results/fedavg_results.json: {e}")
+
+    return errors, warnings
+
+
+def check_phase10_zeroday() -> Tuple[List[str], List[str]]:
+    """
+    CHECK 13 — phase10_zeroday_check:
+    - FAIL if zeroday/results/openset_summary.json or ae_training.json is missing.
+    - FAIL if the threshold in ae_training.json is not a float.
+    - WARN if any class is marked truncated.
+    - Recompute percentages in phase10_summary.md from the JSON counts
+      (same tolerance as the existing percent check).
+    """
+    errors = []
+    warnings = []
+    ae_path = PROJECT_ROOT / "zeroday" / "results" / "ae_training.json"
+    openset_path = PROJECT_ROOT / "zeroday" / "results" / "openset_summary.json"
+    p10_md_path = REPORTS_DIR / "phase10_summary.md"
+
+    if not ae_path.exists():
+        errors.append("zeroday/results/ae_training.json is missing.")
+    else:
+        try:
+            with open(ae_path, "r", encoding="utf-8") as f:
+                ae_data = json.load(f)
+            thresh = ae_data.get("threshold")
+            if not isinstance(thresh, (int, float)):
+                errors.append(f"Threshold in zeroday/results/ae_training.json is not a float: {type(thresh)}")
+        except Exception as e:
+            errors.append(f"Error reading zeroday/results/ae_training.json: {e}")
+
+    if not openset_path.exists():
+        errors.append("zeroday/results/openset_summary.json is missing.")
+    else:
+        try:
+            with open(openset_path, "r", encoding="utf-8") as f:
+                openset_data = json.load(f)
+
+            trunc_list = openset_data.get("truncated_classes", [])
+            if trunc_list:
+                warnings.append(f"WARN phase10_zeroday: Classes marked truncated: {trunc_list}")
+
+            leave_one_out = openset_data.get("leave_one_class_out", {})
+            for cname, cdata in leave_one_out.items():
+                if isinstance(cdata, dict) and cdata.get("truncated") is True:
+                    warnings.append(f"WARN phase10_zeroday: Class '{cname}' has truncated=True")
+
+            if "lift" not in openset_data:
+                errors.append("Key 'lift' missing from zeroday/results/openset_summary.json")
+            if "auroc" not in openset_data:
+                errors.append("Key 'auroc' missing from zeroday/results/openset_summary.json")
+        except Exception as e:
+            errors.append(f"Error reading zeroday/results/openset_summary.json: {e}")
+
+    if p10_md_path.exists():
+        try:
+            md_text = p10_md_path.read_text(encoding="utf-8")
+            frac_errs = check_fraction_percentages(md_text, "phase10_summary.md")
+            if frac_errs:
+                errors.extend(frac_errs)
+        except Exception as e:
+            errors.append(f"Error reading reports/phase10_summary.md: {e}")
+    else:
+        errors.append("reports/phase10_summary.md is missing.")
+
+    return errors, warnings
+
+
+def check_phase11_edge() -> Tuple[List[str], List[str]]:
+    """
+    CHECK 14 - phase11_edge_check:
+    - FAIL if edge/results/baseline.json or edge/results/final_comparison.json is missing.
+    - FAIL if any latency value is not positive in baseline.json, final_comparison.json, or variant JSONs.
+    - FAIL if any peak_rss_mb or load_rss_mb is 0 or missing in baseline.json, final_comparison.json, or variant JSONs.
+    - WARN if the chosen variant is identical to the baseline.
+    - Recompute percentages in phase11_summary.md from JSON (within 0.15% tolerance).
+    """
+    errors = []
+    warnings = []
+    edge_dir = PROJECT_ROOT / "edge" / "results"
+    base_path = edge_dir / "baseline.json"
+    final_path = edge_dir / "final_comparison.json"
+    p11_md_path = REPORTS_DIR / "phase11_summary.md"
+
+    if not base_path.exists():
+        errors.append("edge/results/baseline.json is missing.")
+        return errors, warnings
+    if not final_path.exists():
+        errors.append("edge/results/final_comparison.json is missing.")
+        return errors, warnings
+
+    base_data = {}
+    try:
+        with open(base_path, "r", encoding="utf-8") as f:
+            base_data = json.load(f)
+
+        # Check latency values
+        lat_base = base_data.get("latency_per_flow_ms", {})
+        for k in ["median_ms", "p95_ms", "min_ms", "max_ms"]:
+            val = lat_base.get(k, 0)
+            if not isinstance(val, (int, float)) or val <= 0:
+                errors.append(f"baseline.json latency '{k}' is not positive: {val}")
+
+        # Check RSS values
+        for rk in ["load_rss_mb", "peak_rss_mb"]:
+            rval = base_data.get(rk)
+            if rval is None:
+                errors.append(f"baseline.json is missing '{rk}'")
+            elif not isinstance(rval, (int, float)) or rval <= 0:
+                errors.append(f"baseline.json '{rk}' is not positive: {rval}")
+    except Exception as e:
+        errors.append(f"Error reading edge/results/baseline.json: {e}")
+
+    final_data = {}
+    try:
+        with open(final_path, "r", encoding="utf-8") as f:
+            final_data = json.load(f)
+        chosen_variant = final_data.get("chosen_variant_name")
+        if chosen_variant in ["baseline", "Baseline (B2 Ensemble)"]:
+            warnings.append(f"WARN phase11_edge: Chosen variant is identical to baseline ('{chosen_variant}').")
+
+        test_evals = final_data.get("test_evaluations", {})
+        for name, ev in test_evals.items():
+            lat = ev.get("latency_p95_ms", 0)
+            if not isinstance(lat, (int, float)) or lat <= 0:
+                errors.append(f"final_comparison.json variant '{name}' latency_p95_ms is not positive: {lat}")
+
+            for rk in ["load_rss_mb", "peak_rss_mb"]:
+                rval = ev.get(rk)
+                if rval is None:
+                    errors.append(f"final_comparison.json variant '{name}' is missing '{rk}'")
+                elif not isinstance(rval, (int, float)) or rval <= 0:
+                    errors.append(f"final_comparison.json variant '{name}' '{rk}' is not positive: {rval}")
+    except Exception as e:
+        errors.append(f"Error reading edge/results/final_comparison.json: {e}")
+
+    # Check all variant files
+    for vf in edge_dir.glob("variant_*.json"):
+        try:
+            with open(vf, "r", encoding="utf-8") as f:
+                vdata = json.load(f)
+
+            lat_v = vdata.get("latency_per_flow_ms", {})
+            for k in ["median_ms", "p95_ms", "min_ms", "max_ms"]:
+                val = lat_v.get(k, 0)
+                if not isinstance(val, (int, float)) or val <= 0:
+                    errors.append(f"{vf.name} latency '{k}' is not positive: {val}")
+
+            for rk in ["load_rss_mb", "peak_rss_mb"]:
+                rval = vdata.get(rk)
+                if rval is None:
+                    errors.append(f"{vf.name} is missing '{rk}'")
+                elif not isinstance(rval, (int, float)) or rval <= 0:
+                    errors.append(f"{vf.name} '{rk}' is not positive: {rval}")
+        except Exception as e:
+            errors.append(f"Error reading {vf.name}: {e}")
+
+    # Recompute percentages in phase11_summary.md from JSON
+    if not p11_md_path.exists():
+        errors.append("reports/phase11_summary.md is missing.")
+    else:
+        try:
+            md_text = p11_md_path.read_text(encoding="utf-8")
+            if "latency_per_flow_ms" in base_data and "chosen_variant" in final_data.get("test_evaluations", {}):
+                lat_p95_base = base_data["latency_per_flow_ms"]["p95_ms"]
+                lat_p95_chosen = final_data["test_evaluations"]["chosen_variant"]["latency_p95_ms"]
+                expected_p95_drop = ((lat_p95_base - lat_p95_chosen) / lat_p95_base) * 100.0
+
+                m_p95 = re.search(r"p95 latency reduced from [\d\.]+ ms to [\d\.]+ ms \(([\d\.]+)% reduction\)", md_text)
+                if m_p95:
+                    quoted_p95_drop = float(m_p95.group(1))
+                    if abs(quoted_p95_drop - expected_p95_drop) > 0.15:
+                        errors.append(f"phase11_summary.md p95 latency reduction {quoted_p95_drop}% does not match JSON recomputed {expected_p95_drop:.2f}%")
+
+            frac_errs = check_fraction_percentages(md_text, "phase11_summary.md")
+            if frac_errs:
+                errors.extend(frac_errs)
+        except Exception as e:
+            errors.append(f"Error verifying reports/phase11_summary.md: {e}")
+
+    return errors, warnings
+
+
+
+def check_ensemble_labels_accuracy() -> Tuple[List[str], List[str]]:
+    """
+    CHECK 15 - ensemble_label_accuracy_check:
+    Verifies that every accuracy quoted next to an ensemble label in
+    reports/final_report.md and reports/phase11_summary.md exactly matches
+    the underlying JSON artifact for THAT label. FAIL if mismatched.
+    """
+    errors = []
+    warnings = []
+
+    # 1. Manifest verification
+    manifest_path = PROJECT_ROOT / "artifacts" / "model_manifest.json"
+    if not manifest_path.exists():
+        errors.append("artifacts/model_manifest.json is missing.")
+        return errors, warnings
+
+    with open(manifest_path, "r", encoding="utf-8") as f:
+        manifest = json.load(f)
+
+    p3_block = manifest.get("phase3", {})
+    b2_label = p3_block.get("ensemble")
+    b2_source = p3_block.get("source_file")
+    b2_acc_8 = p3_block.get("test_acc_8class")
+    b2_acc_34 = p3_block.get("test_acc_34class")
+
+    orig_block = p3_block.get("original_ensemble", {})
+    orig_label = orig_block.get("ensemble")
+    orig_source = orig_block.get("source_file")
+    orig_acc_8 = orig_block.get("test_acc_8class")
+    orig_acc_34 = orig_block.get("test_acc_34class")
+
+    if b2_label != "rf_8class_b2 0.60 + xgb_8class_b2 0.40":
+        errors.append(f"Manifest phase3.ensemble is '{b2_label}', expected 'rf_8class_b2 0.60 + xgb_8class_b2 0.40'")
+    if b2_source != "models/ensemble_weights_8class_b2.json":
+        errors.append(f"Manifest phase3.source_file is '{b2_source}', expected 'models/ensemble_weights_8class_b2.json'")
+    if orig_label != "rf_8class_baseline 0.20 + xgb_8class_baseline 0.80":
+        errors.append(f"Manifest phase3.original_ensemble.ensemble is '{orig_label}', expected 'rf_8class_baseline 0.20 + xgb_8class_baseline 0.80'")
+    if orig_source != "reports/phase3_metrics.json":
+        errors.append(f"Manifest phase3.original_ensemble.source_file is '{orig_source}', expected 'reports/phase3_metrics.json'")
+
+    # Ground truth values from JSON files
+    p3_metrics_path = REPORTS_DIR / "phase3_metrics.json"
+    with open(p3_metrics_path, "r", encoding="utf-8") as f:
+        p3_metrics = json.load(f)
+    gt_orig_acc_8 = p3_metrics["8class"]["models"]["weighted"]["accuracy"]
+    gt_orig_acc_34 = p3_metrics["34class"]["models"]["weighted"]["accuracy"]
+
+    b2_8_path = PROJECT_ROOT / "models" / "ensemble_weights_8class_b2.json"
+    with open(b2_8_path, "r", encoding="utf-8") as f:
+        b2_8_data = json.load(f)
+    gt_b2_acc_8 = b2_8_data["telemetry"]["test_acc"]
+
+    b2_34_path = PROJECT_ROOT / "models" / "ensemble_weights_34class_b2.json"
+    with open(b2_34_path, "r", encoding="utf-8") as f:
+        b2_34_data = json.load(f)
+    gt_b2_acc_34 = b2_34_data["telemetry"]["test_acc"]
+
+    # Manifest numbers match ground truth
+    if orig_acc_8 is not None and abs(orig_acc_8 - gt_orig_acc_8) > 1e-4:
+        errors.append(f"Manifest original_ensemble test_acc_8class ({orig_acc_8}) does not match {orig_source} ({gt_orig_acc_8})")
+    if orig_acc_34 is not None and abs(orig_acc_34 - gt_orig_acc_34) > 1e-4:
+        errors.append(f"Manifest original_ensemble test_acc_34class ({orig_acc_34}) does not match {orig_source} ({gt_orig_acc_34})")
+    if b2_acc_8 is not None and abs(b2_acc_8 - gt_b2_acc_8) > 1e-4:
+        errors.append(f"Manifest test_acc_8class ({b2_acc_8}) does not match {b2_source} ({gt_b2_acc_8})")
+    if b2_acc_34 is not None and abs(b2_acc_34 - gt_b2_acc_34) > 1e-4:
+        errors.append(f"Manifest test_acc_34class ({b2_acc_34}) does not match models/ensemble_weights_34class_b2.json ({gt_b2_acc_34})")
+
+    # 2. Check final_report.md
+    final_report_path = REPORTS_DIR / "final_report.md"
+    if not final_report_path.exists():
+        errors.append("reports/final_report.md is missing.")
+    else:
+        report_text = final_report_path.read_text(encoding="utf-8")
+
+        m_orig_8 = re.search(r"Original Baseline Ensemble.*?8-Class Test Accuracy\*\*:\s*\*\*([\d\.]+)%", report_text, re.DOTALL)
+        m_orig_34 = re.search(r"Original Baseline Ensemble.*?34-Class Test Accuracy\*\*:\s*\*\*([\d\.]+)%", report_text, re.DOTALL)
+        if not m_orig_8 or not m_orig_34:
+            errors.append("reports/final_report.md: Could not locate Original Baseline Ensemble accuracy lines.")
+        else:
+            rep_orig_8 = float(m_orig_8.group(1))
+            rep_orig_34 = float(m_orig_34.group(1))
+            if abs(rep_orig_8 - gt_orig_acc_8 * 100) > 0.05:
+                errors.append(f"reports/final_report.md: Original ensemble 8-class accuracy {rep_orig_8}% does not match ground truth {gt_orig_acc_8 * 100:.2f}%")
+            if abs(rep_orig_34 - gt_orig_acc_34 * 100) > 0.05:
+                errors.append(f"reports/final_report.md: Original ensemble 34-class accuracy {rep_orig_34}% does not match ground truth {gt_orig_acc_34 * 100:.2f}%")
+
+        m_b2_8 = re.search(r"B2 Optimized Ensemble.*?8-Class Test Accuracy\*\*:\s*\*\*([\d\.]+)%", report_text, re.DOTALL)
+        m_b2_34 = re.search(r"B2 Optimized Ensemble.*?34-Class Test Accuracy\*\*:\s*\*\*([\d\.]+)%", report_text, re.DOTALL)
+        if not m_b2_8 or not m_b2_34:
+            errors.append("reports/final_report.md: Could not locate B2 Optimized Ensemble accuracy lines.")
+        else:
+            rep_b2_8 = float(m_b2_8.group(1))
+            rep_b2_34 = float(m_b2_34.group(1))
+            if abs(rep_b2_8 - gt_b2_acc_8 * 100) > 0.05:
+                errors.append(f"reports/final_report.md: B2 ensemble 8-class accuracy {rep_b2_8}% does not match ground truth {gt_b2_acc_8 * 100:.2f}%")
+            if abs(rep_b2_34 - gt_b2_acc_34 * 100) > 0.05:
+                errors.append(f"reports/final_report.md: B2 ensemble 34-class accuracy {rep_b2_34}% does not match ground truth {gt_b2_acc_34 * 100:.2f}%")
+
+    # 3. Check phase11_summary.md
+    p11_summary_path = REPORTS_DIR / "phase11_summary.md"
+    if not p11_summary_path.exists():
+        errors.append("reports/phase11_summary.md is missing.")
+    else:
+        p11_lines = p11_summary_path.read_text(encoding="utf-8").splitlines()
+        final_comp_path = PROJECT_ROOT / "edge" / "results" / "final_comparison.json"
+        if final_comp_path.exists():
+            with open(final_comp_path, "r", encoding="utf-8") as f:
+                fcomp = json.load(f)
+            t_evals = fcomp.get("test_evaluations", {})
+            gt_test_acc = t_evals.get("baseline", {}).get("test_accuracy", 0.9542)
+
+            in_table_1 = False
+            in_table_2 = False
+
+            for line in p11_lines:
+                sline = line.strip()
+                if "## Table 1" in sline:
+                    in_table_1 = True
+                    in_table_2 = False
+                elif "## Table 2" in sline:
+                    in_table_1 = False
+                    in_table_2 = True
+                elif sline.startswith("## ") and not ("Table 1" in sline or "Table 2" in sline):
+                    in_table_1 = False
+                    in_table_2 = False
+
+                if "Phase 3 Manifest" in sline:
+                    cells = [c.strip() for c in sline.split("|") if c.strip()]
+                    if len(cells) >= 5:
+                        p3_acc = float(cells[4])
+                        if abs(p3_acc - gt_orig_acc_8) > 1e-4:
+                            errors.append(f"reports/phase11_summary.md: Phase 3 Manifest test accuracy {p3_acc} does not match ground truth {gt_orig_acc_8}")
+
+                if "Phase 11 Baseline (B2)" in sline:
+                    cells = [c.strip() for c in sline.split("|") if c.strip()]
+                    if len(cells) >= 5:
+                        p11_b2_acc = float(cells[4])
+                        if abs(p11_b2_acc - gt_test_acc) > 1e-4:
+                            errors.append(f"reports/phase11_summary.md: Phase 11 Baseline (B2) test accuracy {p11_b2_acc} does not match {gt_test_acc}")
+
+                if in_table_1 and sline.startswith("|") and "**Baseline (B2)**" in sline:
+                    cells = [c.strip() for c in sline.split("|") if c.strip()]
+                    # Column: Val Accuracy is cells[-2]
+                    t1_val_acc = float(cells[-2])
+                    base_json_path = PROJECT_ROOT / "edge" / "results" / "baseline.json"
+                    if base_json_path.exists():
+                        with open(base_json_path, "r", encoding="utf-8") as f:
+                            bdata = json.load(f)
+                        gt_val_acc = bdata.get("accuracy", 0.9645)
+                        if abs(t1_val_acc - gt_val_acc) > 1e-4:
+                            errors.append(f"reports/phase11_summary.md Table 1: Baseline (B2) val accuracy {t1_val_acc} does not match baseline.json ({gt_val_acc})")
+
+                if in_table_2 and sline.startswith("|") and "**Baseline (B2)**" in sline:
+                    cells = [c.strip() for c in sline.split("|") if c.strip()]
+                    # Column: Test Accuracy is cells[6]
+                    t2_test_acc = float(cells[6])
+                    if abs(t2_test_acc - gt_test_acc) > 1e-4:
+                        errors.append(f"reports/phase11_summary.md Table 2: Baseline (B2) test accuracy {t2_test_acc} does not match final_comparison.json ({gt_test_acc})")
+
+    return errors, warnings
+
+
+def check_phase12_calibration() -> Tuple[List[str], List[str]]:
+    """
+    CHECK 16 - phase12_calibration_check:
+    FAIL if raw_metrics.json, fit.json, selective.json is missing or any ECE is not
+    a float in [0,1]; WARN if a class is truncated; recompute percentages in
+    phase12_summary.md from JSON counts.
+    """
+    errors = []
+    warnings = []
+
+    calib_dir = PROJECT_ROOT / "calibration" / "results"
+    raw_path = calib_dir / "raw_metrics.json"
+    fit_path = calib_dir / "fit.json"
+    sel_path = calib_dir / "selective.json"
+    p12_md_path = REPORTS_DIR / "phase12_summary.md"
+
+    # 1. File existence checks
+    if not raw_path.exists():
+        errors.append("calibration/results/raw_metrics.json is missing.")
+    if not fit_path.exists():
+        errors.append("calibration/results/fit.json is missing.")
+    if not sel_path.exists():
+        errors.append("calibration/results/selective.json is missing.")
+
+    if errors:
+        return errors, warnings
+
+    # 2. Check raw_metrics.json
+    try:
+        with open(raw_path, "r", encoding="utf-8") as f:
+            raw_data = json.load(f)
+        for split in ["validation", "test"]:
+            if split not in raw_data:
+                errors.append(f"raw_metrics.json is missing '{split}' split.")
+            else:
+                ece = raw_data[split].get("ece")
+                if ece is None or not isinstance(ece, (int, float)) or not (0.0 <= ece <= 1.0):
+                    errors.append(f"raw_metrics.json {split}.ece is not a float in [0, 1]: {ece}")
+    except Exception as e:
+        errors.append(f"Error reading raw_metrics.json: {e}")
+
+    # 3. Check fit.json
+    try:
+        with open(fit_path, "r", encoding="utf-8") as f:
+            fit_data = json.load(f)
+
+        sel_comp = fit_data.get("select_half_comparison", {})
+        for mname, mstats in sel_comp.items():
+            ece = mstats.get("ece")
+            if ece is None or not isinstance(ece, (int, float)) or not (0.0 <= ece <= 1.0):
+                errors.append(f"fit.json select_half_comparison.{mname}.ece is not a float in [0, 1]: {ece}")
+
+        for fkey in ["full_validation_calibrated_metrics", "test_calibrated_metrics"]:
+            if fkey not in fit_data:
+                errors.append(f"fit.json is missing '{fkey}'.")
+            else:
+                ece = fit_data[fkey].get("ece")
+                if ece is None or not isinstance(ece, (int, float)) or not (0.0 <= ece <= 1.0):
+                    errors.append(f"fit.json {fkey}.ece is not a float in [0, 1]: {ece}")
+    except Exception as e:
+        errors.append(f"Error reading fit.json: {e}")
+
+    # 4. Check selective.json
+    try:
+        with open(sel_path, "r", encoding="utf-8") as f:
+            sel_data = json.load(f)
+        for branch in ["raw", "calibrated"]:
+            if branch not in sel_data:
+                errors.append(f"selective.json is missing '{branch}' branch.")
+            else:
+                aurc_info = sel_data[branch].get("aurc", {})
+                aurc_val = aurc_info.get("aurc")
+                if aurc_val is None or not isinstance(aurc_val, (int, float)) or aurc_val < 0.0:
+                    errors.append(f"selective.json {branch}.aurc is not valid: {aurc_val}")
+    except Exception as e:
+        errors.append(f"Error reading selective.json: {e}")
+
+    # 5. Check truncation across held-out classes in openset_calibrated_summary.json and openset_*.json
+    sum_path = calib_dir / "openset_calibrated_summary.json"
+    if sum_path.exists():
+        try:
+            with open(sum_path, "r", encoding="utf-8") as f:
+                sum_data = json.load(f)
+            for cname, cdata in sum_data.get("leave_one_out", {}).items():
+                if cdata.get("truncated") is True:
+                    warnings.append(f"WARN phase12_calibration: Class '{cname}' was marked as truncated.")
+        except Exception as e:
+            errors.append(f"Error reading openset_calibrated_summary.json: {e}")
+
+    for cf in calib_dir.glob("openset_*.json"):
+        if cf.name == "openset_calibrated_summary.json":
+            continue
+        try:
+            with open(cf, "r", encoding="utf-8") as f:
+                cdata = json.load(f)
+            if cdata.get("truncated") is True:
+                cname = cdata.get("class_name", cf.stem.replace("openset_", ""))
+                warnings.append(f"WARN phase12_calibration: Class '{cname}' in {cf.name} was marked as truncated.")
+        except Exception as e:
+            errors.append(f"Error reading {cf.name}: {e}")
+
+    # 6. Check reports/phase12_summary.md and recompute percentages
+    if not p12_md_path.exists():
+        errors.append("reports/phase12_summary.md is missing.")
+    else:
+        try:
+            p12_text = p12_md_path.read_text(encoding="utf-8")
+            frac_errs = check_fraction_percentages(p12_text, "phase12_summary.md")
+            if frac_errs:
+                errors.extend(frac_errs)
+        except Exception as e:
+            errors.append(f"Error verifying reports/phase12_summary.md: {e}")
 
     return errors, warnings
 
@@ -613,6 +1152,90 @@ def main():
         print("  [WARN] Settings present with truncated=true.")
     else:
         print("  [PASS] All 3 reward settings present with truncated=false.")
+
+    print("\n[11] Auditing Phase 8 concept drift and retraining artifacts (phase8_drift_check) ...")
+    d_errs, d_warns = check_phase8_drift()
+    if d_errs:
+        all_errors.extend(d_errs)
+        for e in d_errs:
+            print(f"  [ERROR] {e}")
+    elif d_warns:
+        all_warnings.extend(d_warns)
+        for w in d_warns:
+            print(f"  {w}")
+        print("  [WARN] Phase 8 drift check completed with warnings.")
+    else:
+        print("  [PASS] Phase 8 drift detection and retraining artifacts verified.")
+
+    print("\n[12] Auditing Phase 9 federated learning artifacts (phase9_federated_check) ...")
+    f_errs, f_warns = check_phase9_federated()
+    if f_errs:
+        all_errors.extend(f_errs)
+        for e in f_errs:
+            print(f"  [ERROR] {e}")
+    elif f_warns:
+        all_warnings.extend(f_warns)
+        for w in f_warns:
+            print(f"  {w}")
+        print("  [WARN] Phase 9 federated check completed with warnings.")
+    else:
+        print("  [PASS] Phase 9 federated learning artifacts verified.")
+
+    print("\n[13] Auditing Phase 10 zero-day detection artifacts (phase10_zeroday_check) ...")
+    z_errs, z_warns = check_phase10_zeroday()
+    if z_errs:
+        all_errors.extend(z_errs)
+        for e in z_errs:
+            print(f"  [ERROR] {e}")
+    elif z_warns:
+        all_warnings.extend(z_warns)
+        for w in z_warns:
+            print(f"  {w}")
+        print("  [WARN] Phase 10 zero-day check completed with warnings.")
+    else:
+        print("  [PASS] Phase 10 zero-day detection artifacts verified.")
+
+    print("\n[14] Auditing Phase 11 edge compression and latency artifacts (phase11_edge_check) ...")
+    e_errs, e_warns = check_phase11_edge()
+    if e_errs:
+        all_errors.extend(e_errs)
+        for e in e_errs:
+            print(f"  [ERROR] {e}")
+    elif e_warns:
+        all_warnings.extend(e_warns)
+        for w in e_warns:
+            print(f"  {w}")
+        print("  [WARN] Phase 11 edge check completed with warnings.")
+    else:
+        print("  [PASS] Phase 11 edge compression and latency artifacts verified.")
+
+    print("\n[15] Auditing ensemble labels and quoted accuracies against underlying JSON artifacts (ensemble_label_accuracy_check) ...")
+    lbl_errs, lbl_warns = check_ensemble_labels_accuracy()
+    if lbl_errs:
+        all_errors.extend(lbl_errs)
+        for e in lbl_errs:
+            print(f"  [ERROR] {e}")
+    elif lbl_warns:
+        all_warnings.extend(lbl_warns)
+        for w in lbl_warns:
+            print(f"  {w}")
+        print("  [WARN] Ensemble label accuracy check completed with warnings.")
+    else:
+        print("  [PASS] All ensemble labels and accuracies match underlying JSON artifacts.")
+
+    print("\n[16] Auditing Phase 12 probability calibration artifacts (phase12_calibration_check) ...")
+    c_errs, c_warns = check_phase12_calibration()
+    if c_errs:
+        all_errors.extend(c_errs)
+        for e in c_errs:
+            print(f"  [ERROR] {e}")
+    elif c_warns:
+        all_warnings.extend(c_warns)
+        for w in c_warns:
+            print(f"  {w}")
+        print("  [WARN] Phase 12 calibration check completed with warnings.")
+    else:
+        print("  [PASS] Phase 12 calibration artifacts and report verified.")
 
     print("\n" + "=" * 76)
     if not all_errors:

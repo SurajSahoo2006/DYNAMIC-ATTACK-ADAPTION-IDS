@@ -76,10 +76,20 @@ def build_manifest(missing_artifacts: List[str]) -> Dict[str, Any]:
             "feature_list": None,
         },
         "phase3": {
-            "ensemble": "RF(0.60)+XGB(0.40)",
+            "ensemble": "rf_8class_b2 0.60 + xgb_8class_b2 0.40",
+            "source_file": "models/ensemble_weights_8class_b2.json",
             "test_acc_8class": None,
             "test_acc_34class": None,
             "macro_f1_34class": None,
+            "source_file_34class": "models/ensemble_weights_34class_b2.json",
+            "original_ensemble": {
+                "ensemble": "rf_8class_baseline 0.20 + xgb_8class_baseline 0.80",
+                "source_file": "reports/phase3_metrics.json",
+                "test_acc_8class": None,
+                "macro_f1_8class": None,
+                "test_acc_34class": None,
+                "macro_f1_34class": None,
+            },
         },
         "phase4": {
             "shap_top_feature": None,
@@ -110,29 +120,88 @@ def build_manifest(missing_artifacts: List[str]) -> Dict[str, Any]:
         except Exception as e:
             print(f"WARNING: Error reading selected_features.json: {e}")
 
-    # 2. Phase 3: Metrics (phase3_metrics.json)
-    p3_path = PROJECT_ROOT / "reports" / "phase3_metrics.json"
-    if p3_path.exists():
-        try:
-            with open(p3_path, "r", encoding="utf-8") as f:
-                p3 = json.load(f)
-            # 8-class test accuracy
-            acc_8 = p3.get("8class", {}).get("models", {}).get("weighted", {}).get("accuracy")
-            if acc_8 is not None:
-                manifest["phase3"]["test_acc_8class"] = round(float(acc_8), 4)
+    # 2. Phase 3: B2 Optimized Ensemble Metrics
+    p3_b2_8_path = PROJECT_ROOT / "models" / "ensemble_weights_8class_b2.json"
+    p3_b2_34_path = PROJECT_ROOT / "models" / "ensemble_weights_34class_b2.json"
 
-            # 34-class test accuracy & macro F1
-            c34_models = p3.get("34class", {}).get("models", {})
-            acc_34 = c34_models.get("weighted", {}).get("accuracy") or c34_models.get("xgb", {}).get("accuracy")
-            f1_34 = c34_models.get("weighted", {}).get("macro_f1") or c34_models.get("xgb", {}).get("macro_f1")
-            if acc_34 is not None:
-                manifest["phase3"]["test_acc_34class"] = round(float(acc_34), 4)
-            if f1_34 is not None:
-                manifest["phase3"]["macro_f1_34class"] = round(float(f1_34), 4)
+    b2_acc_8 = None
+    b2_acc_34 = None
+    b2_f1_34 = None
+
+    if p3_b2_8_path.exists():
+        try:
+            with open(p3_b2_8_path, "r", encoding="utf-8") as f:
+                b2_8_data = json.load(f)
+            b2_acc_8_val = b2_8_data.get("telemetry", {}).get("test_acc")
+            if b2_acc_8_val is not None:
+                b2_acc_8 = round(float(b2_acc_8_val), 4)
+            manifest["phase3"]["source_file"] = "models/ensemble_weights_8class_b2.json"
+        except Exception as e:
+            print(f"WARNING: Error reading ensemble_weights_8class_b2.json: {e}")
+
+    if p3_b2_34_path.exists():
+        try:
+            with open(p3_b2_34_path, "r", encoding="utf-8") as f:
+                b2_34_data = json.load(f)
+            b2_acc_34_val = b2_34_data.get("telemetry", {}).get("test_acc")
+            b2_f1_34_val = b2_34_data.get("telemetry", {}).get("test_macro_f1")
+            if b2_acc_34_val is not None:
+                b2_acc_34 = round(float(b2_acc_34_val), 4)
+            else:
+                print("WARNING: 34-class B2 test accuracy not found in JSON; writing null.")
+            if b2_f1_34_val is not None:
+                b2_f1_34 = round(float(b2_f1_34_val), 4)
+            else:
+                print("WARNING: 34-class B2 test macro F1 not found in JSON; writing null.")
+            manifest["phase3"]["source_file_34class"] = "models/ensemble_weights_34class_b2.json"
+        except Exception as e:
+            print(f"WARNING: Error reading ensemble_weights_34class_b2.json: {e}")
+    else:
+        print(f"WARNING: {p3_b2_34_path} not found; writing null for 34-class B2 metrics.")
+
+    manifest["phase3"]["ensemble"] = "rf_8class_b2 0.60 + xgb_8class_b2 0.40"
+    manifest["phase3"]["test_acc_8class"] = b2_acc_8
+    manifest["phase3"]["test_acc_34class"] = b2_acc_34
+    manifest["phase3"]["macro_f1_34class"] = b2_f1_34
+
+    # 3. Phase 3: Original Baseline Ensemble Metrics
+    p3_orig_path = PROJECT_ROOT / "reports" / "phase3_metrics.json"
+    orig_acc_8 = None
+    orig_f1_8 = None
+    orig_acc_34 = None
+    orig_f1_34 = None
+
+    if p3_orig_path.exists():
+        try:
+            with open(p3_orig_path, "r", encoding="utf-8") as f:
+                p3_orig = json.load(f)
+            orig_acc_8_val = p3_orig.get("8class", {}).get("models", {}).get("weighted", {}).get("accuracy")
+            orig_f1_8_val = p3_orig.get("8class", {}).get("models", {}).get("weighted", {}).get("macro_f1")
+            if orig_acc_8_val is not None:
+                orig_acc_8 = round(float(orig_acc_8_val), 4)
+            if orig_f1_8_val is not None:
+                orig_f1_8 = round(float(orig_f1_8_val), 4)
+
+            c34_models = p3_orig.get("34class", {}).get("models", {})
+            orig_acc_34_val = c34_models.get("weighted", {}).get("accuracy") or c34_models.get("xgb", {}).get("accuracy")
+            orig_f1_34_val = c34_models.get("weighted", {}).get("macro_f1") or c34_models.get("xgb", {}).get("macro_f1")
+            if orig_acc_34_val is not None:
+                orig_acc_34 = round(float(orig_acc_34_val), 4)
+            if orig_f1_34_val is not None:
+                orig_f1_34 = round(float(orig_f1_34_val), 4)
         except Exception as e:
             print(f"WARNING: Error reading phase3_metrics.json: {e}")
 
-    # 3. Phase 4: SHAP top feature & FGSM attack success rate
+    manifest["phase3"]["original_ensemble"] = {
+        "ensemble": "rf_8class_baseline 0.20 + xgb_8class_baseline 0.80",
+        "source_file": "reports/phase3_metrics.json",
+        "test_acc_8class": orig_acc_8,
+        "macro_f1_8class": orig_f1_8,
+        "test_acc_34class": orig_acc_34,
+        "macro_f1_34class": orig_f1_34,
+    }
+
+    # 4. Phase 4: SHAP top feature & FGSM attack success rate
     shap_path = PROJECT_ROOT / "reports" / "shap_metrics.json"
     if shap_path.exists():
         try:
@@ -152,7 +221,6 @@ def build_manifest(missing_artifacts: List[str]) -> Dict[str, Any]:
         try:
             with open(fgsm_path, "r", encoding="utf-8") as f:
                 fg_data = json.load(f)
-            # Find eps = 0.10 transfer ASR
             results_list = fg_data.get("fgsm_and_random_noise_results", [])
             eps10 = next((r for r in results_list if abs(r.get("epsilon", 0) - 0.10) < 1e-3), None)
             if eps10 and "transfer_asr" in eps10:
@@ -165,7 +233,7 @@ def build_manifest(missing_artifacts: List[str]) -> Dict[str, Any]:
         except Exception as e:
             print(f"WARNING: Error reading fgsm results: {e}")
 
-    # 4. Phase 5: MAPPO aggregate metrics for 'balanced'
+    # 5. Phase 5: MAPPO aggregate metrics for 'balanced'
     marl_eval_path = PROJECT_ROOT / "marl" / "results" / "eval_balanced.json"
     if not marl_eval_path.exists():
         marl_eval_path = PROJECT_ROOT / "reports" / "marl_eval.json"

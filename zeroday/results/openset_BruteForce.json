@@ -1,0 +1,120 @@
+{
+  "class_name": "BruteForce",
+  "n_test": 358,
+  "operating_point_original": {
+    "class_name": "BruteForce",
+    "n_test": 358,
+    "flagged_unknown_by_ae": {
+      "x": 29,
+      "n": 358,
+      "percentage": 8.1,
+      "ci_lower": 5.7,
+      "ci_upper": 11.39,
+      "formatted": "29 of 358 (8.10%) [5.70%, 11.39%]"
+    },
+    "flagged_unknown_by_confidence": {
+      "x": 301,
+      "n": 358,
+      "percentage": 84.08,
+      "ci_lower": 79.93,
+      "ci_upper": 87.5,
+      "formatted": "301 of 358 (84.08%) [79.93%, 87.50%]"
+    },
+    "flagged_unknown_either": {
+      "x": 310,
+      "n": 358,
+      "percentage": 86.59,
+      "ci_lower": 82.67,
+      "ci_upper": 89.74,
+      "formatted": "310 of 358 (86.59%) [82.67%, 89.74%]"
+    },
+    "silently_predicted_benign": {
+      "x": 5,
+      "n": 358,
+      "percentage": 1.4,
+      "ci_lower": 0.6,
+      "ci_upper": 3.23,
+      "formatted": "5 of 358 (1.40%) [0.60%, 3.23%]"
+    },
+    "silently_predicted_other_attack": {
+      "x": 43,
+      "n": 358,
+      "percentage": 12.01,
+      "ci_lower": 9.04,
+      "ci_upper": 15.79,
+      "formatted": "43 of 358 (12.01%) [9.04%, 15.79%]"
+    },
+    "missed_rate_percentage": 13.41,
+    "elapsed_seconds": 1.9,
+    "truncated": false
+  },
+  "operating_point_fp_budget": {
+    "class_name": "BruteForce",
+    "n_test": 358,
+    "flagged_unknown_by_ae": {
+      "x": 19,
+      "n": 358,
+      "percentage": 5.31,
+      "ci_lower": 3.42,
+      "ci_upper": 8.14,
+      "formatted": "19 of 358 (5.31%) [3.42%, 8.14%]"
+    },
+    "flagged_unknown_by_confidence": {
+      "x": 120,
+      "n": 358,
+      "percentage": 33.52,
+      "ci_lower": 28.83,
+      "ci_upper": 38.56,
+      "formatted": "120 of 358 (33.52%) [28.83%, 38.56%]"
+    },
+    "flagged_unknown_either": {
+      "x": 130,
+      "n": 358,
+      "percentage": 36.31,
+      "ci_lower": 31.5,
+      "ci_upper": 41.42,
+      "formatted": "130 of 358 (36.31%) [31.50%, 41.42%]"
+    },
+    "silently_predicted_benign": {
+      "x": 19,
+      "n": 358,
+      "percentage": 5.31,
+      "ci_lower": 3.42,
+      "ci_upper": 8.14,
+      "formatted": "19 of 358 (5.31%) [3.42%, 8.14%]"
+    },
+    "silently_predicted_other_attack": {
+      "x": 209,
+      "n": 358,
+      "percentage": 58.38,
+      "ci_lower": 53.21,
+      "ci_upper": 63.37,
+      "formatted": "209 of 358 (58.38%) [53.21%, 63.37%]"
+    },
+    "missed_rate_percentage": 63.69,
+    "elapsed_seconds": 1.9,
+    "truncated": false
+  },
+  "lift_original": {
+    "heldout_rate": 86.59,
+    "known_rate": 39.39,
+    "lift": 47.21,
+    "ci_lower": 41.34,
+    "ci_upper": 53.07,
+    "formatted": "+47.21% [+41.34%, +53.07%]"
+  },
+  "lift_fp_budget": {
+    "heldout_rate": 36.31,
+    "known_rate": 19.83,
+    "lift": 16.48,
+    "ci_lower": 10.89,
+    "ci_upper": 21.79,
+    "formatted": "+16.48% [+10.89%, +21.79%]"
+  },
+  "auroc": {
+    "auroc": 0.4986,
+    "ci_lower": 0.4639,
+    "ci_upper": 0.5333,
+    "formatted": "0.4986 [0.4639, 0.5333]"
+  }
+}

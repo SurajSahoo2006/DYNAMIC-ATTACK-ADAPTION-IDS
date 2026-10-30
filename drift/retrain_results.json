@@ -1,0 +1,13 @@
+{
+  "retrain_triggered_by": "scheduled",
+  "retrain_windows_used": [
+    0,
+    1,
+    2
+  ],
+  "eval_window": 3,
+  "original_rf_accuracy_window3": 0.9502,
+  "retrained_rf_accuracy_window3": 0.9272,
+  "accuracy_delta": -0.023013,
+  "n_retrain_samples": 15776
+}

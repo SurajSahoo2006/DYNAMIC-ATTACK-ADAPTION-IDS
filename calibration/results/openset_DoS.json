@@ -1,0 +1,96 @@
+{
+  "class_name": "DoS",
+  "class_idx": 3,
+  "truncated": false,
+  "elapsed_sec": 1.97,
+  "validation_budget": {
+    "budget_benign_fpr": 0.1,
+    "tau_raw": 0.3792,
+    "tau_calibrated": 0.4958,
+    "val_benign_fpr_raw": 0.1001,
+    "val_benign_fpr_calibrated": 0.1001
+  },
+  "heldout_test_evaluation": {
+    "n_samples": 3971,
+    "raw": {
+      "flagged_unknown": {
+        "x": 51,
+        "n": 3971,
+        "percentage": 1.28,
+        "ci_lower": 0.98,
+        "ci_upper": 1.68,
+        "formatted": "51 of 3971 (1.28%) [0.98%, 1.68%]"
+      },
+      "silently_benign": {
+        "x": 0,
+        "n": 3971,
+        "percentage": 0.0,
+        "ci_lower": 0.0,
+        "ci_upper": 0.1,
+        "formatted": "0 of 3971 (0.00%) [0.00%, 0.10%]"
+      },
+      "silently_other_attack": {
+        "x": 3920,
+        "n": 3971,
+        "percentage": 98.72,
+        "ci_lower": 98.32,
+        "ci_upper": 99.02,
+        "formatted": "3920 of 3971 (98.72%) [98.32%, 99.02%]"
+      }
+    },
+    "calibrated": {
+      "flagged_unknown": {
+        "x": 79,
+        "n": 3971,
+        "percentage": 1.99,
+        "ci_lower": 1.6,
+        "ci_upper": 2.47,
+        "formatted": "79 of 3971 (1.99%) [1.60%, 2.47%]"
+      },
+      "silently_benign": {
+        "x": 0,
+        "n": 3971,
+        "percentage": 0.0,
+        "ci_lower": 0.0,
+        "ci_upper": 0.1,
+        "formatted": "0 of 3971 (0.00%) [0.00%, 0.10%]"
+      },
+      "silently_other_attack": {
+        "x": 3892,
+        "n": 3971,
+        "percentage": 98.01,
+        "ci_lower": 97.53,
+        "ci_upper": 98.4,
+        "formatted": "3892 of 3971 (98.01%) [97.53%, 98.40%]"
+      }
+    },
+    "paired_difference": {
+      "point_diff": 0.71,
+      "ci_lower": 0.35,
+      "ci_upper": 1.08,
+      "formatted": "+0.71% [+0.35%, +1.08%]",
+      "significant_gain": true,
+      "significant_loss": false,
+      "about_the_same": false
+    }
+  },
+  "test_benign_fpr": {
+    "n_samples": 1000,
+    "raw": {
+      "x": 112,
+      "n": 1000,
+      "percentage": 11.2,
+      "ci_lower": 9.39,
+      "ci_upper": 13.31,
+      "formatted": "112 of 1000 (11.20%) [9.39%, 13.31%]"
+    },
+    "calibrated": {
+      "x": 104,
+      "n": 1000,
+      "percentage": 10.4,
+      "ci_lower": 8.66,
+      "ci_upper": 12.45,
+      "formatted": "104 of 1000 (10.40%) [8.66%, 12.45%]"
+    }
+  }
+}

@@ -13,6 +13,20 @@
 
 ---
 
+## Quick Start
+1. Set `CIC_DATA_RAW_DIR` to your CICIoT2023 CSV folder.
+2. Run `python run_phase1_2.py` (Phases 1-2: data pipeline + features).
+3. Run `python run_phase3_ensemble.py` (Phase 3: ensemble training).
+4. Run `python run_phase3_llm.py` (Phase 3: LLM — requires Ollama + `ollama pull llama3.2:3b`).
+5. Run `python adversarial/run_phase4_adversarial.py --stage fgsm` (Phase 4: SHAP + adversarial).
+6. Run `python marl/mappo.py --reward_setting balanced` (Phase 5: MARL).
+7. Run `python package_model.py` (Phase 6: packaging).
+8. Run `python reproduce.py` to verify all artifacts.
+9. Run `python export_database.py` to export CSV splits for submission.
+10. Open `dashboard/dashboard.html` in a browser.
+
+---
+
 ## Architecture Overview
 
 ```
@@ -213,3 +227,72 @@ Run the Phase 5 pipeline stages in sequence. All commands execute locally in the
 | **4C** | Cryptographic Alert Logging | **COMPLETE** | Flat ELK-ready schema, SHA-256 hash chaining, 100% verified tamper detection |
 | **5A** | MARL Tactical Defense (MAPPO) | **COMPLETE** | 3 cooperative agents (Triage, Containment, Escalation); paired diff +21.63 [20.39, 22.85] vs best non-learned baseline (severity_rule_budget_aware) (**better**) |
 | **5B** | Autonomous SOC Dashboard & ECS Export | **COMPLETE** | Elastic Common Schema ndjson export, 3-test cryptographic log verification, standalone Base64 HTML dashboard |
+
+---
+
+### Phase 10: Zero-day detection
+
+Run the Phase 10 zero-day detection pipeline:
+
+```bash
+# 1. Train Benign-Only PyTorch Autoencoder:
+python zeroday/train_autoencoder.py
+
+# 2. Run Open-Set Evaluation (Known Control & Leave-One-Class-Out):
+python zeroday/evaluate_openset.py --resume
+
+# 3. Generate Programmatic Phase 10 Summary Report:
+python reports/generate_phase10_report.py
+```
+
+---
+
+### Phase 11: Edge compression
+
+Run the Phase 11 edge compression and single-thread latency benchmark:
+
+ash
+# 1. Benchmark Baseline Footprint and Latency:
+python edge/benchmark.py
+
+# 2. Evaluate Compression Variants (V1-V5):
+python edge/compress.py --resume
+
+# 3. Final Single-Pass Test Set Evaluation:
+python edge/evaluate_test.py
+
+# 4. Generate Phase 11 Summary Report:
+python reports/generate_phase11_report.py
+```
+
+---
+
+### Phase 12: Probability calibration and selective prediction
+
+Evaluates probability calibration (ECE, Brier score, NLL), selective prediction risk-coverage curves (AURC), and open-set unknown attack detection under a matched 10% Benign false-positive budget.
+
+```bash
+# 1. Measure Raw Probability Quality:
+python calibration/measure.py
+
+# 2. Fit Calibrators on Validation Set (Temperature Scaling vs Isotonic Regression):
+python calibration/fit.py
+
+# 3. Selective Prediction and Risk-Coverage Analysis:
+python calibration/selective.py
+
+# 4. Open-Set Evaluation at Matched 10% Benign False-Positive Budget:
+python calibration/openset_calibrated.py --resume
+
+# 5. Generate Phase 12 Summary Report:
+python reports/generate_phase12_report.py
+```
+> **Note on Cached Probability Arrays**:
+> The array files `calibration/results/val_probs_raw.npy`, `calibration/results/test_probs_raw.npy`, `calibration/results/y_val_8.npy`, and `calibration/results/y_test_8.npy` are cached model outputs from the Phase 3 B2 ensemble. They can be regenerated at any time by running:
+> ```bash
+> python calibration/measure.py
+> ```
+> This loads the saved B2 models (`rf_8class_b2.joblib`, `xgb_8class_b2.joblib`), predicts probabilities on validation and test parquets, and saves the cached `.npy` arrays along with `calibration/results/raw_metrics.json`.
+
+> **Note on Baseline B2 8-Class Test Accuracy**:
+> The 8-class test accuracy recorded in `models/ensemble_weights_8class_b2.json` telemetry is 0.9536 (produced during model wiring in `models/wire_b2_models.py`), whereas the evaluation via the unchanged prediction path (`calibration/measure.py` running `predict_probabilities` on `test.parquet`) yields 0.9542. The exact factor accounting for this 0.0006 discrepancy is cause not determined.

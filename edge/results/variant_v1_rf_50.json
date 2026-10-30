@@ -1,0 +1,99 @@
+{
+  "variant": "v1_rf_50",
+  "category": "V1",
+  "description": "RF truncated to 50 trees + Baseline XGBoost",
+  "model_files": [
+    "edge/models/rf_v1_50.joblib",
+    "models/xgb_8class_b2.joblib"
+  ],
+  "environment": {
+    "cpu_model": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",
+    "machine": "AMD64",
+    "logical_cores": 8,
+    "physical_cores": 4,
+    "ram_gb": 7.79,
+    "python_version": "3.13.1",
+    "library_versions": {
+      "scikit-learn": "1.9.1",
+      "xgboost": "3.4.1",
+      "joblib": "1.6.0",
+      "numpy": "2.5.3",
+      "pandas": "3.0.6",
+      "torch": "2.15.0+cpu",
+      "psutil": "7.2.2"
+    }
+  },
+  "size_mb_uncompressed": 57.09,
+  "size_mb_compressed": 11.98,
+  "latency_per_flow_ms": {
+    "median_ms": 10.353,
+    "p95_ms": 12.073,
+    "min_ms": 10.344,
+    "max_ms": 10.435,
+    "range_ms": [
+      10.344,
+      10.435
+    ],
+    "runs": [
+      {
+        "run": 1,
+        "median_ms": 10.368,
+        "p95_ms": 14.98,
+        "min_ms": 5.534,
+        "max_ms": 42.783
+      },
+      {
+        "run": 2,
+        "median_ms": 10.344,
+        "p95_ms": 11.253,
+        "min_ms": 6.179,
+        "max_ms": 16.311
+      },
+      {
+        "run": 3,
+        "median_ms": 10.349,
+        "p95_ms": 12.073,
+        "min_ms": 6.995,
+        "max_ms": 17.138
+      },
+      {
+        "run": 4,
+        "median_ms": 10.353,
+        "p95_ms": 15.142,
+        "min_ms": 5.64,
+        "max_ms": 17.344
+      },
+      {
+        "run": 5,
+        "median_ms": 10.435,
+        "p95_ms": 11.789,
+        "min_ms": 5.832,
+        "max_ms": 15.278
+      }
+    ]
+  },
+  "throughput_fps": {
+    "median_fps": 8732.16,
+    "min_fps": 8042.0,
+    "max_fps": 8757.72,
+    "range_fps": [
+      8042.0,
+      8757.72
+    ],
+    "runs": [
+      8435.53,
+      8757.72,
+      8042.0,
+      8755.31,
+      8732.16
+    ]
+  },
+  "initial_rss_mb": 158.78,
+  "load_rss_mb": 236.91,
+  "peak_rss_mb": 239.67,
+  "peak_memory_delta_mb": 80.89,
+  "validation_accuracy": 0.9645,
+  "validation_macro_f1": 0.8107,
+  "rf_trees": 50,
+  "xgb_rounds": 250
+}

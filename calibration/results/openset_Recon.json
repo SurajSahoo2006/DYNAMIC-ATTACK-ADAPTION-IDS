@@ -1,0 +1,96 @@
+{
+  "class_name": "Recon",
+  "class_idx": 5,
+  "truncated": false,
+  "elapsed_sec": 1.69,
+  "validation_budget": {
+    "budget_benign_fpr": 0.1,
+    "tau_raw": 0.4672,
+    "tau_calibrated": 0.5938,
+    "val_benign_fpr_raw": 0.1001,
+    "val_benign_fpr_calibrated": 0.1001
+  },
+  "heldout_test_evaluation": {
+    "n_samples": 4002,
+    "raw": {
+      "flagged_unknown": {
+        "x": 1977,
+        "n": 4002,
+        "percentage": 49.4,
+        "ci_lower": 47.85,
+        "ci_upper": 50.95,
+        "formatted": "1977 of 4002 (49.40%) [47.85%, 50.95%]"
+      },
+      "silently_benign": {
+        "x": 449,
+        "n": 4002,
+        "percentage": 11.22,
+        "ci_lower": 10.28,
+        "ci_upper": 12.23,
+        "formatted": "449 of 4002 (11.22%) [10.28%, 12.23%]"
+      },
+      "silently_other_attack": {
+        "x": 1576,
+        "n": 4002,
+        "percentage": 39.38,
+        "ci_lower": 37.88,
+        "ci_upper": 40.9,
+        "formatted": "1576 of 4002 (39.38%) [37.88%, 40.90%]"
+      }
+    },
+    "calibrated": {
+      "flagged_unknown": {
+        "x": 1366,
+        "n": 4002,
+        "percentage": 34.13,
+        "ci_lower": 32.68,
+        "ci_upper": 35.62,
+        "formatted": "1366 of 4002 (34.13%) [32.68%, 35.62%]"
+      },
+      "silently_benign": {
+        "x": 512,
+        "n": 4002,
+        "percentage": 12.79,
+        "ci_lower": 11.79,
+        "ci_upper": 13.86,
+        "formatted": "512 of 4002 (12.79%) [11.79%, 13.86%]"
+      },
+      "silently_other_attack": {
+        "x": 2124,
+        "n": 4002,
+        "percentage": 53.07,
+        "ci_lower": 51.53,
+        "ci_upper": 54.62,
+        "formatted": "2124 of 4002 (53.07%) [51.53%, 54.62%]"
+      }
+    },
+    "paired_difference": {
+      "point_diff": -15.27,
+      "ci_lower": -16.97,
+      "ci_upper": -13.57,
+      "formatted": "-15.27% [-16.97%, -13.57%]",
+      "significant_gain": false,
+      "significant_loss": true,
+      "about_the_same": false
+    }
+  },
+  "test_benign_fpr": {
+    "n_samples": 1000,
+    "raw": {
+      "x": 104,
+      "n": 1000,
+      "percentage": 10.4,
+      "ci_lower": 8.66,
+      "ci_upper": 12.45,
+      "formatted": "104 of 1000 (10.40%) [8.66%, 12.45%]"
+    },
+    "calibrated": {
+      "x": 125,
+      "n": 1000,
+      "percentage": 12.5,
+      "ci_lower": 10.59,
+      "ci_upper": 14.69,
+      "formatted": "125 of 1000 (12.50%) [10.59%, 14.69%]"
+    }
+  }
+}

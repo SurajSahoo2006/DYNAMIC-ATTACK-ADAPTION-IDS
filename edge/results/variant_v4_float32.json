@@ -1,0 +1,100 @@
+{
+  "variant": "v4_float32",
+  "category": "V4",
+  "description": "Baseline Ensemble with float32 input cast",
+  "model_files": [
+    "models/rf_8class_b2.joblib",
+    "models/xgb_8class_b2.joblib"
+  ],
+  "environment": {
+    "cpu_model": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",
+    "machine": "AMD64",
+    "logical_cores": 8,
+    "physical_cores": 4,
+    "ram_gb": 7.79,
+    "python_version": "3.13.1",
+    "library_versions": {
+      "scikit-learn": "1.9.1",
+      "xgboost": "3.4.1",
+      "joblib": "1.6.0",
+      "numpy": "2.5.3",
+      "pandas": "3.0.6",
+      "torch": "2.15.0+cpu",
+      "psutil": "7.2.2"
+    }
+  },
+  "size_mb_uncompressed": 204.84,
+  "size_mb_compressed": 41.48,
+  "latency_per_flow_ms": {
+    "median_ms": 33.138,
+    "p95_ms": 36.394,
+    "min_ms": 33.06,
+    "max_ms": 33.521,
+    "range_ms": [
+      33.06,
+      33.521
+    ],
+    "runs": [
+      {
+        "run": 1,
+        "median_ms": 33.521,
+        "p95_ms": 39.216,
+        "min_ms": 29.749,
+        "max_ms": 58.075
+      },
+      {
+        "run": 2,
+        "median_ms": 33.138,
+        "p95_ms": 38.296,
+        "min_ms": 23.075,
+        "max_ms": 50.776
+      },
+      {
+        "run": 3,
+        "median_ms": 33.06,
+        "p95_ms": 35.986,
+        "min_ms": 29.099,
+        "max_ms": 52.562
+      },
+      {
+        "run": 4,
+        "median_ms": 33.069,
+        "p95_ms": 34.129,
+        "min_ms": 28.347,
+        "max_ms": 39.067
+      },
+      {
+        "run": 5,
+        "median_ms": 33.147,
+        "p95_ms": 36.394,
+        "min_ms": 29.9,
+        "max_ms": 52.351
+      }
+    ]
+  },
+  "throughput_fps": {
+    "median_fps": 5119.58,
+    "min_fps": 4642.54,
+    "max_fps": 5158.73,
+    "range_fps": [
+      4642.54,
+      5158.73
+    ],
+    "runs": [
+      4642.54,
+      5119.58,
+      5132.4,
+      5086.76,
+      5158.73
+    ]
+  },
+  "initial_rss_mb": 158.43,
+  "load_rss_mb": 398.1,
+  "peak_rss_mb": 398.1,
+  "peak_memory_delta_mb": 239.67,
+  "validation_accuracy": 0.9645,
+  "validation_macro_f1": 0.8116,
+  "prediction_differences_count": 0,
+  "prediction_differences_total": 106766,
+  "prediction_difference_rate": 0.0
+}

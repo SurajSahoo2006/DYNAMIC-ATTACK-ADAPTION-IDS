@@ -1,0 +1,97 @@
+{
+  "variant": "baseline",
+  "category": "Reference",
+  "description": "Phase 3 B2 Ensemble (RF 0.60 + XGBoost 0.40, 19 features)",
+  "model_files": [
+    "models/rf_8class_b2.joblib",
+    "models/xgb_8class_b2.joblib"
+  ],
+  "environment": {
+    "cpu_model": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",
+    "machine": "AMD64",
+    "logical_cores": 8,
+    "physical_cores": 4,
+    "ram_gb": 7.79,
+    "python_version": "3.13.1",
+    "library_versions": {
+      "scikit-learn": "1.9.1",
+      "xgboost": "3.4.1",
+      "joblib": "1.6.0",
+      "numpy": "2.5.3",
+      "pandas": "3.0.6",
+      "torch": "2.15.0+cpu",
+      "psutil": "7.2.2"
+    }
+  },
+  "size_mb_uncompressed": 204.84,
+  "size_mb_compressed": 41.47,
+  "latency_per_flow_ms": {
+    "median_ms": 32.595,
+    "p95_ms": 37.755,
+    "min_ms": 31.217,
+    "max_ms": 33.119,
+    "range_ms": [
+      31.217,
+      33.119
+    ],
+    "runs": [
+      {
+        "run": 1,
+        "median_ms": 31.217,
+        "p95_ms": 40.431,
+        "min_ms": 18.491,
+        "max_ms": 62.701
+      },
+      {
+        "run": 2,
+        "median_ms": 32.176,
+        "p95_ms": 39.166,
+        "min_ms": 18.471,
+        "max_ms": 59.367
+      },
+      {
+        "run": 3,
+        "median_ms": 33.119,
+        "p95_ms": 35.045,
+        "min_ms": 20.019,
+        "max_ms": 85.44
+      },
+      {
+        "run": 4,
+        "median_ms": 32.595,
+        "p95_ms": 34.727,
+        "min_ms": 21.61,
+        "max_ms": 48.507
+      },
+      {
+        "run": 5,
+        "median_ms": 32.771,
+        "p95_ms": 37.755,
+        "min_ms": 18.398,
+        "max_ms": 47.237
+      }
+    ]
+  },
+  "throughput_fps": {
+    "median_fps": 5328.47,
+    "min_fps": 5063.82,
+    "max_fps": 5646.27,
+    "range_fps": [
+      5063.82,
+      5646.27
+    ],
+    "runs": [
+      5063.82,
+      5234.08,
+      5328.47,
+      5353.8,
+      5646.27
+    ]
+  },
+  "initial_rss_mb": 158.38,
+  "load_rss_mb": 397.32,
+  "peak_rss_mb": 397.32,
+  "peak_memory_delta_mb": 238.94,
+  "validation_accuracy": 0.9645,
+  "validation_macro_f1": 0.8116
+}

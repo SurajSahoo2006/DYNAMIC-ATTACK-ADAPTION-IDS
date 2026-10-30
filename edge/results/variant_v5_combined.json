@@ -1,0 +1,103 @@
+{
+  "variant": "v5_combined",
+  "category": "V5",
+  "description": "Combined Best (v1_rf_100 + v2_xgb_125)",
+  "model_files": [
+    "edge/models/rf_v1_100.joblib",
+    "edge/models/xgb_v2_125.joblib"
+  ],
+  "environment": {
+    "cpu_model": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",
+    "machine": "AMD64",
+    "logical_cores": 8,
+    "physical_cores": 4,
+    "ram_gb": 7.79,
+    "python_version": "3.13.1",
+    "library_versions": {
+      "scikit-learn": "1.9.1",
+      "xgboost": "3.4.1",
+      "joblib": "1.6.0",
+      "numpy": "2.5.3",
+      "pandas": "3.0.6",
+      "torch": "2.15.0+cpu",
+      "psutil": "7.2.2"
+    }
+  },
+  "size_mb_uncompressed": 104.77,
+  "size_mb_compressed": 21.19,
+  "latency_per_flow_ms": {
+    "median_ms": 17.651,
+    "p95_ms": 19.065,
+    "min_ms": 17.633,
+    "max_ms": 17.713,
+    "range_ms": [
+      17.633,
+      17.713
+    ],
+    "runs": [
+      {
+        "run": 1,
+        "median_ms": 17.713,
+        "p95_ms": 19.065,
+        "min_ms": 12.245,
+        "max_ms": 25.488
+      },
+      {
+        "run": 2,
+        "median_ms": 17.651,
+        "p95_ms": 18.942,
+        "min_ms": 14.498,
+        "max_ms": 25.508
+      },
+      {
+        "run": 3,
+        "median_ms": 17.633,
+        "p95_ms": 18.308,
+        "min_ms": 14.904,
+        "max_ms": 20.401
+      },
+      {
+        "run": 4,
+        "median_ms": 17.662,
+        "p95_ms": 20.167,
+        "min_ms": 11.609,
+        "max_ms": 27.942
+      },
+      {
+        "run": 5,
+        "median_ms": 17.645,
+        "p95_ms": 19.987,
+        "min_ms": 12.28,
+        "max_ms": 27.546
+      }
+    ]
+  },
+  "throughput_fps": {
+    "median_fps": 10315.56,
+    "min_fps": 9995.97,
+    "max_fps": 10440.51,
+    "range_fps": [
+      9995.97,
+      10440.51
+    ],
+    "runs": [
+      9995.97,
+      10440.51,
+      10319.96,
+      10315.56,
+      10256.0
+    ]
+  },
+  "initial_rss_mb": 158.41,
+  "load_rss_mb": 287.83,
+  "peak_rss_mb": 296.71,
+  "peak_memory_delta_mb": 138.3,
+  "validation_accuracy": 0.9631,
+  "validation_macro_f1": 0.8046,
+  "selected_rf_variant": "v1_rf_100",
+  "selected_xgb_variant": "v2_xgb_125",
+  "selected_rf_val_macro_f1": 0.8109,
+  "selected_xgb_val_macro_f1": 0.8049,
+  "selected_rf_model_file": "edge/models/rf_v1_100.joblib",
+  "selected_xgb_model_file": "edge/models/xgb_v2_125.joblib"
+}

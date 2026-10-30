@@ -1,0 +1,96 @@
+{
+  "class_name": "Mirai",
+  "class_idx": 4,
+  "truncated": false,
+  "elapsed_sec": 2.02,
+  "validation_budget": {
+    "budget_benign_fpr": 0.1,
+    "tau_raw": 0.3751,
+    "tau_calibrated": 0.4995,
+    "val_benign_fpr_raw": 0.1001,
+    "val_benign_fpr_calibrated": 0.1001
+  },
+  "heldout_test_evaluation": {
+    "n_samples": 2960,
+    "raw": {
+      "flagged_unknown": {
+        "x": 86,
+        "n": 2960,
+        "percentage": 2.91,
+        "ci_lower": 2.36,
+        "ci_upper": 3.57,
+        "formatted": "86 of 2960 (2.91%) [2.36%, 3.57%]"
+      },
+      "silently_benign": {
+        "x": 0,
+        "n": 2960,
+        "percentage": 0.0,
+        "ci_lower": 0.0,
+        "ci_upper": 0.13,
+        "formatted": "0 of 2960 (0.00%) [0.00%, 0.13%]"
+      },
+      "silently_other_attack": {
+        "x": 2874,
+        "n": 2960,
+        "percentage": 97.09,
+        "ci_lower": 96.43,
+        "ci_upper": 97.64,
+        "formatted": "2874 of 2960 (97.09%) [96.43%, 97.64%]"
+      }
+    },
+    "calibrated": {
+      "flagged_unknown": {
+        "x": 187,
+        "n": 2960,
+        "percentage": 6.32,
+        "ci_lower": 5.5,
+        "ci_upper": 7.25,
+        "formatted": "187 of 2960 (6.32%) [5.50%, 7.25%]"
+      },
+      "silently_benign": {
+        "x": 0,
+        "n": 2960,
+        "percentage": 0.0,
+        "ci_lower": 0.0,
+        "ci_upper": 0.13,
+        "formatted": "0 of 2960 (0.00%) [0.00%, 0.13%]"
+      },
+      "silently_other_attack": {
+        "x": 2773,
+        "n": 2960,
+        "percentage": 93.68,
+        "ci_lower": 92.75,
+        "ci_upper": 94.5,
+        "formatted": "2773 of 2960 (93.68%) [92.75%, 94.50%]"
+      }
+    },
+    "paired_difference": {
+      "point_diff": 3.41,
+      "ci_lower": 2.36,
+      "ci_upper": 4.53,
+      "formatted": "+3.41% [+2.36%, +4.53%]",
+      "significant_gain": true,
+      "significant_loss": false,
+      "about_the_same": false
+    }
+  },
+  "test_benign_fpr": {
+    "n_samples": 1000,
+    "raw": {
+      "x": 103,
+      "n": 1000,
+      "percentage": 10.3,
+      "ci_lower": 8.57,
+      "ci_upper": 12.34,
+      "formatted": "103 of 1000 (10.30%) [8.57%, 12.34%]"
+    },
+    "calibrated": {
+      "x": 104,
+      "n": 1000,
+      "percentage": 10.4,
+      "ci_lower": 8.66,
+      "ci_upper": 12.45,
+      "formatted": "104 of 1000 (10.40%) [8.66%, 12.45%]"
+    }
+  }
+}
