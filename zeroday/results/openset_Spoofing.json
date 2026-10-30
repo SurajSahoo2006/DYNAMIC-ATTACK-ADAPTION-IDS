@@ -1,46 +1,120 @@
 {
   "class_name": "Spoofing",
   "n_test": 1991,
-  "flagged_unknown_by_ae": {
-    "x": 346,
-    "n": 1991,
-    "percentage": 17.38,
-    "ci_lower": 15.78,
-    "ci_upper": 19.11,
-    "formatted": "346 of 1991 (17.38% [15.78%, 19.11%])"
+  "operating_point_original": {
+    "class_name": "Spoofing",
+    "n_test": 1991,
+    "flagged_unknown_by_ae": {
+      "x": 480,
+      "n": 1991,
+      "percentage": 24.11,
+      "ci_lower": 22.28,
+      "ci_upper": 26.04,
+      "formatted": "480 of 1991 (24.11%) [22.28%, 26.04%]"
+    },
+    "flagged_unknown_by_confidence": {
+      "x": 1430,
+      "n": 1991,
+      "percentage": 71.82,
+      "ci_lower": 69.81,
+      "ci_upper": 73.76,
+      "formatted": "1430 of 1991 (71.82%) [69.81%, 73.76%]"
+    },
+    "flagged_unknown_either": {
+      "x": 1519,
+      "n": 1991,
+      "percentage": 76.29,
+      "ci_lower": 74.38,
+      "ci_upper": 78.11,
+      "formatted": "1519 of 1991 (76.29%) [74.38%, 78.11%]"
+    },
+    "silently_predicted_benign": {
+      "x": 179,
+      "n": 1991,
+      "percentage": 8.99,
+      "ci_lower": 7.81,
+      "ci_upper": 10.33,
+      "formatted": "179 of 1991 (8.99%) [7.81%, 10.33%]"
+    },
+    "silently_predicted_other_attack": {
+      "x": 293,
+      "n": 1991,
+      "percentage": 14.72,
+      "ci_lower": 13.23,
+      "ci_upper": 16.34,
+      "formatted": "293 of 1991 (14.72%) [13.23%, 16.34%]"
+    },
+    "missed_rate_percentage": 23.71,
+    "elapsed_seconds": 1.48,
+    "truncated": false
   },
-  "flagged_unknown_by_confidence": {
-    "x": 1430,
-    "n": 1991,
-    "percentage": 71.82,
-    "ci_lower": 69.81,
-    "ci_upper": 73.76,
-    "formatted": "1430 of 1991 (71.82% [69.81%, 73.76%])"
+  "operating_point_fp_budget": {
+    "class_name": "Spoofing",
+    "n_test": 1991,
+    "flagged_unknown_by_ae": {
+      "x": 365,
+      "n": 1991,
+      "percentage": 18.33,
+      "ci_lower": 16.69,
+      "ci_upper": 20.09,
+      "formatted": "365 of 1991 (18.33%) [16.69%, 20.09%]"
+    },
+    "flagged_unknown_by_confidence": {
+      "x": 563,
+      "n": 1991,
+      "percentage": 28.28,
+      "ci_lower": 26.34,
+      "ci_upper": 30.3,
+      "formatted": "563 of 1991 (28.28%) [26.34%, 30.30%]"
+    },
+    "flagged_unknown_either": {
+      "x": 754,
+      "n": 1991,
+      "percentage": 37.87,
+      "ci_lower": 35.77,
+      "ci_upper": 40.02,
+      "formatted": "754 of 1991 (37.87%) [35.77%, 40.02%]"
+    },
+    "silently_predicted_benign": {
+      "x": 310,
+      "n": 1991,
+      "percentage": 15.57,
+      "ci_lower": 14.04,
+      "ci_upper": 17.23,
+      "formatted": "310 of 1991 (15.57%) [14.04%, 17.23%]"
+    },
+    "silently_predicted_other_attack": {
+      "x": 927,
+      "n": 1991,
+      "percentage": 46.56,
+      "ci_lower": 44.38,
+      "ci_upper": 48.76,
+      "formatted": "927 of 1991 (46.56%) [44.38%, 48.76%]"
+    },
+    "missed_rate_percentage": 62.13,
+    "elapsed_seconds": 1.48,
+    "truncated": false
   },
-  "flagged_unknown_either": {
-    "x": 1496,
-    "n": 1991,
-    "percentage": 75.14,
-    "ci_lower": 73.19,
-    "ci_upper": 76.99,
-    "formatted": "1496 of 1991 (75.14% [73.19%, 76.99%])"
+  "lift_original": {
+    "heldout_rate": 76.29,
+    "known_rate": 41.24,
+    "lift": 35.06,
+    "ci_lower": 32.75,
+    "ci_upper": 37.47,
+    "formatted": "+35.06% [+32.75%, +37.47%]"
   },
-  "silently_predicted_benign": {
-    "x": 199,
-    "n": 1991,
-    "percentage": 9.99,
-    "ci_lower": 8.75,
-    "ci_upper": 11.39,
-    "formatted": "199 of 1991 (9.99% [8.75%, 11.39%])"
+  "lift_fp_budget": {
+    "heldout_rate": 37.87,
+    "known_rate": 24.61,
+    "lift": 13.26,
+    "ci_lower": 11.35,
+    "ci_upper": 15.17,
+    "formatted": "+13.26% [+11.35%, +15.17%]"
   },
-  "silently_predicted_other_attack": {
-    "x": 296,
-    "n": 1991,
-    "percentage": 14.87,
-    "ci_lower": 13.37,
-    "ci_upper": 16.5,
-    "formatted": "296 of 1991 (14.87% [13.37%, 16.50%])"
-  },
-  "elapsed_seconds": 3.45,
-  "truncated": false
+  "auroc": {
+    "auroc": 0.665,
+    "ci_lower": 0.6459,
+    "ci_upper": 0.68,
+    "formatted": "0.6650 [0.6459, 0.6800]"
+  }
 }

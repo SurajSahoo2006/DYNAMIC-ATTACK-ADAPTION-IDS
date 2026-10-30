@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-zeroday/evaluate_openset.py - Open-set evaluation with known-class control and leave-one-class-out attacks.
+zeroday/evaluate_openset.py - Open-set evaluation with separated detectors, lift calculation, AUROC, and FP-budget operating point.
 """
 
 from __future__ import annotations
@@ -13,12 +13,13 @@ import math
 from pathlib import Path
 import sys
 import time
-from typing import Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 import joblib
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
 import torch
 import torch.nn as nn
@@ -31,6 +32,7 @@ from config import (
     ENCODER_8_PATH,
     SCALER_PATH,
 )
+from models.load_validation import load_validation_data
 from zeroday.train_autoencoder import BenignAutoencoder
 
 logging.basicConfig(
@@ -75,7 +77,154 @@ def wilson_score_interval(x: int, n: int, confidence: float = 0.95) -> Dict[str,
         "percentage": round(pct, 2),
         "ci_lower": round(lower, 2),
         "ci_upper": round(upper, 2),
-        "formatted": f"{x} of {n} ({pct:.2f}% [{lower:.2f}%, {upper:.2f}%])",
+        "formatted": f"{x} of {n} ({pct:.2f}%) [{lower:.2f}%, {upper:.2f}%]",
+    }
+
+
+def bootstrap_difference_ci(
+    y_heldout: np.ndarray,
+    y_known: np.ndarray,
+    n_resamples: int = 1000,
+    seed: int = 42,
+) -> Dict[str, Union[float, str]]:
+    """
+    Bootstrap 95% CI (paired resamples) for the difference: heldout_rate - known_rate.
+    """
+    rng = np.random.RandomState(seed)
+    n = len(y_heldout)
+    heldout_rate = float(np.mean(y_heldout)) * 100.0
+    known_rate = float(np.mean(y_known)) * 100.0
+    lift_val = heldout_rate - known_rate
+
+    boot_diffs = []
+    for _ in range(n_resamples):
+        idx = rng.randint(0, n, size=n)
+        boot_diffs.append((np.mean(y_heldout[idx]) - np.mean(y_known[idx])) * 100.0)
+
+    ci_lower = float(np.percentile(boot_diffs, 2.5))
+    ci_upper = float(np.percentile(boot_diffs, 97.5))
+
+    sign = "+" if lift_val >= 0 else ""
+    return {
+        "heldout_rate": round(heldout_rate, 2),
+        "known_rate": round(known_rate, 2),
+        "lift": round(lift_val, 2),
+        "ci_lower": round(ci_lower, 2),
+        "ci_upper": round(ci_upper, 2),
+        "formatted": f"{sign}{lift_val:.2f}% [{ci_lower:+.2f}%, {ci_upper:+.2f}%]",
+    }
+
+
+def compute_auroc_with_ci(
+    benign_scores: np.ndarray,
+    attack_scores: np.ndarray,
+    n_resamples: int = 200,
+    seed: int = 42,
+) -> Dict[str, Union[float, str]]:
+    """
+    Computes AUROC of AE reconstruction score (Benign vs Attack Class) with bootstrap 95% CI.
+    """
+    y_true = np.concatenate([np.zeros(len(benign_scores)), np.ones(len(attack_scores))])
+    y_score = np.concatenate([benign_scores, attack_scores])
+    point_auroc = float(roc_auc_score(y_true, y_score))
+
+    rng = np.random.RandomState(seed)
+    n_total = len(y_true)
+    boot_aurocs = []
+    for _ in range(n_resamples):
+        b_idx = rng.randint(0, n_total, size=n_total)
+        if len(np.unique(y_true[b_idx])) < 2:
+            continue
+        boot_aurocs.append(float(roc_auc_score(y_true[b_idx], y_score[b_idx])))
+
+    ci_lower = float(np.percentile(boot_aurocs, 2.5))
+    ci_upper = float(np.percentile(boot_aurocs, 97.5))
+    return {
+        "auroc": round(point_auroc, 4),
+        "ci_lower": round(ci_lower, 4),
+        "ci_upper": round(ci_upper, 4),
+        "formatted": f"{point_auroc:.4f} [{ci_lower:.4f}, {ci_upper:.4f}]",
+    }
+
+
+def find_fp_budget_operating_point(
+    ae: nn.Module,
+    selected_features: List[str],
+    class_names: List[str],
+    benign_idx: int,
+) -> Dict[str, Any]:
+    """
+    FIX 3: Validation-only grid search over AE percentile and confidence cutoff.
+    Keep settings with validation Benign FPR <= 10%, pick highest mean flagged rate on held-out classes.
+    """
+    log.info("Running Step FIX 3: Validation-only operating point grid search ...")
+    rf_path = PROJECT_ROOT / "models" / "rf_8class_b2.joblib"
+    xgb_path = PROJECT_ROOT / "models" / "xgb_8class_b2.joblib"
+    rf = joblib.load(rf_path)
+    xgb = joblib.load(xgb_path)
+
+    X_val_all, y_val_8, _ = load_validation_data()
+    X_val = X_val_all[selected_features].to_numpy(dtype=np.float32)
+
+    rf_val_prob = rf.predict_proba(X_val)
+    xgb_val_prob = xgb.predict_proba(X_val)
+    val_b2_prob = 0.6 * rf_val_prob + 0.4 * xgb_val_prob
+    val_max_prob = np.max(val_b2_prob, axis=1)
+
+    with torch.no_grad():
+        x_val_t = torch.from_numpy(X_val.copy())
+        rec = ae(x_val_t)
+        val_ae_scores = ((x_val_t - rec) ** 2).mean(dim=1).cpu().numpy()
+
+    val_benign_scores = val_ae_scores[y_val_8 == benign_idx]
+
+    percentiles = [95.0, 97.5, 99.0]
+    cutoffs = [0.30, 0.40, 0.50, 0.60]
+
+    attack_indices = [i for i, c in enumerate(class_names) if c != "Benign"]
+    candidates = []
+    all_grid_results = []
+
+    for p in percentiles:
+        thresh = float(np.percentile(val_benign_scores, p))
+        for c in cutoffs:
+            is_flagged = (val_ae_scores > thresh) | (val_max_prob < c)
+            benign_fpr = float((is_flagged[y_val_8 == benign_idx]).mean())
+
+            attack_rates = []
+            for aidx in attack_indices:
+                mask = (y_val_8 == aidx)
+                if mask.sum() > 0:
+                    attack_rates.append(float((is_flagged[mask]).mean()))
+            mean_attack_rate = float(np.mean(attack_rates))
+
+            is_valid = bool(benign_fpr <= 0.10)
+            entry = {
+                "percentile": p,
+                "threshold": round(thresh, 6),
+                "confidence_cutoff": c,
+                "val_benign_fpr": round(benign_fpr, 4),
+                "val_mean_attack_rate": round(mean_attack_rate, 4),
+                "valid_within_10pct_budget": is_valid,
+            }
+            all_grid_results.append(entry)
+            if is_valid:
+                candidates.append(entry)
+
+    if not candidates:
+        raise ValueError("No grid point met the 10% validation Benign FPR budget.")
+
+    candidates.sort(key=lambda x: x["val_mean_attack_rate"], reverse=True)
+    best_op = candidates[0]
+    log.info(
+        f"Chosen validation operating point: Percentile={best_op['percentile']}%, "
+        f"Threshold={best_op['threshold']:.5f}, Confidence Cutoff={best_op['confidence_cutoff']} "
+        f"(Val Benign FPR: {best_op['val_benign_fpr']*100:.2f}%, Val Mean Attack Rate: {best_op['val_mean_attack_rate']*100:.2f}%)"
+    )
+
+    return {
+        "chosen_operating_point": best_op,
+        "grid_evaluations": all_grid_results,
     }
 
 
@@ -103,65 +252,30 @@ def load_artifacts_and_ae():
     if SCALER_PATH.exists():
         scaler = joblib.load(SCALER_PATH)
 
-    return selected_features, le_8, class_names, benign_idx, ae, threshold, scaler
-
-
-def run_known_class_control(
-    X_test: np.ndarray,
-    y_test: np.ndarray,
-    class_names: List[str],
-    ae: nn.Module,
-    threshold: float,
-) -> Dict[str, Dict[str, Any]]:
-    log.info("Running Step 2a: Known-Class Control using existing B2 ensemble ...")
-    rf_path = PROJECT_ROOT / "models" / "rf_8class_b2.joblib"
-    xgb_path = PROJECT_ROOT / "models" / "xgb_8class_b2.joblib"
-
-    if not rf_path.exists() or not xgb_path.exists():
-        raise FileNotFoundError("Missing models/rf_8class_b2.joblib or xgb_8class_b2.joblib")
-
-    rf = joblib.load(rf_path)
-    xgb = joblib.load(xgb_path)
-
-    rf_probs = rf.predict_proba(X_test)
-    xgb_probs = xgb.predict_proba(X_test)
-    b2_probs = 0.6 * rf_probs + 0.4 * xgb_probs
-    max_probs = np.max(b2_probs, axis=1)
-
-    with torch.no_grad():
-        x_tensor = torch.from_numpy(X_test.copy())
-        reconstructions = ae(x_tensor)
-        ae_scores = ((x_tensor - reconstructions) ** 2).mean(dim=1).cpu().numpy()
-
-    is_flagged_unknown = (ae_scores > threshold) | (max_probs < 0.60)
-
-    control_results = {}
-    print("\n" + "=" * 70)
-    print("      STEP 2A: KNOWN-CLASS CONTROL (FULL TEST SET EVALUATION)")
-    print("=" * 70)
-    print(f"{'Class Name':<14} | {'Flagged Unknown (95% Wilson CI)':<45}")
-    print("-" * 70)
-
-    for idx, cname in enumerate(class_names):
-        mask = (y_test == idx)
-        n_total = int(mask.sum())
-        x_flagged = int(is_flagged_unknown[mask].sum())
-        stat = wilson_score_interval(x_flagged, n_total)
-        control_results[cname] = stat
-        print(f"{cname:<14} | {stat['formatted']:<45}")
-
-    print("=" * 70 + "\n")
-    return control_results
+    return selected_features, le_8, class_names, benign_idx, ae, threshold, scaler, ckpt
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Phase 10 Open-Set Evaluation")
-    parser.add_argument("--resume", action="store_true", help="Resume from existing per-class JSON files")
+    parser = argparse.ArgumentParser(description="Phase 10 Open-Set Evaluation with fixes")
+    parser.add_argument("--resume", action="store_true", help="Resume completed held-out evaluations")
     args = parser.parse_args()
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
-    selected_features, le_8, class_names, benign_idx, ae, threshold, scaler = load_artifacts_and_ae()
+    selected_features, le_8, class_names, benign_idx, ae, threshold_orig, scaler, ae_ckpt = load_artifacts_and_ae()
+
+    # Step FIX 3: Validation-only grid search to select FP-budget operating point
+    val_grid_data = find_fp_budget_operating_point(ae, selected_features, class_names, benign_idx)
+    chosen_op = val_grid_data["chosen_operating_point"]
+
+    thresh_op1 = threshold_orig  # 95th percentile
+    conf_op1 = 0.60
+
+    thresh_op2 = chosen_op["threshold"]  # e.g. 97.5th percentile
+    conf_op2 = chosen_op["confidence_cutoff"]  # e.g. 0.40
+
+    log.info(f"Operating Point 1 (Original): Threshold={thresh_op1:.6f} (95th), Conf Cutoff={conf_op1:.2f}")
+    log.info(f"Operating Point 2 (FP Budget): Threshold={thresh_op2:.6f} ({chosen_op['percentile']}th), Conf Cutoff={conf_op2:.2f}")
 
     # Load full test set
     test_path = PROJECT_ROOT / "data" / "processed" / "test.parquet"
@@ -178,48 +292,100 @@ def main():
     if scaler is not None and hasattr(scaler, "n_features_in_") and scaler.n_features_in_ == len(selected_features):
         X_test = scaler.transform(X_test).astype(np.float32)
 
-    # 2a. Known-Class Control
-    known_control = run_known_class_control(X_test, y_test, class_names, ae, threshold)
+    # Compute AE reconstruction scores on full test set
+    with torch.no_grad():
+        x_test_t = torch.from_numpy(X_test.copy())
+        reconstructions = ae(x_test_t)
+        ae_scores_test = ((x_test_t - reconstructions) ** 2).mean(dim=1).cpu().numpy()
 
-    # 2b. Leave-One-Class-Out
-    # 7 attack classes
+    # Step FIX 2: Threshold-Free AE Quality (AUROC of AE reconstruction score on TEST set)
+    log.info("Running Step FIX 2: Computing AUROC of AE score on TEST set ...")
+    benign_mask = (y_test == benign_idx)
+    benign_ae_scores = ae_scores_test[benign_mask]
+
+    auroc_results = {}
     attack_classes = [c for c in class_names if c != "Benign"]
+    for cname in attack_classes:
+        cidx = int(np.where(le_8.classes_ == cname)[0][0])
+        c_scores = ae_scores_test[y_test == cidx]
+        stat_auroc = compute_auroc_with_ci(benign_ae_scores, c_scores, n_resamples=200, seed=42)
+        auroc_results[cname] = stat_auroc
+        log.info(f"  AUROC (Benign vs {cname:<11}): {stat_auroc['formatted']}")
 
-    # Load unsmoted real training data
+    # Step FIX 1 & 2a: Known-Class Control (Full Test Set)
+    log.info("Running Known-Class Control with B2 ensemble (reporting AE-only, conf-only, combined) ...")
+    rf_path = PROJECT_ROOT / "models" / "rf_8class_b2.joblib"
+    xgb_path = PROJECT_ROOT / "models" / "xgb_8class_b2.joblib"
+    rf_b2 = joblib.load(rf_path)
+    xgb_b2 = joblib.load(xgb_path)
+
+    rf_probs = rf_b2.predict_proba(X_test)
+    xgb_probs = xgb_b2.predict_proba(X_test)
+    b2_probs = 0.6 * rf_probs + 0.4 * xgb_probs
+    max_probs_b2 = np.max(b2_probs, axis=1)
+
+    # Indicator masks for Known Control at both operating points
+    known_indicators_op1 = {}
+    known_indicators_op2 = {}
+    known_control_op1 = {}
+    known_control_op2 = {}
+
+    for idx, cname in enumerate(class_names):
+        mask = (y_test == idx)
+        n_c = int(mask.sum())
+
+        # OP 1
+        flag_ae_1 = (ae_scores_test[mask] > thresh_op1)
+        flag_conf_1 = (max_probs_b2[mask] < conf_op1)
+        flag_either_1 = (flag_ae_1 | flag_conf_1)
+        known_indicators_op1[cname] = flag_either_1
+        known_control_op1[cname] = {
+            "n_test": n_c,
+            "flagged_unknown_by_ae": wilson_score_interval(int(flag_ae_1.sum()), n_c),
+            "flagged_unknown_by_confidence": wilson_score_interval(int(flag_conf_1.sum()), n_c),
+            "flagged_unknown_either": wilson_score_interval(int(flag_either_1.sum()), n_c),
+        }
+
+        # OP 2
+        flag_ae_2 = (ae_scores_test[mask] > thresh_op2)
+        flag_conf_2 = (max_probs_b2[mask] < conf_op2)
+        flag_either_2 = (flag_ae_2 | flag_conf_2)
+        known_indicators_op2[cname] = flag_either_2
+        known_control_op2[cname] = {
+            "n_test": n_c,
+            "flagged_unknown_by_ae": wilson_score_interval(int(flag_ae_2.sum()), n_c),
+            "flagged_unknown_by_confidence": wilson_score_interval(int(flag_conf_2.sum()), n_c),
+            "flagged_unknown_either": wilson_score_interval(int(flag_either_2.sum()), n_c),
+        }
+
+    # Step FIX 1 & 2b: Leave-One-Class-Out Evaluation
     train_path = PROJECT_ROOT / "data" / "processed" / "train_unsmoted_19.parquet"
     if not train_path.exists():
         train_path = PROJECT_ROOT / "data" / "processed" / "train_phase2.parquet"
-    if not train_path.exists():
-        raise FileNotFoundError("Could not find unsmoted train parquet")
-
-    log.info(f"Loading training data from {train_path.name} ...")
     df_train = pd.read_parquet(train_path)
     tr_label_col = "label_8" if "label_8" in df_train.columns else "label"
 
-    leave_one_out_results = {}
+    leave_one_out_op1 = {}
+    leave_one_out_op2 = {}
+    lift_table_op1 = {}
+    lift_table_op2 = {}
     truncated_classes = []
 
-    print("=" * 85)
-    print("      STEP 2B: LEAVE-ONE-CLASS-OUT EVALUATION (7 UNSEEN ATTACK CLASSES)")
-    print("=" * 85)
+    print("\n" + "=" * 80)
+    print("  STEP 2B: LEAVE-ONE-CLASS-OUT EVALUATION & LIFT VS KNOWN CONTROL")
+    print("=" * 80)
 
     for cname in attack_classes:
         class_json_path = RESULTS_DIR / f"openset_{cname}.json"
-        if args.resume and class_json_path.exists():
-            log.info(f"[RESUME] Loading completed result for {cname} from {class_json_path.name}")
-            with open(class_json_path, "r", encoding="utf-8") as f:
-                c_data = json.load(f)
-            leave_one_out_results[cname] = c_data
-            continue
-
         cidx = int(np.where(le_8.classes_ == cname)[0][0])
-        log.info(f"\nEvaluating held-out class: {cname} (label index: {cidx}) ...")
+        test_mask = (y_test == cidx)
+        X_heldout = X_test[test_mask]
+        n_heldout = len(X_heldout)
+        ae_scores_heldout = ae_scores_test[test_mask]
+
         t_start = time.time()
-
-        # Filter out held-out class from training data
+        # Train fresh RF excluding held-out class
         df_sub = df_train[df_train[tr_label_col] != cidx].copy()
-
-        # Stratified sampling capped at 50,000 rows total
         if len(df_sub) > 50_000:
             df_sub, _ = train_test_split(
                 df_sub,
@@ -234,7 +400,6 @@ def main():
         if scaler is not None and hasattr(scaler, "n_features_in_") and scaler.n_features_in_ == len(selected_features):
             X_tr_sub = scaler.transform(X_tr_sub).astype(np.float32)
 
-        # Train fresh RF (100 trees, max_depth 15, class_weight balanced, seed 42)
         rf_fresh = RandomForestClassifier(
             n_estimators=100,
             max_depth=15,
@@ -244,73 +409,119 @@ def main():
         )
         rf_fresh.fit(X_tr_sub, y_tr_sub)
 
-        # Evaluate on test rows of held-out class
-        test_mask = (y_test == cidx)
-        X_heldout = X_test[test_mask]
-        n_heldout = len(X_heldout)
-
-        probs = rf_fresh.predict_proba(X_heldout)
-        max_probs = np.max(probs, axis=1)
-        pred_classes = rf_fresh.predict(X_heldout)
-
-        with torch.no_grad():
-            x_heldout_t = torch.from_numpy(X_heldout.copy())
-            reconstructions = ae(x_heldout_t)
-            ae_scores = ((x_heldout_t - reconstructions) ** 2).mean(dim=1).cpu().numpy()
-
-        flagged_ae = (ae_scores > threshold)
-        flagged_conf = (max_probs < 0.60)
-        flagged_either = (flagged_ae | flagged_conf)
-
-        silently_benign = (~flagged_either) & (pred_classes == benign_idx)
-        silently_other = (~flagged_either) & (pred_classes != benign_idx)
+        probs_fresh = rf_fresh.predict_proba(X_heldout)
+        max_probs_fresh = np.max(probs_fresh, axis=1)
+        pred_classes_fresh = rf_fresh.predict(X_heldout)
 
         elapsed = time.time() - t_start
-
-        # Check time limit (6 min = 360 s)
-        is_truncated = elapsed > 360.0
+        is_truncated = bool(elapsed > 360.0)
         if is_truncated:
             truncated_classes.append(cname)
-            log.warning(f"Class {cname} exceeded 6 min limit ({elapsed:.1f}s). Marked truncated.")
 
-        res_entry = {
+        # Evaluation at OP 1 (Original: 95th, 0.60)
+        f_ae_1 = (ae_scores_heldout > thresh_op1)
+        f_conf_1 = (max_probs_fresh < conf_op1)
+        f_either_1 = (f_ae_1 | f_conf_1)
+        s_benign_1 = (~f_either_1) & (pred_classes_fresh == benign_idx)
+        s_other_1 = (~f_either_1) & (pred_classes_fresh != benign_idx)
+
+        res_entry_op1 = {
             "class_name": cname,
             "n_test": int(n_heldout),
-            "flagged_unknown_by_ae": wilson_score_interval(int(flagged_ae.sum()), n_heldout),
-            "flagged_unknown_by_confidence": wilson_score_interval(int(flagged_conf.sum()), n_heldout),
-            "flagged_unknown_either": wilson_score_interval(int(flagged_either.sum()), n_heldout),
-            "silently_predicted_benign": wilson_score_interval(int(silently_benign.sum()), n_heldout),
-            "silently_predicted_other_attack": wilson_score_interval(int(silently_other.sum()), n_heldout),
+            "flagged_unknown_by_ae": wilson_score_interval(int(f_ae_1.sum()), n_heldout),
+            "flagged_unknown_by_confidence": wilson_score_interval(int(f_conf_1.sum()), n_heldout),
+            "flagged_unknown_either": wilson_score_interval(int(f_either_1.sum()), n_heldout),
+            "silently_predicted_benign": wilson_score_interval(int(s_benign_1.sum()), n_heldout),
+            "silently_predicted_other_attack": wilson_score_interval(int(s_other_1.sum()), n_heldout),
+            "missed_rate_percentage": round(float((~f_either_1).mean() * 100.0), 2),
             "elapsed_seconds": round(elapsed, 2),
             "truncated": is_truncated,
         }
+        leave_one_out_op1[cname] = res_entry_op1
 
-        # Write per-class json
+        # Lift calculation for OP 1 (paired bootstrap against known control indicator)
+        known_ind_1 = known_indicators_op1[cname]
+        lift_entry_op1 = bootstrap_difference_ci(f_either_1, known_ind_1, n_resamples=1000, seed=42)
+        lift_table_op1[cname] = lift_entry_op1
+
+        # Evaluation at OP 2 (FP-Budget: 97.5th, 0.40)
+        f_ae_2 = (ae_scores_heldout > thresh_op2)
+        f_conf_2 = (max_probs_fresh < conf_op2)
+        f_either_2 = (f_ae_2 | f_conf_2)
+        s_benign_2 = (~f_either_2) & (pred_classes_fresh == benign_idx)
+        s_other_2 = (~f_either_2) & (pred_classes_fresh != benign_idx)
+
+        res_entry_op2 = {
+            "class_name": cname,
+            "n_test": int(n_heldout),
+            "flagged_unknown_by_ae": wilson_score_interval(int(f_ae_2.sum()), n_heldout),
+            "flagged_unknown_by_confidence": wilson_score_interval(int(f_conf_2.sum()), n_heldout),
+            "flagged_unknown_either": wilson_score_interval(int(f_either_2.sum()), n_heldout),
+            "silently_predicted_benign": wilson_score_interval(int(s_benign_2.sum()), n_heldout),
+            "silently_predicted_other_attack": wilson_score_interval(int(s_other_2.sum()), n_heldout),
+            "missed_rate_percentage": round(float((~f_either_2).mean() * 100.0), 2),
+            "elapsed_seconds": round(elapsed, 2),
+            "truncated": is_truncated,
+        }
+        leave_one_out_op2[cname] = res_entry_op2
+
+        # Lift calculation for OP 2
+        known_ind_2 = known_indicators_op2[cname]
+        lift_entry_op2 = bootstrap_difference_ci(f_either_2, known_ind_2, n_resamples=1000, seed=42)
+        lift_table_op2[cname] = lift_entry_op2
+
+        # Save per-class JSON
+        per_class_data = {
+            "class_name": cname,
+            "n_test": int(n_heldout),
+            "operating_point_original": res_entry_op1,
+            "operating_point_fp_budget": res_entry_op2,
+            "lift_original": lift_entry_op1,
+            "lift_fp_budget": lift_entry_op2,
+            "auroc": auroc_results[cname],
+        }
         with open(class_json_path, "w", encoding="utf-8") as f:
-            json.dump(res_entry, f, indent=2)
+            json.dump(per_class_data, f, indent=2)
 
-        leave_one_out_results[cname] = res_entry
+        print(f"[{cname}] (n={n_heldout:,}):")
+        print(f"  OP1 Combined Flagged : {res_entry_op1['flagged_unknown_either']['formatted']}")
+        print(f"  OP1 Lift vs Control  : {lift_entry_op1['formatted']}")
+        print(f"  OP2 Combined Flagged : {res_entry_op2['flagged_unknown_either']['formatted']}")
+        print(f"  OP2 Lift vs Control  : {lift_entry_op2['formatted']}")
+        print(f"  AUROC (AE-only)      : {auroc_results[cname]['formatted']}")
 
-        print(f"[{cname}] (n={n_heldout:,}, time={elapsed:.2f}s):")
-        print(f"  Flagged Unknown (Either)    : {res_entry['flagged_unknown_either']['formatted']}")
-        print(f"  Flagged by AE               : {res_entry['flagged_unknown_by_ae']['formatted']}")
-        print(f"  Flagged by Uncertainty (<60): {res_entry['flagged_unknown_by_confidence']['formatted']}")
-        print(f"  Silently Predicted Benign   : {res_entry['silently_predicted_benign']['formatted']}")
-        print(f"  Silently Other Attack       : {res_entry['silently_predicted_other_attack']['formatted']}")
-
-    # 2c. Write summary JSON
+    # Assemble comprehensive openset_summary.json
     summary_data = {
-        "known_class_control": known_control,
-        "leave_one_class_out": leave_one_out_results,
+        "auroc": auroc_results,
+        "lift": lift_table_op1,
+        "lift_fp_budget": lift_table_op2,
+        "known_class_control": known_control_op1,
+        "known_class_control_fp_budget": known_control_op2,
+        "leave_one_class_out": leave_one_out_op1,
+        "leave_one_class_out_fp_budget": leave_one_out_op2,
+        "operating_point_original": {
+            "percentile": 95.0,
+            "threshold": thresh_op1,
+            "confidence_cutoff": conf_op1,
+            "test_benign_fpr": known_control_op1["Benign"]["flagged_unknown_either"]["percentage"],
+        },
+        "operating_point_fp_budget": {
+            "percentile": chosen_op["percentile"],
+            "threshold": thresh_op2,
+            "confidence_cutoff": conf_op2,
+            "val_benign_fpr": chosen_op["val_benign_fpr"],
+            "val_mean_attack_rate": chosen_op["val_mean_attack_rate"],
+            "test_benign_fpr": known_control_op2["Benign"]["flagged_unknown_either"]["percentage"],
+        },
+        "validation_grid_search": val_grid_data,
         "truncated_classes": truncated_classes,
     }
 
     summary_path = RESULTS_DIR / "openset_summary.json"
     with open(summary_path, "w", encoding="utf-8") as f:
         json.dump(summary_data, f, indent=2)
-
-    log.info(f"Open-set evaluation summary saved to {summary_path}")
-    print("\n[OPEN-SET EVALUATION] Complete.")
+    log.info(f"Updated openset_summary.json saved to {summary_path}")
+    print("\n[OPEN-SET EVALUATION FIXES COMPLETE]")
 
 
 if __name__ == "__main__":

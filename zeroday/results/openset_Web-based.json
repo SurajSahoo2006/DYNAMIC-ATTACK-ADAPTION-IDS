@@ -1,46 +1,120 @@
 {
   "class_name": "Web-based",
   "n_test": 672,
-  "flagged_unknown_by_ae": {
-    "x": 42,
-    "n": 672,
-    "percentage": 6.25,
-    "ci_lower": 4.66,
-    "ci_upper": 8.34,
-    "formatted": "42 of 672 (6.25% [4.66%, 8.34%])"
+  "operating_point_original": {
+    "class_name": "Web-based",
+    "n_test": 672,
+    "flagged_unknown_by_ae": {
+      "x": 42,
+      "n": 672,
+      "percentage": 6.25,
+      "ci_lower": 4.66,
+      "ci_upper": 8.34,
+      "formatted": "42 of 672 (6.25%) [4.66%, 8.34%]"
+    },
+    "flagged_unknown_by_confidence": {
+      "x": 335,
+      "n": 672,
+      "percentage": 49.85,
+      "ci_lower": 46.08,
+      "ci_upper": 53.62,
+      "formatted": "335 of 672 (49.85%) [46.08%, 53.62%]"
+    },
+    "flagged_unknown_either": {
+      "x": 367,
+      "n": 672,
+      "percentage": 54.61,
+      "ci_lower": 50.83,
+      "ci_upper": 58.34,
+      "formatted": "367 of 672 (54.61%) [50.83%, 58.34%]"
+    },
+    "silently_predicted_benign": {
+      "x": 0,
+      "n": 672,
+      "percentage": 0.0,
+      "ci_lower": 0.0,
+      "ci_upper": 0.57,
+      "formatted": "0 of 672 (0.00%) [0.00%, 0.57%]"
+    },
+    "silently_predicted_other_attack": {
+      "x": 305,
+      "n": 672,
+      "percentage": 45.39,
+      "ci_lower": 41.66,
+      "ci_upper": 49.17,
+      "formatted": "305 of 672 (45.39%) [41.66%, 49.17%]"
+    },
+    "missed_rate_percentage": 45.39,
+    "elapsed_seconds": 1.48,
+    "truncated": false
   },
-  "flagged_unknown_by_confidence": {
-    "x": 335,
-    "n": 672,
-    "percentage": 49.85,
-    "ci_lower": 46.08,
-    "ci_upper": 53.62,
-    "formatted": "335 of 672 (49.85% [46.08%, 53.62%])"
+  "operating_point_fp_budget": {
+    "class_name": "Web-based",
+    "n_test": 672,
+    "flagged_unknown_by_ae": {
+      "x": 27,
+      "n": 672,
+      "percentage": 4.02,
+      "ci_lower": 2.78,
+      "ci_upper": 5.78,
+      "formatted": "27 of 672 (4.02%) [2.78%, 5.78%]"
+    },
+    "flagged_unknown_by_confidence": {
+      "x": 130,
+      "n": 672,
+      "percentage": 19.35,
+      "ci_lower": 16.54,
+      "ci_upper": 22.5,
+      "formatted": "130 of 672 (19.35%) [16.54%, 22.50%]"
+    },
+    "flagged_unknown_either": {
+      "x": 157,
+      "n": 672,
+      "percentage": 23.36,
+      "ci_lower": 20.32,
+      "ci_upper": 26.71,
+      "formatted": "157 of 672 (23.36%) [20.32%, 26.71%]"
+    },
+    "silently_predicted_benign": {
+      "x": 9,
+      "n": 672,
+      "percentage": 1.34,
+      "ci_lower": 0.71,
+      "ci_upper": 2.53,
+      "formatted": "9 of 672 (1.34%) [0.71%, 2.53%]"
+    },
+    "silently_predicted_other_attack": {
+      "x": 506,
+      "n": 672,
+      "percentage": 75.3,
+      "ci_lower": 71.9,
+      "ci_upper": 78.41,
+      "formatted": "506 of 672 (75.30%) [71.90%, 78.41%]"
+    },
+    "missed_rate_percentage": 76.64,
+    "elapsed_seconds": 1.48,
+    "truncated": false
   },
-  "flagged_unknown_either": {
-    "x": 368,
-    "n": 672,
-    "percentage": 54.76,
-    "ci_lower": 50.98,
-    "ci_upper": 58.49,
-    "formatted": "368 of 672 (54.76% [50.98%, 58.49%])"
+  "lift_original": {
+    "heldout_rate": 54.61,
+    "known_rate": 43.9,
+    "lift": 10.71,
+    "ci_lower": 7.59,
+    "ci_upper": 13.84,
+    "formatted": "+10.71% [+7.59%, +13.84%]"
   },
-  "silently_predicted_benign": {
-    "x": 0,
-    "n": 672,
-    "percentage": 0.0,
-    "ci_lower": 0.0,
-    "ci_upper": 0.57,
-    "formatted": "0 of 672 (0.00% [0.00%, 0.57%])"
+  "lift_fp_budget": {
+    "heldout_rate": 23.36,
+    "known_rate": 17.71,
+    "lift": 5.65,
+    "ci_lower": 2.52,
+    "ci_upper": 8.93,
+    "formatted": "+5.65% [+2.52%, +8.93%]"
   },
-  "silently_predicted_other_attack": {
-    "x": 304,
-    "n": 672,
-    "percentage": 45.24,
-    "ci_lower": 41.51,
-    "ci_upper": 49.02,
-    "formatted": "304 of 672 (45.24% [41.51%, 49.02%])"
-  },
-  "elapsed_seconds": 3.27,
-  "truncated": false
+  "auroc": {
+    "auroc": 0.4637,
+    "ci_lower": 0.4351,
+    "ci_upper": 0.4904,
+    "formatted": "0.4637 [0.4351, 0.4904]"
+  }
 }

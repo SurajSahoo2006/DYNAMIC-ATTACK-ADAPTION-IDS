@@ -608,6 +608,11 @@ def check_phase10_zeroday() -> Tuple[List[str], List[str]]:
             for cname, cdata in leave_one_out.items():
                 if isinstance(cdata, dict) and cdata.get("truncated") is True:
                     warnings.append(f"WARN phase10_zeroday: Class '{cname}' has truncated=True")
+
+            if "lift" not in openset_data:
+                errors.append("Key 'lift' missing from zeroday/results/openset_summary.json")
+            if "auroc" not in openset_data:
+                errors.append("Key 'auroc' missing from zeroday/results/openset_summary.json")
         except Exception as e:
             errors.append(f"Error reading zeroday/results/openset_summary.json: {e}")
 

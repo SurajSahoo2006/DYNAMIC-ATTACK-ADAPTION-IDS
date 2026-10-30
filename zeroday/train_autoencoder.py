@@ -103,12 +103,13 @@ def main():
 
     # Filter Benign rows only (real rows, cap at 100,000)
     df_benign = df_train[df_train[label_col] == benign_idx].copy()
-    if len(df_benign) > 100_000:
+    raw_benign_count = len(df_benign)
+    if raw_benign_count > 100_000:
         df_benign = df_benign.sample(n=100_000, random_state=seed)
 
     X_train_benign = df_benign[selected_features].to_numpy(dtype=np.float32)
     n_train_benign = len(X_train_benign)
-    log.info(f"Extracted {n_train_benign:,} Benign training flows.")
+    log.info(f"Extracted {n_train_benign:,} Benign training flows (cap: 100,000).")
 
     # Apply scaler if dimensions match
     if scaler is not None and hasattr(scaler, "n_features_in_") and scaler.n_features_in_ == len(selected_features):
@@ -132,19 +133,20 @@ def main():
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
-    train_dataset = TensorDataset(torch.from_numpy(X_train_benign))
+    train_dataset = TensorDataset(torch.from_numpy(X_train_benign.copy()))
     train_loader = DataLoader(train_dataset, batch_size=512, shuffle=True)
 
-    val_tensor = torch.from_numpy(X_val_benign).to(device)
+    val_tensor = torch.from_numpy(X_val_benign.copy()).to(device)
 
-    max_epochs = 40
-    patience = 5
+    # Allow up to 150 epochs with early stopping (patience 10)
+    max_epochs = 150
+    patience = 10
     best_val_loss = float("inf")
     best_weights = None
     patience_counter = 0
     epochs_run = 0
 
-    log.info("Starting Autoencoder training on Benign flows (CPU) ...")
+    log.info(f"Starting Autoencoder training on Benign flows (CPU, max {max_epochs} epochs, patience {patience}) ...")
     for epoch in range(1, max_epochs + 1):
         epochs_run = epoch
         model.train()
@@ -170,9 +172,10 @@ def main():
             val_recon = model(val_tensor)
             val_loss = criterion(val_recon, val_tensor).item()
 
-        log.info(
-            f"Epoch {epoch:02d}/{max_epochs} - Train MSE: {avg_train_loss:.6f} | Val MSE: {val_loss:.6f}"
-        )
+        if epoch % 5 == 0 or epoch == 1 or val_loss < best_val_loss - 1e-6:
+            log.info(
+                f"Epoch {epoch:03d}/{max_epochs} - Train MSE: {avg_train_loss:.6f} | Val MSE: {val_loss:.6f}"
+            )
 
         if val_loss < best_val_loss - 1e-6:
             best_val_loss = val_loss
@@ -187,15 +190,18 @@ def main():
     if best_weights is not None:
         model.load_state_dict(best_weights)
 
-    # 1d & 1e. Compute Anomaly Score and Threshold (95th percentile on val Benign)
+    # 1d & 1e. Compute Anomaly Score and Thresholds (95th, 97.5th, 99th percentiles on val Benign)
     model.eval()
     with torch.no_grad():
         val_recon = model(val_tensor)
-        # per-flow mean squared reconstruction error across 19 features
         val_scores = ((val_tensor - val_recon) ** 2).mean(dim=1).cpu().numpy()
 
-    threshold = float(np.percentile(val_scores, 95))
-    log.info(f"Anomaly threshold (95th percentile of validation Benign scores): {threshold:.6f}")
+    thresh_95 = float(np.percentile(val_scores, 95.0))
+    thresh_97_5 = float(np.percentile(val_scores, 97.5))
+    thresh_99 = float(np.percentile(val_scores, 99.0))
+
+    threshold = thresh_95
+    log.info(f"Validation Benign thresholds: 95th={thresh_95:.6f}, 97.5th={thresh_97_5:.6f}, 99th={thresh_99:.6f}")
 
     # 1f. Save model and results
     model_path = MODELS_DIR / "autoencoder.pt"
@@ -203,6 +209,11 @@ def main():
         "state_dict": model.state_dict(),
         "in_features": len(selected_features),
         "threshold": threshold,
+        "thresholds_by_percentile": {
+            "95.0": thresh_95,
+            "97.5": thresh_97_5,
+            "99.0": thresh_99,
+        },
     }, model_path)
     log.info(f"Model saved to {model_path}")
 
@@ -210,7 +221,15 @@ def main():
         "epochs_run": int(epochs_run),
         "best_val_loss": round(float(best_val_loss), 6),
         "threshold": round(float(threshold), 6),
+        "thresholds_by_percentile": {
+            "95.0": round(float(thresh_95), 6),
+            "97.5": round(float(thresh_97_5), 6),
+            "99.0": round(float(thresh_99), 6),
+        },
         "n_train_benign": int(n_train_benign),
+        "train_cap": 100000,
+        "train_below_cap": bool(n_train_benign < 100000),
+        "train_cap_note": f"Real Benign training rows ({n_train_benign:,}) are fewer than the 100,000 cap.",
         "n_val_benign": int(n_val_benign),
         "seed": int(seed),
     }

@@ -1,46 +1,120 @@
 {
   "class_name": "Mirai",
   "n_test": 2960,
-  "flagged_unknown_by_ae": {
-    "x": 1001,
-    "n": 2960,
-    "percentage": 33.82,
-    "ci_lower": 32.14,
-    "ci_upper": 35.54,
-    "formatted": "1001 of 2960 (33.82% [32.14%, 35.54%])"
+  "operating_point_original": {
+    "class_name": "Mirai",
+    "n_test": 2960,
+    "flagged_unknown_by_ae": {
+      "x": 2189,
+      "n": 2960,
+      "percentage": 73.95,
+      "ci_lower": 72.34,
+      "ci_upper": 75.5,
+      "formatted": "2189 of 2960 (73.95%) [72.34%, 75.50%]"
+    },
+    "flagged_unknown_by_confidence": {
+      "x": 2777,
+      "n": 2960,
+      "percentage": 93.82,
+      "ci_lower": 92.89,
+      "ci_upper": 94.63,
+      "formatted": "2777 of 2960 (93.82%) [92.89%, 94.63%]"
+    },
+    "flagged_unknown_either": {
+      "x": 2894,
+      "n": 2960,
+      "percentage": 97.77,
+      "ci_lower": 97.17,
+      "ci_upper": 98.24,
+      "formatted": "2894 of 2960 (97.77%) [97.17%, 98.24%]"
+    },
+    "silently_predicted_benign": {
+      "x": 0,
+      "n": 2960,
+      "percentage": 0.0,
+      "ci_lower": 0.0,
+      "ci_upper": 0.13,
+      "formatted": "0 of 2960 (0.00%) [0.00%, 0.13%]"
+    },
+    "silently_predicted_other_attack": {
+      "x": 66,
+      "n": 2960,
+      "percentage": 2.23,
+      "ci_lower": 1.76,
+      "ci_upper": 2.83,
+      "formatted": "66 of 2960 (2.23%) [1.76%, 2.83%]"
+    },
+    "missed_rate_percentage": 2.23,
+    "elapsed_seconds": 1.5,
+    "truncated": false
   },
-  "flagged_unknown_by_confidence": {
-    "x": 2777,
-    "n": 2960,
-    "percentage": 93.82,
-    "ci_lower": 92.89,
-    "ci_upper": 94.63,
-    "formatted": "2777 of 2960 (93.82% [92.89%, 94.63%])"
+  "operating_point_fp_budget": {
+    "class_name": "Mirai",
+    "n_test": 2960,
+    "flagged_unknown_by_ae": {
+      "x": 2067,
+      "n": 2960,
+      "percentage": 69.83,
+      "ci_lower": 68.15,
+      "ci_upper": 71.46,
+      "formatted": "2067 of 2960 (69.83%) [68.15%, 71.46%]"
+    },
+    "flagged_unknown_by_confidence": {
+      "x": 147,
+      "n": 2960,
+      "percentage": 4.97,
+      "ci_lower": 4.24,
+      "ci_upper": 5.81,
+      "formatted": "147 of 2960 (4.97%) [4.24%, 5.81%]"
+    },
+    "flagged_unknown_either": {
+      "x": 2206,
+      "n": 2960,
+      "percentage": 74.53,
+      "ci_lower": 72.93,
+      "ci_upper": 76.06,
+      "formatted": "2206 of 2960 (74.53%) [72.93%, 76.06%]"
+    },
+    "silently_predicted_benign": {
+      "x": 0,
+      "n": 2960,
+      "percentage": 0.0,
+      "ci_lower": 0.0,
+      "ci_upper": 0.13,
+      "formatted": "0 of 2960 (0.00%) [0.00%, 0.13%]"
+    },
+    "silently_predicted_other_attack": {
+      "x": 754,
+      "n": 2960,
+      "percentage": 25.47,
+      "ci_lower": 23.94,
+      "ci_upper": 27.07,
+      "formatted": "754 of 2960 (25.47%) [23.94%, 27.07%]"
+    },
+    "missed_rate_percentage": 25.47,
+    "elapsed_seconds": 1.5,
+    "truncated": false
   },
-  "flagged_unknown_either": {
-    "x": 2828,
-    "n": 2960,
-    "percentage": 95.54,
-    "ci_lower": 94.74,
-    "ci_upper": 96.23,
-    "formatted": "2828 of 2960 (95.54% [94.74%, 96.23%])"
+  "lift_original": {
+    "heldout_rate": 97.77,
+    "known_rate": 74.39,
+    "lift": 23.38,
+    "ci_lower": 21.82,
+    "ci_upper": 24.8,
+    "formatted": "+23.38% [+21.82%, +24.80%]"
   },
-  "silently_predicted_benign": {
-    "x": 0,
-    "n": 2960,
-    "percentage": 0.0,
-    "ci_lower": 0.0,
-    "ci_upper": 0.13,
-    "formatted": "0 of 2960 (0.00% [0.00%, 0.13%])"
+  "lift_fp_budget": {
+    "heldout_rate": 74.53,
+    "known_rate": 69.83,
+    "lift": 4.7,
+    "ci_lower": 3.89,
+    "ci_upper": 5.47,
+    "formatted": "+4.70% [+3.89%, +5.47%]"
   },
-  "silently_predicted_other_attack": {
-    "x": 132,
-    "n": 2960,
-    "percentage": 4.46,
-    "ci_lower": 3.77,
-    "ci_upper": 5.26,
-    "formatted": "132 of 2960 (4.46% [3.77%, 5.26%])"
-  },
-  "elapsed_seconds": 3.61,
-  "truncated": false
+  "auroc": {
+    "auroc": 0.9502,
+    "ci_lower": 0.9436,
+    "ci_upper": 0.9571,
+    "formatted": "0.9502 [0.9436, 0.9571]"
+  }
 }

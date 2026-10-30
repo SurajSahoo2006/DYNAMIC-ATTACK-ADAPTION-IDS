@@ -4,8 +4,10 @@ data/
 # Model binaries (large binary weights)
 models/*.joblib
 models/*.pt
+!zeroday/models/autoencoder.pt
 *.joblib
 *.pt
+!zeroday/models/autoencoder.pt
 
 
 # Python
