@@ -376,7 +376,7 @@ def check_requirements_completeness() -> List[str]:
         "models", "ingest", "preprocess", "xai", "adversarial", "alerts", "orchestrator",
         "config", "predict", "tools", "__future__", "dataclasses", "gc", "uuid", "experiments",
         "run_phase3_llm", "scapy", "concurrent", "marl", "export", "dashboard", "config_marl",
-        "io", "base64", "tempfile", "urllib", "subprocess", "drift", "federated", "copy", "zeroday", "edge", "platform",
+        "io", "base64", "tempfile", "urllib", "subprocess", "drift", "federated", "copy", "zeroday", "edge", "platform", "threading",
     }
 
     missing = []
@@ -635,6 +635,7 @@ def check_phase11_edge() -> Tuple[List[str], List[str]]:
     CHECK 14 - phase11_edge_check:
     - FAIL if edge/results/baseline.json or edge/results/final_comparison.json is missing.
     - FAIL if any latency value is not positive in baseline.json, final_comparison.json, or variant JSONs.
+    - FAIL if any peak_rss_mb or load_rss_mb is 0 or missing in baseline.json, final_comparison.json, or variant JSONs.
     - WARN if the chosen variant is identical to the baseline.
     - Recompute percentages in phase11_summary.md from JSON (within 0.15% tolerance).
     """
@@ -656,11 +657,21 @@ def check_phase11_edge() -> Tuple[List[str], List[str]]:
     try:
         with open(base_path, "r", encoding="utf-8") as f:
             base_data = json.load(f)
+
+        # Check latency values
         lat_base = base_data.get("latency_per_flow_ms", {})
         for k in ["median_ms", "p95_ms", "min_ms", "max_ms"]:
             val = lat_base.get(k, 0)
             if not isinstance(val, (int, float)) or val <= 0:
                 errors.append(f"baseline.json latency '{k}' is not positive: {val}")
+
+        # Check RSS values
+        for rk in ["load_rss_mb", "peak_rss_mb"]:
+            rval = base_data.get(rk)
+            if rval is None:
+                errors.append(f"baseline.json is missing '{rk}'")
+            elif not isinstance(rval, (int, float)) or rval <= 0:
+                errors.append(f"baseline.json '{rk}' is not positive: {rval}")
     except Exception as e:
         errors.append(f"Error reading edge/results/baseline.json: {e}")
 
@@ -677,6 +688,13 @@ def check_phase11_edge() -> Tuple[List[str], List[str]]:
             lat = ev.get("latency_p95_ms", 0)
             if not isinstance(lat, (int, float)) or lat <= 0:
                 errors.append(f"final_comparison.json variant '{name}' latency_p95_ms is not positive: {lat}")
+
+            for rk in ["load_rss_mb", "peak_rss_mb"]:
+                rval = ev.get(rk)
+                if rval is None:
+                    errors.append(f"final_comparison.json variant '{name}' is missing '{rk}'")
+                elif not isinstance(rval, (int, float)) or rval <= 0:
+                    errors.append(f"final_comparison.json variant '{name}' '{rk}' is not positive: {rval}")
     except Exception as e:
         errors.append(f"Error reading edge/results/final_comparison.json: {e}")
 
@@ -685,11 +703,19 @@ def check_phase11_edge() -> Tuple[List[str], List[str]]:
         try:
             with open(vf, "r", encoding="utf-8") as f:
                 vdata = json.load(f)
+
             lat_v = vdata.get("latency_per_flow_ms", {})
             for k in ["median_ms", "p95_ms", "min_ms", "max_ms"]:
                 val = lat_v.get(k, 0)
                 if not isinstance(val, (int, float)) or val <= 0:
                     errors.append(f"{vf.name} latency '{k}' is not positive: {val}")
+
+            for rk in ["load_rss_mb", "peak_rss_mb"]:
+                rval = vdata.get(rk)
+                if rval is None:
+                    errors.append(f"{vf.name} is missing '{rk}'")
+                elif not isinstance(rval, (int, float)) or rval <= 0:
+                    errors.append(f"{vf.name} '{rk}' is not positive: {rval}")
         except Exception as e:
             errors.append(f"Error reading {vf.name}: {e}")
 

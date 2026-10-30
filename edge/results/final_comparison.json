@@ -1,13 +1,15 @@
 {
   "chosen_variant_name": "v1_rf_25",
-  "chosen_variant_selection_reason": "Smallest compressed size (6.84 MB) with validation macro F1 (0.8087) within 1.0% of baseline (0.8116)",
+  "chosen_variant_selection_reason": "Smallest compressed size (6.7 MB) with validation macro F1 (0.8087) within 1.0% of baseline (0.8116)",
   "test_evaluations": {
     "baseline": {
       "name": "Baseline (B2 Ensemble)",
       "size_mb_uncompressed": 204.84,
-      "size_mb_compressed": 41.55,
-      "latency_p95_ms": 27.825,
-      "throughput_fps": 13402.44,
+      "size_mb_compressed": 41.47,
+      "latency_p95_ms": 37.755,
+      "throughput_fps": 5328.47,
+      "load_rss_mb": 397.32,
+      "peak_rss_mb": 397.32,
       "test_accuracy": 0.9542,
       "test_accuracy_wilson_ci": [
         0.9516,
@@ -18,9 +20,11 @@
     "chosen_variant": {
       "name": "v1_rf_25",
       "size_mb_uncompressed": 30.49,
-      "size_mb_compressed": 6.84,
-      "latency_p95_ms": 6.884,
-      "throughput_fps": 25314.85,
+      "size_mb_compressed": 6.7,
+      "latency_p95_ms": 7.701,
+      "throughput_fps": 9667.73,
+      "load_rss_mb": 211.47,
+      "peak_rss_mb": 215.32,
       "test_accuracy": 0.9538,
       "test_accuracy_wilson_ci": [
         0.9512,
@@ -37,8 +41,10 @@
       "name": "v5_combined",
       "size_mb_uncompressed": 104.77,
       "size_mb_compressed": 21.19,
-      "latency_p95_ms": 16.487,
-      "throughput_fps": 22861.38,
+      "latency_p95_ms": 19.065,
+      "throughput_fps": 10315.56,
+      "load_rss_mb": 287.83,
+      "peak_rss_mb": 296.71,
       "test_accuracy": 0.9521,
       "test_accuracy_wilson_ci": [
         0.9495,
@@ -77,5 +83,34 @@
       "chosen_f1": 0.5728,
       "f1_difference": 0.0027
     }
-  ]
+  ],
+  "baseline_reconciliation": {
+    "phase3_manifest": {
+      "model": "Phase 3 Weighted Ensemble (rf_8class_baseline 0.20 + xgb_8class_baseline 0.80)",
+      "test_file": "data/processed/test.parquet",
+      "test_rows": 26292,
+      "manifest_test_accuracy": 0.9553,
+      "manifest_test_macro_f1": 0.8766,
+      "reproduced_test_accuracy": 0.9553,
+      "reproduced_test_macro_f1": 0.8766,
+      "reproduction_difference": 0.0,
+      "reproduced_exact": true
+    },
+    "phase9_centralized": {
+      "model": "Centralized Random Forest Only (rf_8class_b2.joblib, 200 trees, no XGBoost)",
+      "test_file": "data/processed/test.parquet",
+      "test_rows": 26292,
+      "test_accuracy": 0.952343,
+      "test_macro_f1": 0.869726
+    },
+    "phase11_baseline": {
+      "model": "Phase 3 B2 Ensemble (rf_8class_b2.joblib 0.60 + xgb_8class_b2.joblib 0.40)",
+      "test_file": "data/processed/test.parquet",
+      "test_rows": 26292,
+      "test_accuracy": 0.9542,
+      "test_macro_f1": 0.8728,
+      "difference_vs_phase3_manifest": -0.0011,
+      "verified_cause": "Different model version and ensemble weighting: Phase 3 manifest records the SMOTE-trained baseline ensemble with weights RF 0.20 + XGBoost 0.80 (models/rf_8class_baseline.joblib, models/xgb_8class_baseline.joblib), which reproduces the manifest accuracy of 0.9553 and macro F1 of 0.8766 exactly. Phase 11 benchmarks the B2 model version trained without SMOTE with balanced class weighting (models/rf_8class_b2.joblib, models/xgb_8class_b2.joblib) wired with weights RF 0.60 + XGBoost 0.40, yielding 0.9542 accuracy (-0.0011 difference)."
+    }
+  }
 }

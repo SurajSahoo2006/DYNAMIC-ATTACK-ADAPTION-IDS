@@ -3,7 +3,8 @@ edge/benchmark.py
 =================
 Phase 11 Edge Compression and Latency Benchmark.
 Measures model footprint (uncompressed and compressed), per-flow latency,
-throughput, and peak memory under strict single-thread CPU execution.
+throughput, and true resident memory (psutil RSS) under single-thread execution.
+Supports running variants in isolated fresh subprocesses.
 """
 
 from __future__ import annotations
@@ -16,12 +17,14 @@ os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 
+import argparse
 import copy
 import gc
 import json
 import logging
 import platform
 import tempfile
+import threading
 import time
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
@@ -47,14 +50,15 @@ from models.load_validation import load_validation_data
 RESULTS_DIR = PROJECT_ROOT / "edge" / "results"
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
+EDGE_MODELS_DIR = PROJECT_ROOT / "edge" / "models"
+EDGE_MODELS_DIR.mkdir(parents=True, exist_ok=True)
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger(__name__)
 
 
 def get_environment_info() -> Dict[str, Any]:
-    """
-    Returns environment metadata without machine-specific or personal identifiers
-    (no username, no hostname).
-    """
+    """Returns environment metadata without machine-specific or personal identifiers."""
     import sklearn
     import xgboost
     import torch
@@ -120,6 +124,8 @@ def benchmark(
     model_files: List[Any],
     X_val: Optional[Union[np.ndarray, pd.DataFrame]] = None,
     y_val: Optional[np.ndarray] = None,
+    initial_rss_mb: Optional[float] = None,
+    load_rss_mb: Optional[float] = None,
     n_runs: int = 5,
     warmup_flows: int = 50,
     eval_flows: int = 500,
@@ -127,24 +133,15 @@ def benchmark(
 ) -> Dict[str, Any]:
     """
     Reusable benchmark function used by every variant.
-
-    Parameters
-    ----------
-    predict_fn : callable taking a 2D numpy array and returning predicted labels or probabilities
-    X : test inputs (2,000 real scaled test rows, 19 features)
-    model_files : list of model files or model objects to measure size on disk
-    X_val : optional validation features for accuracy/macro F1
-    y_val : optional validation true labels
-    n_runs : number of repeated runs (default 5)
-    warmup_flows : warm-up flows before timing (default 50)
-    eval_flows : number of flows timed per run (default 500)
-    throughput_batch : batch size for throughput measurement (default 1000)
-
-    Returns
-    -------
-    dict with environment, size, latency (median, p95, min-max), throughput, peak memory,
+    Measures size, per-flow latency, throughput, peak resident memory (psutil RSS),
     and validation metrics.
     """
+    proc = psutil.Process()
+    if initial_rss_mb is None:
+        initial_rss_mb = round(proc.memory_info().rss / (1024 * 1024), 2)
+    if load_rss_mb is None:
+        load_rss_mb = round(proc.memory_info().rss / (1024 * 1024), 2)
+
     X_np = X.to_numpy(dtype=np.float32) if hasattr(X, "to_numpy") else np.asarray(X, dtype=np.float32)
 
     # 1. Size on disk
@@ -188,9 +185,26 @@ def benchmark(
         "runs": per_flow_runs,
     }
 
-    # 3. Throughput (batch size 1,000, 5 runs)
+    # 3. Throughput and Peak Resident Memory (RSS sampled every 5 ms during batch prediction)
     throughput_runs = []
     X_batch = X_np[:throughput_batch]
+
+    stop_event = threading.Event()
+    peak_rss_holder = [proc.memory_info().rss]
+
+    def rss_sampler():
+        while not stop_event.is_set():
+            try:
+                curr_rss = proc.memory_info().rss
+                if curr_rss > peak_rss_holder[0]:
+                    peak_rss_holder[0] = curr_rss
+            except Exception:
+                pass
+            time.sleep(0.005)
+
+    sampler_thread = threading.Thread(target=rss_sampler, daemon=True)
+    sampler_thread.start()
+
     for r in range(n_runs):
         t0 = time.perf_counter()
         _ = predict_fn(X_batch)
@@ -198,6 +212,27 @@ def benchmark(
         elapsed = t1 - t0
         fps = throughput_batch / elapsed if elapsed > 0 else 0.0
         throughput_runs.append(round(fps, 2))
+
+    stop_event.set()
+    sampler_thread.join(timeout=1.0)
+
+    # Final check of peak RSS
+    final_rss = proc.memory_info().rss
+    if final_rss > peak_rss_holder[0]:
+        peak_rss_holder[0] = final_rss
+
+    raw_peak_mb = round(peak_rss_holder[0] / (1024 * 1024), 2)
+    peak_rss_mb = max(load_rss_mb, raw_peak_mb)
+
+    # Verify memory values are non-zero
+    if load_rss_mb <= 0:
+        log.error(f"ERROR: load_rss_mb is not positive ({load_rss_mb} MB)!")
+        raise ValueError(f"ERROR: load_rss_mb is not positive ({load_rss_mb} MB)!")
+    if peak_rss_mb <= 0:
+        log.error(f"ERROR: peak_rss_mb is not positive ({peak_rss_mb} MB)!")
+        raise ValueError(f"ERROR: peak_rss_mb is not positive ({peak_rss_mb} MB)!")
+
+    peak_delta_mb = round(max(0.0, peak_rss_mb - initial_rss_mb), 2)
 
     throughput_summary = {
         "median_fps": round(float(np.median(throughput_runs)), 2),
@@ -207,15 +242,7 @@ def benchmark(
         "runs": throughput_runs,
     }
 
-    # 4. Peak memory: resident memory delta while predicting batch of 1,000
-    process = psutil.Process(os.getpid())
-    gc.collect()
-    rss_before = process.memory_info().rss
-    _ = predict_fn(X_batch)
-    rss_after = process.memory_info().rss
-    mem_delta_mb = round(max(0.0, (rss_after - rss_before) / (1024 * 1024)), 4)
-
-    # 5. Validation evaluation if provided
+    # 4. Validation evaluation if provided
     val_accuracy = None
     val_macro_f1 = None
     if X_val is not None and y_val is not None:
@@ -234,7 +261,10 @@ def benchmark(
         "size_mb_compressed": size_comp,
         "latency_per_flow_ms": latency_summary,
         "throughput_fps": throughput_summary,
-        "peak_memory_delta_mb": mem_delta_mb,
+        "initial_rss_mb": initial_rss_mb,
+        "load_rss_mb": load_rss_mb,
+        "peak_rss_mb": peak_rss_mb,
+        "peak_memory_delta_mb": peak_delta_mb,
     }
     if val_accuracy is not None:
         results["validation_accuracy"] = val_accuracy
@@ -243,83 +273,148 @@ def benchmark(
     return results
 
 
-def run_baseline_benchmark() -> Dict[str, Any]:
-    """Runs baseline footprint and latency benchmark for Phase 3 B2 ensemble."""
-    print("=" * 70)
-    print("PHASE 11: BASELINE FOOTPRINT AND LATENCY BENCHMARK")
-    print("=" * 70)
+def run_single_variant_process(
+    variant_name: str,
+    rf_path: str,
+    xgb_path: str,
+    out_json_path: str,
+    category: str = "Variant",
+    description: str = "",
+    float32_cast: bool = False,
+    extra_fields: Dict[str, Any] = None,
+) -> Dict[str, Any]:
+    """
+    Executes a complete benchmark in the current process (designed to be invoked
+    in a fresh subprocess for each variant).
+    """
+    proc = psutil.Process()
 
-    # 1. Load test data: 2,000 real scaled test rows (seed 42), 19 features
-    print("[1/4] Loading test inputs (2,000 samples, seed 42) ...")
+    # 1. Load test data inputs first (small memory footprint ~150 KB)
     with open(SELECTED_FEATURES_PATH, "r", encoding="utf-8") as f:
         selected_features = json.load(f)
 
     df_test = pd.read_parquet(TEST_PARQUET)
     df_2k = df_test[selected_features].sample(n=2000, random_state=RANDOM_SEED).reset_index(drop=True)
     X_2k = df_2k.to_numpy(dtype=np.float32)
-    print(f"  Test samples shape: {X_2k.shape}")
 
-    # 2. Load validation data
-    print("[2/4] Loading validation set for macro F1 and accuracy ...")
-    X_val, y_val_8, _ = load_validation_data()
-    X_val_np = X_val[selected_features].to_numpy(dtype=np.float32)
-    print(f"  Validation samples shape: {X_val_np.shape}")
+    # Record initial resident memory before model loading
+    initial_rss_mb = round(proc.memory_info().rss / (1024 * 1024), 2)
 
-    # 3. Load baseline B2 models
-    print("[3/4] Loading baseline Phase 3 B2 ensemble (RF 0.60 + XGBoost 0.40) ...")
-    rf_path = MODELS_DIR / "rf_8class_b2.joblib"
-    xgb_path = MODELS_DIR / "xgb_8class_b2.joblib"
+    # 2. Load models into memory
     rf_model = joblib.load(rf_path)
     xgb_model = joblib.load(xgb_path)
-
-    # Single-thread enforcement
     rf_model.n_jobs = 1
     xgb_model.set_params(n_jobs=1)
 
-    model_files = [rf_path, xgb_path]
+    # Record resident memory after model loading
+    load_rss_mb = round(proc.memory_info().rss / (1024 * 1024), 2)
 
-    # Predict function
-    def baseline_predict_fn(x: np.ndarray) -> np.ndarray:
-        p_rf = rf_model.predict_proba(x)
-        p_xgb = xgb_model.predict_proba(x)
+    # 3. Define predict_fn
+    def predict_fn(x: np.ndarray) -> np.ndarray:
+        if float32_cast:
+            x_in = np.asarray(x, dtype=np.float32)
+        else:
+            x_in = x
+        p_rf = rf_model.predict_proba(x_in)
+        p_xgb = xgb_model.predict_proba(x_in)
         probs = 0.60 * p_rf + 0.40 * p_xgb
         return np.argmax(probs, axis=1)
 
-    # 4. Run benchmark
-    print("[4/4] Executing benchmark suite ...")
+    # 4. Execute latency, throughput, and memory benchmark
+    model_files = [Path(rf_path), Path(xgb_path)]
     bench_res = benchmark(
-        predict_fn=baseline_predict_fn,
+        predict_fn=predict_fn,
         X=X_2k,
         model_files=model_files,
-        X_val=X_val_np,
-        y_val=y_val_8,
+        initial_rss_mb=initial_rss_mb,
+        load_rss_mb=load_rss_mb,
     )
 
-    baseline_output = {
-        "variant": "baseline",
-        "description": "Phase 3 B2 Ensemble (RF 0.60 + XGBoost 0.40, 19 features)",
-        "model_files": [
-            "models/rf_8class_b2.joblib",
-            "models/xgb_8class_b2.joblib",
-        ],
+    # 5. Load validation data and evaluate accuracy / macro F1 AFTER memory benchmarks
+    X_val_df, y_val_8, _ = load_validation_data()
+    X_val_np = X_val_df[selected_features].to_numpy(dtype=np.float32)
+    val_preds_raw = predict_fn(X_val_np)
+    val_preds = np.argmax(val_preds_raw, axis=1) if val_preds_raw.ndim > 1 else val_preds_raw
+    val_acc = round(float(accuracy_score(y_val_8, val_preds)), 4)
+    val_f1 = round(float(f1_score(y_val_8, val_preds, average="macro", zero_division=0)), 4)
+
+    bench_res["validation_accuracy"] = val_acc
+    bench_res["validation_macro_f1"] = val_f1
+
+    record = {
+        "variant": variant_name,
+        "category": category,
+        "description": description,
+        "model_files": [str(Path(rf_path).relative_to(PROJECT_ROOT)).replace("\\", "/"),
+                        str(Path(xgb_path).relative_to(PROJECT_ROOT)).replace("\\", "/")],
         **bench_res,
     }
+    if extra_fields:
+        record.update(extra_fields)
 
+    out_p = Path(out_json_path)
+    out_p.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_p, "w", encoding="utf-8") as f:
+        json.dump(record, f, indent=2)
+
+    log.info(
+        f"[DONE] {variant_name}: size={record['size_mb_uncompressed']}MB (comp: {record['size_mb_compressed']}MB), "
+        f"lat_p95={record['latency_per_flow_ms']['p95_ms']:.2f}ms, "
+        f"load_rss={record['load_rss_mb']:.2f}MB, peak_rss={record['peak_rss_mb']:.2f}MB, "
+        f"val_f1={record.get('validation_macro_f1', 0):.4f}"
+    )
+    return record
+
+
+def run_baseline_benchmark() -> Dict[str, Any]:
+    """Runs baseline footprint and latency benchmark for Phase 3 B2 ensemble."""
+    rf_path = MODELS_DIR / "rf_8class_b2.joblib"
+    xgb_path = MODELS_DIR / "xgb_8class_b2.joblib"
     out_file = RESULTS_DIR / "baseline.json"
-    with open(out_file, "w", encoding="utf-8") as f:
-        json.dump(baseline_output, f, indent=2)
 
-    print(f"\n[DONE] Baseline benchmark saved to {out_file}")
-    print(f"  Size uncompressed: {baseline_output['size_mb_uncompressed']} MB")
-    print(f"  Size compressed:   {baseline_output['size_mb_compressed']} MB")
-    print(f"  Per-flow latency:  median={baseline_output['latency_per_flow_ms']['median_ms']:.2f} ms | p95={baseline_output['latency_per_flow_ms']['p95_ms']:.2f} ms")
-    print(f"  Throughput:        {baseline_output['throughput_fps']['median_fps']:.1f} flows/sec")
-    print(f"  Peak memory delta: {baseline_output['peak_memory_delta_mb']:.4f} MB")
-    print(f"  Val accuracy:      {baseline_output['validation_accuracy']:.4f}")
-    print(f"  Val macro F1:      {baseline_output['validation_macro_f1']:.4f}")
+    return run_single_variant_process(
+        variant_name="baseline",
+        rf_path=str(rf_path),
+        xgb_path=str(xgb_path),
+        out_json_path=str(out_file),
+        category="Reference",
+        description="Phase 3 B2 Ensemble (RF 0.60 + XGBoost 0.40, 19 features)",
+    )
 
-    return baseline_output
+
+def main():
+    parser = argparse.ArgumentParser(description="Edge Benchmark Module")
+    parser.add_argument("--variant", default="baseline", help="Variant name")
+    parser.add_argument("--rf-path", default=None, help="Path to RF joblib file")
+    parser.add_argument("--xgb-path", default=None, help="Path to XGBoost joblib file")
+    parser.add_argument("--out-json", default=None, help="Path to save output JSON")
+    parser.add_argument("--category", default="Variant", help="Variant category")
+    parser.add_argument("--description", default="", help="Variant description")
+    parser.add_argument("--float32", action="store_true", help="Cast input to float32")
+    parser.add_argument("--extra-json", default=None, help="Extra JSON key-values to include")
+    args = parser.parse_args()
+
+    if args.variant == "baseline" and args.rf_path is None:
+        run_baseline_benchmark()
+        return
+
+    rf_p = args.rf_path or str(MODELS_DIR / "rf_8class_b2.joblib")
+    xgb_p = args.xgb_path or str(MODELS_DIR / "xgb_8class_b2.joblib")
+    out_p = args.out_json or str(RESULTS_DIR / f"variant_{args.variant}.json")
+
+    extra = json.loads(args.extra_json) if args.extra_json else None
+
+    run_single_variant_process(
+        variant_name=args.variant,
+        rf_path=rf_p,
+        xgb_path=xgb_p,
+        out_json_path=out_p,
+        category=args.category,
+        description=args.description,
+        float32_cast=args.float32,
+        extra_fields=extra,
+    )
 
 
 if __name__ == "__main__":
-    run_baseline_benchmark()
+    main()

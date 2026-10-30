@@ -2,6 +2,10 @@
   "variant": "v1_rf_50",
   "category": "V1",
   "description": "RF truncated to 50 trees + Baseline XGBoost",
+  "model_files": [
+    "edge/models/rf_v1_50.joblib",
+    "models/xgb_8class_b2.joblib"
+  ],
   "environment": {
     "cpu_model": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",
     "machine": "AMD64",
@@ -20,71 +24,74 @@
     }
   },
   "size_mb_uncompressed": 57.09,
-  "size_mb_compressed": 11.99,
+  "size_mb_compressed": 11.98,
   "latency_per_flow_ms": {
-    "median_ms": 4.218,
-    "p95_ms": 9.906,
-    "min_ms": 4.201,
-    "max_ms": 4.238,
+    "median_ms": 10.353,
+    "p95_ms": 12.073,
+    "min_ms": 10.344,
+    "max_ms": 10.435,
     "range_ms": [
-      4.201,
-      4.238
+      10.344,
+      10.435
     ],
     "runs": [
       {
         "run": 1,
-        "median_ms": 4.238,
-        "p95_ms": 9.934,
-        "min_ms": 3.878,
-        "max_ms": 11.327
+        "median_ms": 10.368,
+        "p95_ms": 14.98,
+        "min_ms": 5.534,
+        "max_ms": 42.783
       },
       {
         "run": 2,
-        "median_ms": 4.201,
-        "p95_ms": 9.906,
-        "min_ms": 3.839,
-        "max_ms": 11.162
+        "median_ms": 10.344,
+        "p95_ms": 11.253,
+        "min_ms": 6.179,
+        "max_ms": 16.311
       },
       {
         "run": 3,
-        "median_ms": 4.218,
-        "p95_ms": 9.936,
-        "min_ms": 3.746,
-        "max_ms": 91.718
+        "median_ms": 10.349,
+        "p95_ms": 12.073,
+        "min_ms": 6.995,
+        "max_ms": 17.138
       },
       {
         "run": 4,
-        "median_ms": 4.22,
-        "p95_ms": 9.844,
-        "min_ms": 3.912,
-        "max_ms": 11.957
+        "median_ms": 10.353,
+        "p95_ms": 15.142,
+        "min_ms": 5.64,
+        "max_ms": 17.344
       },
       {
         "run": 5,
-        "median_ms": 4.203,
-        "p95_ms": 9.76,
-        "min_ms": 3.836,
-        "max_ms": 13.771
+        "median_ms": 10.435,
+        "p95_ms": 11.789,
+        "min_ms": 5.832,
+        "max_ms": 15.278
       }
     ]
   },
   "throughput_fps": {
-    "median_fps": 15796.02,
-    "min_fps": 13567.34,
-    "max_fps": 23143.33,
+    "median_fps": 8732.16,
+    "min_fps": 8042.0,
+    "max_fps": 8757.72,
     "range_fps": [
-      13567.34,
-      23143.33
+      8042.0,
+      8757.72
     ],
     "runs": [
-      14256.37,
-      13567.34,
-      15796.02,
-      23143.33,
-      22890.16
+      8435.53,
+      8757.72,
+      8042.0,
+      8755.31,
+      8732.16
     ]
   },
-  "peak_memory_delta_mb": 0.0,
+  "initial_rss_mb": 158.78,
+  "load_rss_mb": 236.91,
+  "peak_rss_mb": 239.67,
+  "peak_memory_delta_mb": 80.89,
   "validation_accuracy": 0.9645,
   "validation_macro_f1": 0.8107,
   "rf_trees": 50,
