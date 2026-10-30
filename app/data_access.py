@@ -215,7 +215,7 @@ def load_downloadable_files() -> Dict[str, Path]:
     """Discovers available report, artifact, and data files for download."""
     candidates = [
         ("Final Report (Markdown)", PROJECT_ROOT / "reports" / "final_report.md"),
-        ("Phase 13 Summary (Markdown)", PROJECT_ROOT / "reports" / "phase13_summary.md"),
+        ("Integrated Pipeline Summary (Markdown)", PROJECT_ROOT / "reports" / "phase13_summary.md"),
         ("Model Manifest (JSON)", PROJECT_ROOT / "artifacts" / "model_manifest.json"),
         ("Integration Report (JSON)", PROJECT_ROOT / "ids_system" / "results" / "integration_report.json"),
     ]

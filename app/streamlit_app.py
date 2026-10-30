@@ -49,7 +49,7 @@ PAGE_DEFINITIONS = [
     ("Live Triage", "02", "Flow telemetry scoring, calibration, SHAP & LLM briefing"),
     ("Batch Analysis", "03", "Bulk CSV telemetry classification & MARL tactical defense"),
     ("Alert Log", "04", "Forensic audit ledger & SHA-256 cryptographic verification"),
-    ("Results", "05", "Empirical findings & validated metrics across Phases 4 through 12"),
+    ("Results", "05", "Empirical findings & validated metrics across subsystems"),
     ("Downloads", "06", "Technical summaries, manifests & processed datasets"),
 ]
 PAGE_NAMES = [p[0] for p in PAGE_DEFINITIONS]
@@ -139,7 +139,7 @@ def page_system_overview(pipeline: IDSPipeline):
                 "Component": name,
                 "Status": status_display,
                 "Required Artifact": details.get("file", "N/A"),
-                "Phase Generator Script": details.get("phase_script", "N/A"),
+                "Component Build Script": details.get("phase_script", "N/A"),
             })
         st.dataframe(pd.DataFrame(comp_rows), use_container_width=True, hide_index=True)
     except Exception as ex:
@@ -179,7 +179,7 @@ def page_system_overview(pipeline: IDSPipeline):
     if int_rep:
         m2000 = int_rep.get("metrics_2000_test", {})
         perf = int_rep.get("performance", {})
-        st.markdown("#### Phase 13 End-to-End Integrated Evaluation (2,000 Flows)")
+        st.markdown("#### End-to-End Integrated Evaluation (2,000 Flows)")
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("8-Class Accuracy", f"{m2000.get('accuracy', 'N/A')}")
         c2.metric("8-Class Macro F1", f"{m2000.get('macro_f1', 'N/A')}")
@@ -480,7 +480,7 @@ def page_alert_log(pipeline: IDSPipeline):
 
     log_source = st.selectbox(
         "Select Audit Ledger Source",
-        ["Live Production Log (logs/alerts_live.jsonl)", "Phase 5 Baseline Log (logs/alerts_phase5.jsonl)"],
+        ["Live Production Ledger (logs/alerts_live.jsonl)", "Baseline Audit Ledger (logs/alerts_phase5.jsonl)"],
     )
     src_key = "live" if "alerts_live" in log_source else "phase5"
     alerts = load_alerts(src_key)
@@ -535,7 +535,7 @@ def page_alert_log(pipeline: IDSPipeline):
                     else:
                         st.error(f"Audit Status: **FAIL**. Verification message: {msg}")
                 else:
-                    st.info("Phase 5 baseline log is static and verified during Phase 5 testing.")
+                    st.info("Baseline audit ledger is static and cryptographically verified.")
             except Exception as ex:
                 st.error(f"Verification audit failed: {ex}")
 
@@ -544,22 +544,22 @@ def page_alert_log(pipeline: IDSPipeline):
 # Page 5: Results & Empirical Evaluation
 # =====================================================================
 def page_results():
-    st.title("Empirical Results & Phase Benchmarks")
-    st.markdown("Examine empirical findings across experimental phases directly from underlying JSON evaluation records.")
+    st.title("Subsystem Empirical Results & Benchmarks")
+    st.markdown("Examine empirical findings across experimental subsystems directly from underlying JSON evaluation records.")
 
     tabs = st.tabs([
-        "Phase 4 (XAI & Robustness)",
-        "Phase 5-6 (MARL Defense)",
-        "Phase 8 (Concept Drift)",
-        "Phase 9 (Federated Learning)",
-        "Phase 10 (Zero-Day Detection)",
-        "Phase 11 (Edge Compression)",
-        "Phase 12 (Calibration & Openset)",
+        "XAI & Robustness",
+        "Tactical Defense (MARL)",
+        "Concept Drift & Adaptation",
+        "Federated Learning",
+        "Zero-Day Anomaly Detection",
+        "Edge Latency Optimization",
+        "Probability Calibration",
     ])
 
-    # Tab Phase 4
+    # Tab 1: XAI & Robustness
     with tabs[0]:
-        st.subheader("Phase 4: Explainable AI & Adversarial Robustness")
+        st.subheader("Explainable AI & Adversarial Robustness")
         xai_res = load_xai_results()
         adv_res = load_adversarial_results()
 
@@ -570,7 +570,7 @@ def page_results():
                 imp_df = pd.DataFrame(list(glob_imp.items()), columns=["Feature", "Mean |SHAP|"]).set_index("Feature")
                 st.bar_chart(imp_df.head(10))
         else:
-            st.warning("Not available - run Phase 4 first.")
+            st.warning("Artifacts not available - run robustness evaluation first.")
 
         if adv_res:
             st.markdown("#### Adversarial Evasion Matrix")
@@ -580,22 +580,22 @@ def page_results():
         with st.expander("Limitations & Scope Notes"):
             st.markdown(load_limitations(4))
 
-    # Tab Phase 5-6
+    # Tab 2: MARL Defense
     with tabs[1]:
-        st.subheader("Phase 5 & 6: Multi-Agent Tactical Defense (MARL)")
+        st.subheader("Multi-Agent Tactical Defense Response (MARL)")
         marl_res = load_marl_results()
         if marl_res:
             st.markdown("#### Objective Trade-Offs Across Reward Settings")
             st.json(marl_res)
         else:
-            st.warning("Not available - run Phase 5 first.")
+            st.warning("Artifacts not available - run tactical defense training first.")
 
         with st.expander("Limitations & Scope Notes"):
             st.markdown(load_limitations(5))
 
-    # Tab Phase 8
+    # Tab 3: Concept Drift
     with tabs[2]:
-        st.subheader("Phase 8: Concept Drift & Continuous Retraining")
+        st.subheader("Concept Drift Detection & Continuous Retraining")
         drift_res = load_drift_results()
         if drift_res:
             det = drift_res.get("detection", {})
@@ -608,27 +608,27 @@ def page_results():
                 st.markdown("#### Retraining Evaluation")
                 st.json(ret)
         else:
-            st.warning("Not available - run Phase 8 first.")
+            st.warning("Artifacts not available - run drift detection pipeline first.")
 
         with st.expander("Limitations & Scope Notes"):
             st.markdown(load_limitations(8))
 
-    # Tab Phase 9
+    # Tab 4: Federated Learning
     with tabs[3]:
-        st.subheader("Phase 9: Federated Learning & Non-IID Aggregation")
+        st.subheader("Federated Learning & Model Aggregation")
         fed_res = load_federated_results()
         if fed_res:
             st.markdown("#### Federated Model Comparison")
             st.json(fed_res.get("fedavg", {}))
         else:
-            st.warning("Not available - run Phase 9 first.")
+            st.warning("Artifacts not available - run federated simulation first.")
 
         with st.expander("Limitations & Scope Notes"):
             st.markdown(load_limitations(9))
 
-    # Tab Phase 10
+    # Tab 5: Zero-Day Anomaly Detection
     with tabs[4]:
-        st.subheader("Phase 10: Zero-Day Anomaly Detection (Autoencoder)")
+        st.subheader("Zero-Day Anomaly Detection (Autoencoder)")
         zd_res = load_zeroday_results()
         if zd_res:
             ae_tr = zd_res.get("ae_training", {})
@@ -639,14 +639,14 @@ def page_results():
                 st.markdown("#### Open-Set Evaluation Summary")
                 st.json(os_sum)
         else:
-            st.warning("Not available - run Phase 10 first.")
+            st.warning("Artifacts not available - run autoencoder training first.")
 
         with st.expander("Limitations & Scope Notes"):
             st.markdown(load_limitations(10))
 
-    # Tab Phase 11
+    # Tab 6: Edge Compression
     with tabs[5]:
-        st.subheader("Phase 11: Edge Compression & Latency Benchmarks")
+        st.subheader("Edge Compression & Latency Benchmarks")
         edge_res = load_edge_results()
         if edge_res:
             final_c = edge_res.get("final_comparison", {})
@@ -654,14 +654,14 @@ def page_results():
             st.write(f"Selection Reason: {final_c.get('chosen_variant_selection_reason')}")
             st.json(final_c.get("test_evaluations", {}))
         else:
-            st.warning("Not available - run Phase 11 first.")
+            st.warning("Artifacts not available - run compression benchmark first.")
 
         with st.expander("Limitations & Scope Notes"):
             st.markdown(load_limitations(11))
 
-    # Tab Phase 12
+    # Tab 7: Probability Calibration
     with tabs[6]:
-        st.subheader("Phase 12: Probability Calibration & Selective Prediction")
+        st.subheader("Probability Calibration & Selective Prediction")
         cal_res = load_calibration_results()
         if cal_res:
             fit_data = cal_res.get("fit", {})
@@ -672,7 +672,7 @@ def page_results():
                 st.markdown("#### Selective Prediction Comparison")
                 st.json(sel_data.get("comparison", {}))
         else:
-            st.warning("Not available - run Phase 12 first.")
+            st.warning("Artifacts not available - run calibration fitting first.")
 
         with st.expander("Limitations & Scope Notes"):
             st.markdown(load_limitations(12))

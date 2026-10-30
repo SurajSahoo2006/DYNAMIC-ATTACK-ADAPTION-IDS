@@ -14,9 +14,11 @@
     --text-secondary: #cbd5e1;
     --text-muted: #94a3b8;
     --accent-cyan: #38bdf8;
+    --accent-neon: #00f2fe;
     --accent-emerald: #10b981;
     --accent-amber: #f59e0b;
     --accent-rose: #f43f5e;
+    --glow-cyan-intense: 0 0 25px rgba(0, 242, 254, 0.65), inset 0 0 15px rgba(56, 189, 248, 0.15), 0 8px 30px rgba(0, 0, 0, 0.6);
 }
 
 /* Global resets for pure dark mode */
@@ -67,6 +69,12 @@ code, pre, [class*="stCode"] {
     border-radius: 12px;
     margin-bottom: 24px;
     box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.7);
+    transition: all 0.25s ease-in-out;
+}
+
+.soc-navbar:hover {
+    border-color: rgba(56, 189, 248, 0.4);
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.2), 0 10px 30px rgba(0, 0, 0, 0.8);
 }
 
 .soc-brand {
@@ -79,8 +87,8 @@ code, pre, [class*="stCode"] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 42px;
-    height: 42px;
+    width: 44px;
+    height: 44px;
     background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
     border: 1px solid #38bdf8;
     border-radius: 8px;
@@ -89,11 +97,11 @@ code, pre, [class*="stCode"] {
     font-size: 0.95rem;
     color: #ffffff !important;
     letter-spacing: 0.05em;
-    box-shadow: 0 0 15px rgba(2, 132, 199, 0.5);
+    box-shadow: 0 0 18px rgba(2, 132, 199, 0.6);
 }
 
 .soc-brand-title {
-    font-size: 1.2rem;
+    font-size: 1.25rem;
     font-weight: 800;
     letter-spacing: 0.04em;
     color: #ffffff !important;
@@ -151,21 +159,22 @@ div[data-testid="stPopover"] > button {
     border-radius: 8px !important;
     padding: 10px 22px !important;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
-    transition: all 0.2s ease !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 div[data-testid="stPopover"] > button:hover {
     background: #1e293b !important;
-    border-color: #38bdf8 !important;
+    border-color: #00f2fe !important;
     color: #ffffff !important;
-    box-shadow: 0 0 16px rgba(56, 189, 248, 0.4) !important;
+    box-shadow: 0 0 20px rgba(0, 242, 254, 0.5) !important;
+    transform: translateY(-2px);
 }
 
 div[data-testid="stPopoverBody"] {
     background: #0b1120 !important;
     border: 1px solid rgba(56, 189, 248, 0.4) !important;
     border-radius: 12px !important;
-    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.9), 0 0 20px rgba(56, 189, 248, 0.15) !important;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.9), 0 0 25px rgba(56, 189, 248, 0.2) !important;
     padding: 16px !important;
     min-width: 320px !important;
 }
@@ -187,9 +196,10 @@ div[data-testid="stPopoverBody"] .stButton > button {
 
 div[data-testid="stPopoverBody"] .stButton > button:hover {
     background: #1e293b !important;
-    border-color: #38bdf8 !important;
-    color: #38bdf8 !important;
+    border-color: #00f2fe !important;
+    color: #00f2fe !important;
     transform: translateX(4px);
+    box-shadow: 0 0 14px rgba(0, 242, 254, 0.3) !important;
 }
 
 /* Sidebar Customization */
@@ -218,14 +228,25 @@ section[data-testid="stSidebar"] div[data-testid="stRadio"] label span {
     font-size: 0.92rem !important;
 }
 
-/* Streamlit Metric Cards */
+/* =====================================================================
+   Streamlit Metric Cards with Glowing Border on Hover (e.g. RSS / Acc)
+   ===================================================================== */
 div[data-testid="stMetric"] {
     background: #0f172a !important;
-    border: 1px solid var(--border-subtle) !important;
+    border: 1px solid rgba(56, 189, 248, 0.25) !important;
     border-left: 4px solid var(--accent-cyan) !important;
     border-radius: 10px !important;
     padding: 16px 20px !important;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    cursor: pointer !important;
+}
+
+div[data-testid="stMetric"]:hover {
+    border-color: #00f2fe !important;
+    border-left: 4px solid #00f2fe !important;
+    box-shadow: var(--glow-cyan-intense) !important;
+    transform: translateY(-3px) scale(1.01) !important;
 }
 
 div[data-testid="stMetricLabel"] p {
@@ -235,22 +256,34 @@ div[data-testid="stMetricLabel"] p {
     text-transform: uppercase !important;
     letter-spacing: 0.08em !important;
     color: var(--text-muted) !important;
+    transition: color 0.2s ease !important;
+}
+
+div[data-testid="stMetric"]:hover div[data-testid="stMetricLabel"] p {
+    color: #38bdf8 !important;
 }
 
 div[data-testid="stMetricValue"] {
-    font-size: 1.8rem !important;
+    font-size: 1.85rem !important;
     font-weight: 800 !important;
     color: #ffffff !important;
     letter-spacing: -0.02em !important;
 }
 
-/* Dataframe containers - Fix pure dark theme */
+/* Dataframe containers - Pure dark theme with border glow on hover */
 div[data-testid="stDataFrame"],
 div[data-testid="stTable"] {
     background-color: #0f172a !important;
     border: 1px solid var(--border-subtle) !important;
     border-radius: 10px !important;
     overflow: hidden !important;
+    transition: all 0.25s ease !important;
+}
+
+div[data-testid="stDataFrame"]:hover,
+div[data-testid="stTable"]:hover {
+    border-color: rgba(56, 189, 248, 0.45) !important;
+    box-shadow: 0 0 18px rgba(56, 189, 248, 0.25) !important;
 }
 
 table {
@@ -292,12 +325,19 @@ td {
     color: var(--text-muted) !important;
     border: none !important;
     background: transparent !important;
+    transition: all 0.2s ease !important;
+}
+
+.stTabs [data-baseweb="tab"]:hover {
+    color: #f8fafc !important;
+    background: rgba(30, 41, 59, 0.6) !important;
 }
 
 .stTabs [aria-selected="true"] {
     background: #1e293b !important;
     color: #38bdf8 !important;
     border: 1px solid rgba(56, 189, 248, 0.4) !important;
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.2) !important;
 }
 
 /* Action Buttons */
@@ -311,10 +351,13 @@ td {
     border-radius: 8px !important;
     padding: 10px 24px !important;
     box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4) !important;
+    transition: all 0.25s ease !important;
 }
 
 .stButton > button[kind="primary"]:hover {
-    box-shadow: 0 0 20px rgba(56, 189, 248, 0.6) !important;
+    border-color: #00f2fe !important;
+    box-shadow: 0 0 24px rgba(0, 242, 254, 0.7) !important;
+    transform: translateY(-2px);
 }
 
 /* Threat Severity Badges */
@@ -359,36 +402,17 @@ td {
     border: 1px solid rgba(16, 185, 129, 0.6);
 }
 
-/* Status Badges */
-.status-tag-ok {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: #34d399 !important;
-    background: rgba(16, 185, 129, 0.12);
-    border: 1px solid rgba(16, 185, 129, 0.4);
-}
-
-.status-tag-fail {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: #f87171 !important;
-    background: rgba(239, 68, 68, 0.12);
-    border: 1px solid rgba(239, 68, 68, 0.4);
-}
-
-/* Expander Containers */
+/* Expander Containers with Border Glow on Hover */
 div[data-testid="stExpander"] {
     background: #0f172a !important;
     border: 1px solid var(--border-subtle) !important;
     border-radius: 10px !important;
+    transition: all 0.25s ease !important;
+}
+
+div[data-testid="stExpander"]:hover {
+    border-color: rgba(56, 189, 248, 0.45) !important;
+    box-shadow: 0 0 16px rgba(56, 189, 248, 0.2) !important;
 }
 
 /* Footer styling */
