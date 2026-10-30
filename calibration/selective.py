@@ -148,6 +148,47 @@ def compute_aurc_with_ci(
     }
 
 
+def compute_paired_aurc_ci(
+    probs_raw: np.ndarray,
+    probs_cal: np.ndarray,
+    y_true: np.ndarray,
+    n_resamples: int = 1000,
+    seed: int = 42,
+) -> Dict[str, Any]:
+    """
+    Computes paired difference on AURC (calibrated minus raw) with a 1,000-resample bootstrap 95% CI.
+    """
+    _, _, aurc_raw = compute_risk_coverage_curve(probs_raw, y_true)
+    _, _, aurc_cal = compute_risk_coverage_curve(probs_cal, y_true)
+    point_diff = aurc_cal - aurc_raw
+
+    rng = np.random.RandomState(seed)
+    n = len(y_true)
+    boot_diffs = []
+
+    for _ in range(n_resamples):
+        idx = rng.randint(0, n, size=n)
+        _, _, r = compute_risk_coverage_curve(probs_raw[idx], y_true[idx])
+        _, _, c = compute_risk_coverage_curve(probs_cal[idx], y_true[idx])
+        boot_diffs.append(c - r)
+
+    ci_lower = float(np.percentile(boot_diffs, 2.5))
+    ci_upper = float(np.percentile(boot_diffs, 97.5))
+    excludes_zero = bool((ci_upper < 0) or (ci_lower > 0))
+
+    return {
+        "point_diff": round(float(point_diff), 6),
+        "ci_lower": round(float(ci_lower), 6),
+        "ci_upper": round(float(ci_upper), 6),
+        "ci": [round(float(ci_lower), 6), round(float(ci_upper), 6)],
+        "formatted": f"{point_diff:+.6f} [{ci_lower:+.6f}, {ci_upper:+.6f}]",
+        "n_resamples": n_resamples,
+        "seed": seed,
+        "excludes_zero": excludes_zero,
+    }
+
+
+
 def find_validation_operating_point(
     probs_val: np.ndarray,
     y_val: np.ndarray,
@@ -247,6 +288,10 @@ def main():
     log.info("Computing Test AURC for Calibrated probabilities (200 bootstrap resamples)...")
     aurc_cal = compute_aurc_with_ci(P_test_cal, y_test, n_resamples=200, seed=42)
 
+    log.info("Computing paired bootstrap 95% CI on Test AURC difference (1,000 resamples)...")
+    paired_aurc = compute_paired_aurc_ci(P_test_raw, P_test_cal, y_test, n_resamples=1000, seed=42)
+    log.info(f"  Paired AURC Delta: {paired_aurc['formatted']} (excludes zero: {paired_aurc['excludes_zero']})")
+
     # 2. Operating point chosen on VALIDATION only (lowest cutoff with accepted accuracy >= 99.0%)
     log.info("Selecting 99.0% accuracy operating point on VALIDATION set...")
     op_val_raw = find_validation_operating_point(P_val_raw, y_val, target_accuracy=0.990)
@@ -277,6 +322,7 @@ def main():
         },
         "comparison": {
             "aurc_delta": aurc_diff,
+            "paired_aurc_ci": paired_aurc,
             "coverage_delta_pct": cov_diff_pct,
             "coverage_gain": cov_diff_pct > 0,
         },
@@ -294,6 +340,7 @@ def main():
     print(f"  Raw AURC:        {aurc_raw['formatted']}")
     print(f"  Calibrated AURC: {aurc_cal['formatted']}")
     print(f"  AURC Delta:      {aurc_diff:+.6f} ({'Improved' if aurc_diff < 0 else 'Degraded'})")
+    print(f"  Paired 95% CI:   {paired_aurc['formatted']} (excludes zero: {paired_aurc['excludes_zero']})")
 
     print("\n2. Validation-Chosen 99.0% Accuracy Operating Point on Test Set:")
     print(f"  Raw (Cutoff = {op_val_raw['chosen_cutoff']}):")

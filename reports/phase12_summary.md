@@ -10,7 +10,7 @@ Phase 12 examines whether post-hoc probability calibration improves the confiden
 
 - **Calibration Quality**: On the untouched test set ($N = 26,292$), Expected Calibration Error (ECE, 15 bins) decreased from **0.0270** ([0.0259, 0.0291]) to **0.0087** ([0.0076, 0.0109]), multiclass Brier score decreased from **0.0648** to **0.0586**, and NLL decreased from **0.1404** to **0.1231**.
 - **Calibrator Selection**: On a stratified 50/50 validation split, `isotonic_regression` was selected over temperature scaling due to lower select-half NLL (0.0897 vs 0.0930).
-- **Selective Prediction (AURC)**: Area Under the Risk-Coverage curve on the test set decreased from **0.002035** (0.002035 [0.001870, 0.002234]) to **0.001830** (0.001830 [0.001665, 0.002034]), reflecting an AURC delta of **-0.000205**.
+- **Selective Prediction (AURC)**: Area Under the Risk-Coverage curve on the test set decreased from **0.002035** (0.002035 [0.001870, 0.002234]) to **0.001830** (0.001830 [0.001665, 0.002034]), reflecting an AURC delta of **-0.000205** (paired bootstrap 95% CI: -0.000205 [-0.000287, -0.000118]).
 - **Operating Point at $\ge 99.0\%$ Accuracy**: At the lowest validation cutoff achieving $\ge 99.0\%$ accepted accuracy (raw $\theta = 0.5376$, calibrated $\theta = 0.6220$), test set coverage was **24,740 of 26,292 flows (94.10%)** for raw vs **24,898 of 26,292 flows (94.70%)** for calibrated, an increase of **+0.60%** (+158 flows).
 - **Open-Set Detection at Matched 10% Benign Budget**: In **3** of the 7 held-out classes, the calibrated rule flagged significantly more flows than the raw rule; in **0** classes differences were within sampling uncertainty; and in **4** classes it flagged significantly fewer flows.
 
@@ -29,6 +29,10 @@ Evaluation on the validation set ($N = 106,766$) and untouched test set ($N = 26
 | **Test** | Negative Log-Likelihood | 0.1404 | [0.1356, 0.1461] | 0.1231 | [0.1155, 0.1310] | -0.0173 |
 | **Test** | Classification Accuracy | 95.42% | -- | 95.76% | -- | +0.34% |
 
+### Note on Baseline B2 8-Class Test Accuracy
+
+The 8-class test accuracy recorded in `models/ensemble_weights_8class_b2.json` telemetry is **0.9536** (95.36%), produced during Phase 3 model wiring (`models/wire_b2_models.py`). In contrast, the evaluation from the unchanged prediction path (`calibration/measure.py` executing `get_or_load_model('8class', 'b2').predict_probabilities(X_test)['weighted']` on untouched `test.parquet`, $N = 26,292$) yielded **0.9542** (95.42%, 25089 of 26292 flows (95.42%)). The exact factor accounting for this 0.0006 discrepancy (0.9536 vs 0.9542) between the static telemetry metadata and the active prediction pipeline is cause not determined.
+
 ## Table 2 -- Selective Prediction and Operating Point Analysis
 
 Evaluates the risk-coverage curve on the test partition ($N = 26,292$) alongside an operating point selected strictly on the validation partition:
@@ -37,6 +41,7 @@ Evaluates the risk-coverage curve on the test partition ($N = 26,292$) alongside
 | :--- | :--- | :---: | :---: | :---: |
 | **Risk-Coverage Curve** | Test AURC (mean risk over coverage) | 0.002035 | 0.001830 | -0.000205 |
 | **Risk-Coverage Curve** | Bootstrap 95% CI on Test AURC | [0.001870, 0.002234] | [0.001665, 0.002034] | Shifted lower |
+| **Risk-Coverage Curve** | Paired AURC Difference (Cal - Raw) | -- | -- | -0.000205 [-0.000287, -0.000118] |
 | **Validation Operating Point** | Target Accepted Accuracy | $\ge 99.00\%$ | $\ge 99.00\%$ | Identical threshold requirement |
 | **Validation Operating Point** | Selected Cutoff Threshold $\theta^*$ | 0.5376 | 0.6220 | Cutoff adjusted post-calibration |
 | **Validation Operating Point** | Achieved Validation Accuracy | 99.00% | 99.00% | Meets criterion |
@@ -58,6 +63,10 @@ For each held-out attack family, a fresh Random Forest (100 trees, depth 15, bal
 | `Recon` | 4,002 | 1977 of 4002 (49.40%) | 1366 of 4002 (34.13%) | **-15.27% [-16.97%, -13.57%]** | 11.22% vs 12.79% | 39.38% vs 53.07% | 10.40% vs 12.50% |
 | `Spoofing` | 1,991 | 666 of 1991 (33.45%) | 614 of 1991 (30.84%) | **-2.61% [-5.13%, -0.30%]** | 20.34% vs 27.32% | 46.21% vs 41.84% | 9.80% vs 11.10% |
 | `Web-based` | 672 | 166 of 672 (24.70%) | 123 of 672 (18.30%) | **-6.40% [-9.08%, -3.57%]** | 0.74% vs 0.15% | 74.55% vs 81.55% | 9.70% vs 9.40% |
+
+### Test Benign False-Positive Rate Budget Analysis
+
+Across the held-out evaluation classes, the test Benign false-positive rate exceeded the 10.0% validation budget under the raw rule in 3 of 7 classes (`DoS` (11.20%), `Mirai` (10.30%), `Recon` (10.40%)) and under the calibrated rule in 5 of 7 classes (`BruteForce` (11.40%), `DoS` (10.40%), `Mirai` (10.40%), `Recon` (12.50%), `Spoofing` (11.10%)). This indicates that the validation budget was not exactly held on test.
 
 ### Headline Summary of Leave-One-Class-Out Evaluation
 
@@ -82,7 +91,7 @@ Evaluates the known-class control on the full test set under the matched validat
 
 1. **Calibration Metric Agreement**: Isotonic regression consistently decreased Expected Calibration Error across validation and test partitions (test ECE decreased from 0.0270 to 0.0087), aligning output probabilities with empirical observed frequencies.
 2. **Risk-Coverage Curve Improvement**: Calibrated probabilities improved the test-set AURC from 0.002035 to 0.001830. When applying an identical 99.0% accuracy requirement selected on validation, calibrated probabilities accepted 158 additional test flows (+0.60% coverage) while maintaining 98.61% accuracy on the test set.
-3. **Heterogeneous Impact on Open-Set Detection**: At a matched 10% false-positive budget on Benign traffic, probability calibration did not universally increase detection of unseen attacks. For high-volume volumetric attacks (`DDoS`, `DoS`, `Mirai`), calibration compressed extreme overconfident probabilities, raising the flagged rate (e.g. +3.56% on DDoS, +3.41% on Mirai). Conversely, for scanning and application-layer classes (`Recon`, `BruteForce`, `Web-based`), calibration reduced false flagging of non-benign patterns, shifting flows into the silently-other-attack category rather than unknown.
+3. **Heterogeneous Impact on Open-Set Detection**: At a matched 10% false-positive budget on Benign validation traffic, probability calibration did not uniformly increase detection of unseen attacks across all classes. Across the 7 held-out classes, calibration yielded a higher flagged rate in 3 classes (`DDoS` (+3.56% [+3.06%, +4.04%]), `DoS` (+0.71% [+0.35%, +1.08%]), `Mirai` (+3.41% [+2.36%, +4.53%])) and a lower flagged rate in 4 classes (`BruteForce` (-11.17% [-17.33%, -5.03%]), `Recon` (-15.27% [-16.97%, -13.57%]), `Spoofing` (-2.61% [-5.13%, -0.30%]), `Web-based` (-6.40% [-9.08%, -3.57%])), with 0 classes within sampling uncertainty. The underlying mechanism driving differences in flagged rates across attack classes was not tested (mechanism not tested).
 
 ## Limitations and Boundaries
 

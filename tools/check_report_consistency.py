@@ -125,7 +125,7 @@ def check_all_tracked_text_files_paths() -> List[str]:
     except Exception as e:
         return [f"Failed to execute git ls-files: {e}"]
 
-    binary_exts = {".pt", ".joblib", ".parquet", ".png", ".jpg", ".jpeg", ".webp", ".ico", ".bin"}
+    binary_exts = {".pt", ".joblib", ".parquet", ".png", ".jpg", ".jpeg", ".webp", ".ico", ".bin", ".npy", ".npz", ".pkl"}
     pattern = re.compile(r"(?<!https)(?<!http)(?<!ftp)\b[A-Za-z]:[\\/]|file:\/\/\/|\bUsers[\\/]|\\suraj\b|\/suraj\b")
 
     for rel_path in tracked_files:

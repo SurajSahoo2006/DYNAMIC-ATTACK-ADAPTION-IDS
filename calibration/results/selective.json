@@ -297,6 +297,19 @@
   },
   "comparison": {
     "aurc_delta": -0.000205,
+    "paired_aurc_ci": {
+      "point_diff": -0.000205,
+      "ci_lower": -0.000287,
+      "ci_upper": -0.000118,
+      "ci": [
+        -0.000287,
+        -0.000118
+      ],
+      "formatted": "-0.000205 [-0.000287, -0.000118]",
+      "n_resamples": 1000,
+      "seed": 42,
+      "excludes_zero": true
+    },
     "coverage_delta_pct": 0.6,
     "coverage_gain": true
   }

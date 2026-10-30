@@ -287,4 +287,12 @@ python calibration/openset_calibrated.py --resume
 # 5. Generate Phase 12 Summary Report:
 python reports/generate_phase12_report.py
 ```
+> **Note on Cached Probability Arrays**:
+> The array files `calibration/results/val_probs_raw.npy`, `calibration/results/test_probs_raw.npy`, `calibration/results/y_val_8.npy`, and `calibration/results/y_test_8.npy` are cached model outputs from the Phase 3 B2 ensemble. They can be regenerated at any time by running:
+> ```bash
+> python calibration/measure.py
+> ```
+> This loads the saved B2 models (`rf_8class_b2.joblib`, `xgb_8class_b2.joblib`), predicts probabilities on validation and test parquets, and saves the cached `.npy` arrays along with `calibration/results/raw_metrics.json`.
 
+> **Note on Baseline B2 8-Class Test Accuracy**:
+> The 8-class test accuracy recorded in `models/ensemble_weights_8class_b2.json` telemetry is 0.9536 (produced during model wiring in `models/wire_b2_models.py`), whereas the evaluation via the unchanged prediction path (`calibration/measure.py` running `predict_probabilities` on `test.parquet`) yields 0.9542. The exact factor accounting for this 0.0006 discrepancy is cause not determined.

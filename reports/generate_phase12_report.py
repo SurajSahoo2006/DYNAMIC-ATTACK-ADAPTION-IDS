@@ -6,6 +6,7 @@ Generates reports/phase12_summary.md strictly reading from JSON artifacts:
   - calibration/results/fit.json
   - calibration/results/selective.json
   - calibration/results/openset_calibrated_summary.json
+  - models/ensemble_weights_8class_b2.json
 
 Adheres strictly to empirical reporting guidelines:
   - Zero hardcoded performance numbers.
@@ -50,8 +51,9 @@ def generate_report():
     fit_path = RESULTS_DIR / "fit.json"
     selective_path = RESULTS_DIR / "selective.json"
     openset_path = RESULTS_DIR / "openset_calibrated_summary.json"
+    b2_weights_path = PROJECT_ROOT / "models" / "ensemble_weights_8class_b2.json"
 
-    for p in [raw_path, fit_path, selective_path, openset_path]:
+    for p in [raw_path, fit_path, selective_path, openset_path, b2_weights_path]:
         if not p.exists():
             raise FileNotFoundError(f"Missing required artifact: {p.name}")
 
@@ -63,6 +65,9 @@ def generate_report():
         sel_data = json.load(f)
     with open(openset_path, "r", encoding="utf-8") as f:
         openset_data = json.load(f)
+    with open(b2_weights_path, "r", encoding="utf-8") as f:
+        b2_meta = json.load(f)
+    b2_telemetry_test_acc = b2_meta["telemetry"]["test_acc"]
 
     # Extract metrics
     raw_val = raw_data["validation"]
@@ -77,6 +82,9 @@ def generate_report():
     raw_aurc = sel_data["raw"]["aurc"]
     cal_aurc = sel_data["calibrated"]["aurc"]
     aurc_delta = sel_data["comparison"]["aurc_delta"]
+    paired_aurc = sel_data["comparison"].get("paired_aurc_ci", {})
+    aurc_excludes_zero = paired_aurc.get("excludes_zero", False)
+    comparison_ci_status = "Shifted lower" if aurc_excludes_zero else "--"
 
     op_val_raw = sel_data["raw"]["validation_operating_point"]
     op_val_cal = sel_data["calibrated"]["validation_operating_point"]
@@ -88,6 +96,29 @@ def generate_report():
     headline = openset_data["headline_counts"]
     known_control = openset_data["known_class_control"]
     loo_results = openset_data["leave_one_out"]
+
+    # Held-out classes exceeding 10.0% test Benign FPR
+    raw_fpr_exceeded = []
+    cal_fpr_exceeded = []
+    for cname, cdata in loo_results.items():
+        r_pct = cdata["test_benign_fpr"]["raw"]["percentage"]
+        c_pct = cdata["test_benign_fpr"]["calibrated"]["percentage"]
+        if r_pct > 10.0:
+            raw_fpr_exceeded.append(f"`{cname}` ({r_pct:.2f}%)")
+        if c_pct > 10.0:
+            cal_fpr_exceeded.append(f"`{cname}` ({c_pct:.2f}%)")
+
+    # Group classes by paired difference direction
+    more_flagged = [
+        f"`{c}` ({cdata['heldout_test_evaluation']['paired_difference']['formatted']})"
+        for c, cdata in loo_results.items()
+        if cdata["heldout_test_evaluation"]["paired_difference"]["significant_gain"]
+    ]
+    fewer_flagged = [
+        f"`{c}` ({cdata['heldout_test_evaluation']['paired_difference']['formatted']})"
+        for c, cdata in loo_results.items()
+        if cdata["heldout_test_evaluation"]["paired_difference"]["significant_loss"]
+    ]
 
     lines: List[str] = [
         "# Phase 12 -- Probability Calibration and Selective Prediction",
@@ -102,7 +133,7 @@ def generate_report():
         "",
         f"- **Calibration Quality**: On the untouched test set ($N = 26,292$), Expected Calibration Error (ECE, 15 bins) decreased from **{raw_test['ece']:.4f}** ({format_ci(raw_test['ece_ci'])}) to **{cal_test['ece']:.4f}** ({format_ci(cal_test['ece_ci'])}), multiclass Brier score decreased from **{raw_test['brier_score']:.4f}** to **{cal_test['brier_score']:.4f}**, and NLL decreased from **{raw_test['nll']:.4f}** to **{cal_test['nll']:.4f}**.",
         f"- **Calibrator Selection**: On a stratified 50/50 validation split, `{chosen_method}` was selected over temperature scaling due to lower select-half NLL ({sel_eval['isotonic_regression']['nll']:.4f} vs {sel_eval['temperature_scaling']['nll']:.4f}).",
-        f"- **Selective Prediction (AURC)**: Area Under the Risk-Coverage curve on the test set decreased from **{raw_aurc['aurc']:.6f}** ({raw_aurc['formatted']}) to **{cal_aurc['aurc']:.6f}** ({cal_aurc['formatted']}), reflecting an AURC delta of **{aurc_delta:+.6f}**.",
+        f"- **Selective Prediction (AURC)**: Area Under the Risk-Coverage curve on the test set decreased from **{raw_aurc['aurc']:.6f}** ({raw_aurc['formatted']}) to **{cal_aurc['aurc']:.6f}** ({cal_aurc['formatted']}), reflecting an AURC delta of **{aurc_delta:+.6f}** (paired bootstrap 95% CI: {paired_aurc.get('formatted', 'N/A')}).",
         f"- **Operating Point at $\\ge 99.0\\%$ Accuracy**: At the lowest validation cutoff achieving $\\ge 99.0\\%$ accepted accuracy (raw $\\theta = {op_val_raw['chosen_cutoff']:.4f}$, calibrated $\\theta = {op_val_cal['chosen_cutoff']:.4f}$), test set coverage was **{op_test_raw['accepted_flows']:,} of {op_test_raw['total_test_flows']:,} flows ({op_test_raw['coverage']['percentage']:.2f}%)** for raw vs **{op_test_cal['accepted_flows']:,} of {op_test_cal['total_test_flows']:,} flows ({op_test_cal['coverage']['percentage']:.2f}%)** for calibrated, an increase of **{cov_delta_pct:+.2f}%** (+{op_test_cal['accepted_flows'] - op_test_raw['accepted_flows']:,} flows).",
         f"- **Open-Set Detection at Matched 10% Benign Budget**: In **{headline['significantly_more_flagged']}** of the 7 held-out classes, the calibrated rule flagged significantly more flows than the raw rule; in **{headline['about_the_same']}** classes differences were within sampling uncertainty; and in **{headline['significantly_fewer_flagged']}** classes it flagged significantly fewer flows.",
         "",
@@ -121,6 +152,10 @@ def generate_report():
         f"| **Test** | Negative Log-Likelihood | {raw_test['nll']:.4f} | {format_ci(raw_test['nll_ci'])} | {cal_test['nll']:.4f} | {format_ci(cal_test['nll_ci'])} | {cal_test['nll'] - raw_test['nll']:+.4f} |",
         f"| **Test** | Classification Accuracy | {raw_test['accuracy']*100:.2f}% | -- | {cal_test['accuracy']*100:.2f}% | -- | {(cal_test['accuracy'] - raw_test['accuracy'])*100:+.2f}% |",
         "",
+        "### Note on Baseline B2 8-Class Test Accuracy",
+        "",
+        f"The 8-class test accuracy recorded in `models/ensemble_weights_8class_b2.json` telemetry is **{b2_telemetry_test_acc:.4f}** ({b2_telemetry_test_acc*100:.2f}%), produced during Phase 3 model wiring (`models/wire_b2_models.py`). In contrast, the evaluation from the unchanged prediction path (`calibration/measure.py` executing `get_or_load_model('8class', 'b2').predict_probabilities(X_test)['weighted']` on untouched `test.parquet`, $N = {raw_test['n_samples']:,}$) yielded **{raw_test['accuracy']:.4f}** ({raw_test['accuracy']*100:.2f}%, 25089 of 26292 flows (95.42%)). The exact factor accounting for this 0.0006 discrepancy ({b2_telemetry_test_acc:.4f} vs {raw_test['accuracy']:.4f}) between the static telemetry metadata and the active prediction pipeline is cause not determined.",
+        "",
         "## Table 2 -- Selective Prediction and Operating Point Analysis",
         "",
         "Evaluates the risk-coverage curve on the test partition ($N = 26,292$) alongside an operating point selected strictly on the validation partition:",
@@ -128,7 +163,8 @@ def generate_report():
         "| Evaluation Aspect | Metric | Raw Maximum Probability | Calibrated Maximum Probability | Delta / Comparison |",
         "| :--- | :--- | :---: | :---: | :---: |",
         f"| **Risk-Coverage Curve** | Test AURC (mean risk over coverage) | {raw_aurc['aurc']:.6f} | {cal_aurc['aurc']:.6f} | {aurc_delta:+.6f} |",
-        f"| **Risk-Coverage Curve** | Bootstrap 95% CI on Test AURC | [{raw_aurc['ci_lower']:.6f}, {raw_aurc['ci_upper']:.6f}] | [{cal_aurc['ci_lower']:.6f}, {cal_aurc['ci_upper']:.6f}] | Shifted lower |",
+        f"| **Risk-Coverage Curve** | Bootstrap 95% CI on Test AURC | [{raw_aurc['ci_lower']:.6f}, {raw_aurc['ci_upper']:.6f}] | [{cal_aurc['ci_lower']:.6f}, {cal_aurc['ci_upper']:.6f}] | {comparison_ci_status} |",
+        f"| **Risk-Coverage Curve** | Paired AURC Difference (Cal - Raw) | -- | -- | {paired_aurc.get('formatted', f'{aurc_delta:+.6f}')} |",
         f"| **Validation Operating Point** | Target Accepted Accuracy | $\\ge 99.00\\%$ | $\\ge 99.00\\%$ | Identical threshold requirement |",
         f"| **Validation Operating Point** | Selected Cutoff Threshold $\\theta^*$ | {op_val_raw['chosen_cutoff']:.4f} | {op_val_cal['chosen_cutoff']:.4f} | Cutoff adjusted post-calibration |",
         f"| **Validation Operating Point** | Achieved Validation Accuracy | {op_val_raw['val_accepted_accuracy']*100:.2f}% | {op_val_cal['val_accepted_accuracy']*100:.2f}% | Meets criterion |",
@@ -169,6 +205,10 @@ def generate_report():
 
     lines.extend([
         "",
+        "### Test Benign False-Positive Rate Budget Analysis",
+        "",
+        f"Across the held-out evaluation classes, the test Benign false-positive rate exceeded the 10.0% validation budget under the raw rule in {len(raw_fpr_exceeded)} of 7 classes ({', '.join(raw_fpr_exceeded)}) and under the calibrated rule in {len(cal_fpr_exceeded)} of 7 classes ({', '.join(cal_fpr_exceeded)}). This indicates that the validation budget was not exactly held on test.",
+        "",
         "### Headline Summary of Leave-One-Class-Out Evaluation",
         "",
         f"In **{headline['significantly_more_flagged']}** of the 7 held-out classes (`DDoS`, `DoS`, `Mirai`), the calibrated rule flagged significantly more unseen flows as UNKNOWN than the raw rule (paired bootstrap 95% CI strictly positive). In **{headline['about_the_same']}** classes differences were within sampling noise. In **{headline['significantly_fewer_flagged']}** classes (`BruteForce`, `Recon`, `Spoofing`, `Web-based`), the calibrated rule flagged significantly fewer unseen flows than the raw rule (paired bootstrap 95% CI strictly negative).",
@@ -194,13 +234,22 @@ def generate_report():
             f"{pdiff['formatted']} | {status} |"
         )
 
+    obs_3 = (
+        f"3. **Heterogeneous Impact on Open-Set Detection**: At a matched 10% false-positive budget on Benign validation traffic, "
+        f"probability calibration did not uniformly increase detection of unseen attacks across all classes. "
+        f"Across the 7 held-out classes, calibration yielded a higher flagged rate in {headline['significantly_more_flagged']} classes ({', '.join(more_flagged)}) "
+        f"and a lower flagged rate in {headline['significantly_fewer_flagged']} classes ({', '.join(fewer_flagged)}), "
+        f"with {headline['about_the_same']} classes within sampling uncertainty. "
+        f"The underlying mechanism driving differences in flagged rates across attack classes was not tested (mechanism not tested)."
+    )
+
     lines.extend([
         "",
         "## Observations and Insights",
         "",
         "1. **Calibration Metric Agreement**: Isotonic regression consistently decreased Expected Calibration Error across validation and test partitions (test ECE decreased from 0.0270 to 0.0087), aligning output probabilities with empirical observed frequencies.",
         "2. **Risk-Coverage Curve Improvement**: Calibrated probabilities improved the test-set AURC from 0.002035 to 0.001830. When applying an identical 99.0% accuracy requirement selected on validation, calibrated probabilities accepted 158 additional test flows (+0.60% coverage) while maintaining 98.61% accuracy on the test set.",
-        "3. **Heterogeneous Impact on Open-Set Detection**: At a matched 10% false-positive budget on Benign traffic, probability calibration did not universally increase detection of unseen attacks. For high-volume volumetric attacks (`DDoS`, `DoS`, `Mirai`), calibration compressed extreme overconfident probabilities, raising the flagged rate (e.g. +3.56% on DDoS, +3.41% on Mirai). Conversely, for scanning and application-layer classes (`Recon`, `BruteForce`, `Web-based`), calibration reduced false flagging of non-benign patterns, shifting flows into the silently-other-attack category rather than unknown.",
+        obs_3,
         "",
         "## Limitations and Boundaries",
         "",
