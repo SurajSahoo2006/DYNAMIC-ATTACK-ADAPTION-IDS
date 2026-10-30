@@ -1,0 +1,103 @@
+{
+  "reward_setting": "balanced",
+  "seed": 42,
+  "total_steps": 200000,
+  "runtime_seconds": 928.64,
+  "peak_ram_mb": 112.38,
+  "best_val_return": -3.14,
+  "final_val_return": -3.14,
+  "learning_curve": [
+    {
+      "step": 20000,
+      "elapsed_sec": 96.19,
+      "rl_val_return": -35.06,
+      "rl_val_attacks_contained_pct": 100.0,
+      "rl_val_benigns_disrupted_pct": 100.0,
+      "actor_loss": -0.0188,
+      "critic_loss": 10.155
+    },
+    {
+      "step": 40000,
+      "elapsed_sec": 191.94,
+      "rl_val_return": -28.0,
+      "rl_val_attacks_contained_pct": 100.0,
+      "rl_val_benigns_disrupted_pct": 100.0,
+      "actor_loss": -0.0055,
+      "critic_loss": 3.4646
+    },
+    {
+      "step": 60000,
+      "elapsed_sec": 287.91,
+      "rl_val_return": -24.525,
+      "rl_val_attacks_contained_pct": 97.39,
+      "rl_val_benigns_disrupted_pct": 99.57,
+      "actor_loss": -0.0095,
+      "critic_loss": 2.3432
+    },
+    {
+      "step": 80000,
+      "elapsed_sec": 382.58,
+      "rl_val_return": -22.78,
+      "rl_val_attacks_contained_pct": 99.67,
+      "rl_val_benigns_disrupted_pct": 99.86,
+      "actor_loss": -0.0069,
+      "critic_loss": 5.2738
+    },
+    {
+      "step": 100000,
+      "elapsed_sec": 477.08,
+      "rl_val_return": -21.75,
+      "rl_val_attacks_contained_pct": 100.0,
+      "rl_val_benigns_disrupted_pct": 99.57,
+      "actor_loss": -0.007,
+      "critic_loss": 1.3392
+    },
+    {
+      "step": 120000,
+      "elapsed_sec": 572.25,
+      "rl_val_return": -21.585,
+      "rl_val_attacks_contained_pct": 100.0,
+      "rl_val_benigns_disrupted_pct": 99.71,
+      "actor_loss": -0.0095,
+      "critic_loss": 1.9099
+    },
+    {
+      "step": 140000,
+      "elapsed_sec": 668.84,
+      "rl_val_return": -16.5225,
+      "rl_val_attacks_contained_pct": 96.73,
+      "rl_val_benigns_disrupted_pct": 5.76,
+      "actor_loss": -0.013,
+      "critic_loss": 12.5776
+    },
+    {
+      "step": 160000,
+      "elapsed_sec": 763.37,
+      "rl_val_return": -5.0,
+      "rl_val_attacks_contained_pct": 95.75,
+      "rl_val_benigns_disrupted_pct": 4.61,
+      "actor_loss": -0.0018,
+      "critic_loss": 6.2462
+    },
+    {
+      "step": 180000,
+      "elapsed_sec": 836.5,
+      "rl_val_return": -3.87,
+      "rl_val_attacks_contained_pct": 95.75,
+      "rl_val_benigns_disrupted_pct": 8.21,
+      "actor_loss": -0.0013,
+      "critic_loss": 1.9032
+    },
+    {
+      "step": 200000,
+      "elapsed_sec": 928.58,
+      "rl_val_return": -3.14,
+      "rl_val_attacks_contained_pct": 97.06,
+      "rl_val_benigns_disrupted_pct": 8.5,
+      "actor_loss": -0.0042,
+      "critic_loss": 0.4516
+    }
+  ],
+  "best_checkpoint": "models/marl/mappo_balanced_seed42_best.pt",
+  "final_checkpoint": "models/marl/mappo_balanced_seed42_final.pt"
+}

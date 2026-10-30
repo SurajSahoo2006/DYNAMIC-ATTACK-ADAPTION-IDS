@@ -83,6 +83,10 @@ class ForensicAlertLogger:
         adversarial: bool = False,
         true_class: Optional[str] = None,
         custom_metadata: Optional[Dict[str, Any]] = None,
+        marl_triage_action: Optional[str] = None,
+        marl_containment_action: Optional[str] = None,
+        marl_escalation_action: Optional[str] = None,
+        marl_policy_version: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Creates, hashes, and persists a single forensic alert record.
@@ -143,6 +147,15 @@ class ForensicAlertLogger:
             "recommended_action": str(recommended_action),
             "prev_hash": self.last_hash,
         }
+
+        if marl_triage_action is not None:
+            entry["marl_triage_action"] = str(marl_triage_action)
+        if marl_containment_action is not None:
+            entry["marl_containment_action"] = str(marl_containment_action)
+        if marl_escalation_action is not None:
+            entry["marl_escalation_action"] = str(marl_escalation_action)
+        if marl_policy_version is not None:
+            entry["marl_policy_version"] = str(marl_policy_version)
 
         if custom_metadata:
             entry.update(custom_metadata)

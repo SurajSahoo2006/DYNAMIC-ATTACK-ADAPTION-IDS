@@ -2,13 +2,14 @@
 ### B.Tech Sem IV Research Project | NMIMS Design Experience / IROP
 
 > **Project**: AI/ML pipeline for adaptive network intrusion detection in IoT environments.  
-> **Dataset**: CICIoT2023 (University of New Brunswick) — 47M+ records, 33 attack types.  
-> **Branch**: `phase4-xai-adversarial`  
-> **Current Pipeline Scope**:  
+> **Dataset**: CICIoT2023 (University of New Brunswick) — 47M+ records, 33 attack types (34 fine-grained classes).  
+> **Branch**: `phase5-marl-dashboard`  
+> **Pipeline Scope**:  
 > - **Phase 1**: Chunked Ingestion & Invariant Validation  
 > - **Phase 2**: Leak-Free Preprocessing & Recursive Feature Elimination (46 → 19 features)  
-> - **Phase 3**: Multi-Model Ensemble (Method B2) & LLM Semantic Orchestrator (Ollama Llama-3.2:3b)  
-> - **Phase 4**: Explainable AI (SHAP TreeExplainer), Realistic Adversarial Robustness (ART), and Tamper-Evident Forensic Logging
+> - **Phase 3**: Multi-Model Ensemble (Method B2: RF 0.6 + XGBoost 0.4) & LLM Semantic Orchestrator (Ollama Llama-3.2:3b)  
+> - **Phase 4**: Explainable AI (SHAP TreeExplainer), Realistic Adversarial Robustness (ART), and Tamper-Evident Forensic Logging  
+> - **Phase 5**: Multi-Agent Reinforcement Learning (MAPPO) Tactical Defense & Standalone SOC Operational Dashboard  
 
 ---
 
@@ -36,7 +37,7 @@ Network Traffic (PCAP)          Honeypot (Cowrie JSON)*      Benchmark Datasets
     [Phase 4A: Explainable AI]             [Phase 4B: Adversarial Suite]
     ├── SHAP TreeExplainer (2,000 flows)   ├── Domain Constraints (11 modifiable / 8 fixed)
     ├── Stability check (rho = 0.9088)     ├── FGSM Transfer (White-box DNN -> Ensemble)
-    └── Opt-in --use-shap telemetry         ├── HopSkipJump & ZOO Black-Box Attacks
+    └── Opt-in --use-shap telemetry        ├── HopSkipJump & ZOO Black-Box Attacks
             |                              └── Adversarial Retraining Defense
             |                                       |
             +-------------------+-------------------+
@@ -47,11 +48,21 @@ Network Traffic (PCAP)          Honeypot (Cowrie JSON)*      Benchmark Datasets
                 (Translates predictions & SHAP attributions into analyst playbooks)
                                 |
                                 ▼
-            [Phase 4C: Forensic Alert Logging]
-            └── Cryptographic SHA-256 Tamper-Evident Audit Trail (logs/alerts.jsonl)
+            [Phase 4C & 5: Forensic Alert Logging & ECS Export]
+            ├── Cryptographic SHA-256 Tamper-Evident Hash Chaining (logs/alerts_phase5.jsonl)
+            ├── External Immutable Anchor (logs/alerts_phase5_tail_hash.txt)
+            └── Elastic Common Schema (ECS) ndjson Export (logs/alerts_phase5_ecs.ndjson)
                                 |
-            [Phase 5+: Future Strategic Phases]
-            MARL Tactical Defense Agents (MAPPO) -> Full ELK Stack / SIEM Dashboard
+                                ▼
+            [Phase 5: MARL Tactical Defense Team (MAPPO)]
+            ├── Triage Agent (3 actions): Accept / Flag for Review / Defer
+            ├── Containment Agent (4 actions): None / Rate Limit / Block / Isolate (K=3 steps)
+            ├── Escalation Agent (3 actions): None / Notify Analyst / Forensic Capture (Budget B=5)
+            └── Centralized Critic: Concatenated Multi-Agent State Evaluation (84 dims)
+                                |
+                                ▼
+            [Phase 5: Autonomous SOC Operational Dashboard]
+            └── Standalone HTML Dashboard with Base64 Visualizations (reports/dashboard.html)
 
 * Note: Honeypot log enrichment is future work; current pipeline consumes statistical flow vectors.
 ```
@@ -62,12 +73,41 @@ Network Traffic (PCAP)          Honeypot (Cowrie JSON)*      Benchmark Datasets
 
 ```
 .
-├── config.py                         # Central configuration (paths, hyperparameters, mappings)
-├── requirements.txt
+├── config.py                         # Central configuration for Phases 1-3
+├── config_marl.py                    # Single Source of Truth for Phase 5 (MARL, rewards, budgets)
+├── requirements.txt                  # Full project dependencies (including torch, shap, art, pytest)
 ├── run_phase1_2.py                   # Phase 1 & 2 pipeline runner
 ├── run_phase3_ensemble.py            # Phase 3 ensemble training & evaluation runner
 ├── run_phase3_llm.py                 # Phase 3/4 LLM orchestrator runner (--use-shap flag)
 ├── predict.py                        # Standalone flow prediction & severity module (B2 default)
+├── docker-compose.yml                # Optional ELK stack compose manifest (reference only; not run)
+│
+├── marl/                             # Phase 5: Multi-Agent Tactical Defense Module
+│   ├── build_cache.py                # Precomputes ensemble probabilities and 70/30 validation split
+│   ├── env.py                        # Vectorized campaign defense environment (T=50, K=3, B=5)
+│   ├── stats.py                      # Statistical tools (Wilson score intervals, 10k bootstrap CIs)
+│   ├── baselines.py                  # Benchmark policies (Random, None, Max, Severity Rule, Oracle)
+│   ├── mappo.py                      # 3 Actor MLPs + Centralized Critic with PPO & GAE
+│   ├── evaluate.py                   # Single-pass 500 test episode evaluation & decision rule
+│   ├── stress_test.py                # Adversarial FGSM (eps=0.10) evasion stress testing
+│   └── tests/
+│       └── test_env.py               # Pytest suite: no leakage, determinism, reward math, bounds
+│
+├── alerts/                           # Forensic Alert Logging Module
+│   ├── alert_logger.py               # Tamper-evident logger with SHA-256 chaining and MARL fields
+│   ├── verify_log.py                 # Cryptographic auditor: detects mid-chain tamper & truncation
+│   ├── generate_and_test_alerts.py   # Phase 4 alert generation & tamper test suite
+│   └── generate_phase5_alerts.py     # Phase 5 alert generator (45 demo flows with MARL actions)
+│
+├── export/                           # SIEM / ELK Export Module
+│   └── elk_export.py                 # Transforms alerts to Elastic Common Schema (ndjson)
+│
+├── dashboard/                        # Autonomous Dashboard Module
+│   └── build_dashboard.py            # Generates standalone reports/dashboard.html (inline Base64 PNGs)
+│
+├── tools/                            # Verification & Consistency Auditors
+│   ├── check_report_consistency.py   # Comprehensive mathematical, empirical & formatting auditor
+│   └── rerender_check.py             # LaTeX math delimiter & header integrity checker
 │
 ├── xai/                              # Phase 4A: Explainable AI Module
 │   ├── shap_explain.py               # SHAP TreeExplainer wrapper & stability evaluation
@@ -77,59 +117,30 @@ Network Traffic (PCAP)          Honeypot (Cowrie JSON)*      Benchmark Datasets
 │   ├── constraints.py                # 19-feature domain constraints, clipping, and bounds
 │   └── run_phase4_adversarial.py     # FGSM transfer, HopSkipJump, ZOO, and defense retraining
 │
-├── alerts/                           # Phase 4C: Forensic Alert Logging Module
-│   ├── alert_logger.py               # Flattened ELK-ready logger with SHA-256 hash chaining
-│   ├── verify_log.py                 # Tamper-evident hash chain auditor
-│   └── generate_and_test_alerts.py   # Test suite: populates logs/alerts.jsonl and verifies tamper test
-│
-├── models/
-│   ├── load_validation.py            # Leak-free pure validation data loader (NO SMOTE)
+├── models/                           # Model Definitions & Saved Weights
 │   ├── ensemble.py                   # RF + XGBoost + PyTorch DNN + soft/weighted voting
 │   ├── wire_b2_models.py             # Model wiring utility for Method B2
-│   ├── investigate_dnn.py            # Tabular neural network limit investigation
-│   ├── ensemble_weights_8class.json
-│   └── ensemble_weights_34class.json
+│   └── marl/                         # MAPPO Checkpoints (best rl_val return per seed)
 │
-├── orchestrator/
-│   ├── __init__.py
-│   └── llm_orchestrator.py           # Ollama client + deterministic expert fallback + SHAP injection
+├── reports/                          # Generated empirical artifacts, plots, and markdown summaries
+│   ├── marl_cache_metrics.json       # Cache row counts and classifier accuracies
+│   ├── marl_tests.txt                # Pytest verification output
+│   ├── marl_baselines.json           # Baseline benchmark metrics across settings
+│   ├── marl_pilot.json               # Pilot steps/sec benchmark and training budget selection
+│   ├── marl_eval.json                # Single-pass 500 episode test evaluation metrics
+│   ├── marl_stress_test.json         # FGSM perturbation stress test results
+│   ├── marl_returns.png              # Test returns comparison chart
+│   ├── marl_learning_curves.png      # MAPPO training convergence curves
+│   ├── dashboard.html                # Standalone operational SOC dashboard
+│   ├── phase5_log_verification.txt   # Cryptographic 3-test log verification record
+│   ├── phase5_summary.md             # Programmatically generated Phase 5 summary report
+│   └── phase4_summary.md             # Programmatically audited Phase 4 summary report
 │
-├── ingest/
-│   ├── loader.py                     # Chunked CSV reader with per-class sampling
-│   ├── validate.py                   # Validation report + class distribution chart
-│   └── cowrie_loader.py              # Honeypot enrichment (future work)
-│
-├── preprocess/
-│   ├── clean.py                      # Drop NaN / Inf / duplicates
-│   ├── encode.py                     # LabelEncoder for 34-class and 8-class labels
-│   ├── split.py                      # Stratified 80/20 split (before scaling)
-│   ├── scale.py                      # StandardScaler (fit on train only)
-│   ├── balance.py                    # SMOTE (applied to train only)
-│   └── select_features.py            # RFE: 46 features → top 19
-│
-├── reports/                          # Generated charts and reports
-│   ├── class_distribution.png
-│   ├── rfe_ranking.png
-│   ├── confusion_matrix_8class.png
-│   ├── phase3_summary.md             # Comprehensive Phase 3 report
-│   ├── phase4_summary.md             # Comprehensive Phase 4 report
-│   ├── shap_global_importance.png    # Global SHAP feature importance plot
-│   ├── shap_per_class_importance.png # Per-class SHAP importance heatmap
-│   ├── shap_metrics.json
-│   ├── adversarial_accuracy_vs_epsilon.png # Evasion curves: DNN vs Ensemble transfer
-│   ├── adversarial_metrics.json
-│   ├── llm_demo_outputs.csv          # Standard 40-flow triage outputs
-│   └── llm_demo_outputs_shap.csv     # SHAP-grounded 40-flow triage outputs
-│
-├── logs/
-│   └── alerts.jsonl                  # Cryptographically chained forensic alert log
-│
-└── artifacts/                        # Saved preprocessing objects and attributions
-    ├── standard_scaler.pkl
-    ├── label_encoder_8class.pkl
-    ├── selected_features.json
-    ├── shap_local_40flows.json       # Top-5 SHAP features per demo flow
-    └── adversarial_demo_flows.parquet# Sample adversarial evaluation flows
+└── logs/                             # Audit Trails and ECS Exports
+    ├── alerts.jsonl                  # Phase 4 forensic alert log
+    ├── alerts_phase5.jsonl           # Phase 5 forensic alert log with MARL actions
+    ├── alerts_phase5_tail_hash.txt   # External immutable tail anchor
+    └── alerts_phase5_ecs.ndjson      # Elastic Common Schema formatted alert stream
 ```
 
 ---
@@ -139,78 +150,53 @@ Network Traffic (PCAP)          Honeypot (Cowrie JSON)*      Benchmark Datasets
 ### 1. Clone & Setup Environment
 
 ```bash
-git clone -b phase4-xai-adversarial https://github.com/SurajSahoo2006/DYNAMIC-ATTACK-ADAPTION-IDS
+git clone -b phase5-marl-dashboard https://github.com/SurajSahoo2006/DYNAMIC-ATTACK-ADAPTION-IDS
 cd DYNAMIC-ATTACK-ADAPTION-IDS
 pip install -r requirements.txt
 ```
-*Dependencies include `shap` (0.52.0) and `adversarial-robustness-toolbox` (1.20.1).*
 
 > [!NOTE]
 > Raw CICIoT2023 CSV datasets (`train.csv`, `test.csv`, `validation.csv`) are not tracked in the git repository due to size. Place raw CSVs in `data/raw/` or set the environment variable `CIC_DATA_RAW_DIR` to your raw data path.
 
-### 2. Ollama Local LLM Setup
+---
 
-The LLM Semantic Orchestrator uses local [Ollama](https://ollama.com) running `llama3.2:3b`:
+## Running the Complete Pipeline (Step-by-Step)
+
+### Phases 1 to 4: Ingestion, Training, XAI & Adversarial Robustness
 ```bash
-# Pull model
-ollama pull llama3.2:3b
+# 1. Ingestion & Preprocessing (46 -> 19 features via RFE):
+python run_phase1_2.py --sample 5000
 
-# Verify connection
-curl http://localhost:11434/api/tags
+# 2. Method B2 Ensemble Training (RF 0.6 + XGBoost 0.4):
+python run_phase3_ensemble.py
+
+# 3. Explainable AI (SHAP TreeExplainer across 2,000 flows):
+python xai/run_phase4_shap.py
+
+# 4. Realistic Adversarial Suite (Constrained FGSM, HopSkipJump, ZOO, Defense Matrix):
+python adversarial/run_phase4_adversarial.py --stage all
 ```
 
 ---
 
-## Running the Pipeline (Step-by-Step)
+### Phase 5: Multi-Agent Tactical Defense & Operational Dashboard
 
-### Step 1: Preprocessing & Feature Selection (Phases 1 & 2)
-```bash
-python run_phase1_2.py --sample 5000
-```
+Run the Phase 5 pipeline stages in sequence. All commands execute locally in the foreground, track peak memory via `psutil` (under 4 GB), and write structured JSON artifacts:
 
-### Step 2: Train & Evaluate Ensemble Classifiers (Phase 3A)
-```bash
-python run_phase3_ensemble.py
-```
-
-### Step 3: Run the LLM Semantic Orchestrator (Phase 3B)
-```bash
-# Standard fixed telemetry run:
-python run_phase3_llm.py
-
-# Or with real top SHAP feature grounding:
-python run_phase3_llm.py --use-shap
-```
-
-### Step 4: Run Phase 4A Explainable AI (SHAP Analysis)
-```bash
-python xai/run_phase4_shap.py
-```
-*Computes TreeExplainer SHAP values across 2,000 stratified test flows, evaluates XGBoost vs RF stability ($\rho = 0.9088$), generates global and per-class plots, and exports `artifacts/shap_local_40flows.json`.*
-
-### Step 5: Run Phase 4B Adversarial Robustness Assessment
-The adversarial suite supports staged modular execution (writing results immediately per stage):
-```bash
-# Run individual stages:
-python adversarial/run_phase4_adversarial.py --stage fgsm
-python adversarial/run_phase4_adversarial.py --stage hsj --hsj2-samples 50
-python adversarial/run_phase4_adversarial.py --stage zoo --zoo-samples 40
-python adversarial/run_phase4_adversarial.py --stage defense --defense-samples 500 --defense-hsj-samples 50
-python adversarial/run_phase4_adversarial.py --stage combine
-
-# Or run complete suite:
-python adversarial/run_phase4_adversarial.py --stage all
-```
-*Enforces domain constraints (freezes protocols/flags, bounds packet sizes/timing), verifies zero-attack pipeline invariance (0.000000 drift), evaluates FGSM transfer vs isotropic random-noise controls, runs multi-budget black-box HopSkipJump & ZOO, and tests a 4-arm defense matrix.*
-
-### Step 6: Generate & Audit Forensic Alert Logs (Phase 4C)
-```bash
-# Populate logs/alerts.jsonl and execute tamper verification tests (including tail truncation):
-python alerts/generate_and_test_alerts.py
-
-# Audit an existing log file directly against the external tail hash anchor:
-python alerts/verify_log.py --file logs/alerts.jsonl --anchor logs/alerts_tail_hash.txt
-```
+| Step | Command | Description | Measured Runtime | Peak RAM |
+|:---:|:---|:---|:---:|:---:|
+| **1** | `python marl/build_cache.py` | Runs frozen B2 ensemble over val & test sets; generates 70/30 `rl_train`/`rl_val` splits | ~6.1 s | 610 MB |
+| **2** | `pytest marl/tests/test_env.py -v` | Unit tests: no label leakage, determinism, reward arithmetic, budget/posture limits | ~1.6 s | 95 MB |
+| **3** | `python marl/baselines.py` | Benchmarks 7 baselines (Random, None, Max, Severity Rule, Budget-Aware Severity, Label-Aware Reference Rules) over 200 episodes | ~31.9 s | 129 MB |
+| **4** | `python marl/mappo.py --pilot` | Runs 20,000-step pilot, computes steps/sec, sets budget (200,000 steps) | ~97.9 s | 367 MB |
+| **5** | `python marl/mappo.py --resume` | Trains 5 seeds under `balanced` setting; selects checkpoints by best `rl_val` return | ~48.6 min | 410 MB |
+| **6** | `python marl/evaluate.py` | Evaluates MAPPO and baselines on SAME 500 test episodes; applies pre-registered decision rule | ~160.8 s | 297 MB |
+| **7** | `python marl/stress_test.py` | Paired like-for-like test of all policies against 500 clean vs FGSM-perturbed flows ($\epsilon=0.10$) | ~299.8 s | 52 MB |
+| **8** | `python alerts/generate_phase5_alerts.py` | Emits 45 alerts with MARL actions to `logs/alerts_phase5.jsonl`; executes 3-test cryptographic audit | ~2.0 s | 135 MB |
+| **9** | `python export/elk_export.py` | Exports alerts to Elastic Common Schema (`logs/alerts_phase5_ecs.ndjson`) | ~0.1 s | 60 MB |
+| **10** | `python dashboard/build_dashboard.py` | Compiles self-contained `reports/dashboard.html` with embedded Base64 PNG charts | ~1.5 s | 120 MB |
+| **11** | `python reports/generate_phase5_report.py` | Compiles `reports/phase5_summary.md` 100% programmatically from JSON artifacts | ~0.2 s | 60 MB |
+| **12** | `python tools/check_report_consistency.py` | Automated auditor verifying mathematical, empirical & formatting consistency | ~1.0 s | 80 MB |
 
 ---
 
@@ -225,5 +211,5 @@ python alerts/verify_log.py --file logs/alerts.jsonl --anchor logs/alerts_tail_h
 | **4A** | Explainable AI (SHAP TreeExplainer) | **COMPLETE** | 2,000 stratified flows, $\rho = 0.9088$ stability, `--use-shap` LLM integration |
 | **4B** | Adversarial Robustness (ART) | **COMPLETE** | Domain constraints, zero-attack control (0.0 drift), random noise control, FGSM transfer, multi-budget HSJ & ZOO, 4-arm defense matrix |
 | **4C** | Cryptographic Alert Logging | **COMPLETE** | Flat ELK-ready schema, SHA-256 hash chaining, 100% verified tamper detection |
-| **5** | MARL Tactical Defense (MAPPO) | UPCOMING | Multi-agent dynamic adaptation against adversarial evasion |
-| **6** | SIEM Dashboard (ELK / Kibana) | UPCOMING | Ingestion of `logs/alerts.jsonl` into Elasticsearch & Kibana dashboards |
+| **5A** | MARL Tactical Defense (MAPPO) | **COMPLETE** | 3 cooperative agents (Triage, Containment, Escalation); paired diff +21.63 [20.39, 22.85] vs best non-learned baseline (severity_rule_budget_aware) (**better**) |
+| **5B** | Autonomous SOC Dashboard & ECS Export | **COMPLETE** | Elastic Common Schema ndjson export, 3-test cryptographic log verification, standalone Base64 HTML dashboard |

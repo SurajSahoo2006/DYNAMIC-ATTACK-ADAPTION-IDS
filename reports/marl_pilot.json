@@ -1,0 +1,23 @@
+{
+  "description": "Stage 4 MAPPO Pilot Benchmark and Budget Selection",
+  "timestamp": "2026-10-30 00:14:08",
+  "pilot_steps": 20000,
+  "elapsed_seconds": 97.92,
+  "steps_per_second": 204.26,
+  "rule": "budget = min(MAX_TRAIN_STEPS, steps_per_sec * 1500s), >= 100,000 steps",
+  "chosen_budget": 200000,
+  "training_plan": {
+    "balanced": [
+      42,
+      123,
+      456,
+      789,
+      1011
+    ]
+  },
+  "active_settings": [
+    "balanced"
+  ],
+  "skipped_settings_reason": "All 3 settings x 5 seeds (14687.2s) and 2 settings (7833.2s) exceed 75-minute limit (4500s). Trained 'balanced' setting only (5 seeds).",
+  "peak_ram_mb": 366.98
+}

@@ -21,6 +21,9 @@ requests>=2.28
 shap>=0.44
 adversarial-robustness-toolbox>=1.16
 
+# Phase 5 (MARL, Testing & Dashboard)
+pytest>=7.0
+
 # Phase 5+ Future Modules
 # ray[rllib]>=2.9
 # elasticsearch>=8.0
