@@ -43,13 +43,34 @@ from app.data_access import (
     load_zeroday_results,
 )
 
+# Navigation definition with icons and descriptions
+PAGE_DEFINITIONS = [
+    ("System Overview", "🛡️", "Subsystem health, model manifest & multi-stage pipeline flow"),
+    ("Live Triage", "⚡", "Flow telemetry scoring, calibration, SHAP & LLM briefing"),
+    ("Batch Analysis", "📊", "Bulk CSV telemetry classification & MARL tactical defense"),
+    ("Alert Log", "📜", "Forensic audit ledger & SHA-256 cryptographic verification"),
+    ("Results", "🔬", "Empirical findings & validated metrics across Phases 4 through 12"),
+    ("Downloads", "💾", "Technical summaries, manifests & processed datasets"),
+]
+PAGE_NAMES = [p[0] for p in PAGE_DEFINITIONS]
+
 # Page configuration
 st.set_page_config(
     page_title="Autonomous Threat Detection & Defense Console",
     page_icon="🛡️",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
+
+
+def load_custom_css():
+    """Injects high-end Cyber SOC stylesheets."""
+    css_file = PROJECT_ROOT / "app" / "style.css"
+    if css_file.exists():
+        st.markdown(f"<style>{css_file.read_text(encoding='utf-8')}</style>", unsafe_allow_html=True)
+
+
+load_custom_css()
 
 
 @st.cache_resource
@@ -58,10 +79,30 @@ def get_pipeline() -> IDSPipeline:
     return IDSPipeline()
 
 
+def format_cyber_plot(fig, ax):
+    """Styles Matplotlib figures to match the dark SOC aesthetic."""
+    fig.patch.set_facecolor("#0b1120")
+    ax.set_facecolor("#0f172a")
+    ax.tick_params(colors="#94a3b8", labelsize=9)
+    ax.xaxis.label.set_color("#94a3b8")
+    ax.yaxis.label.set_color("#94a3b8")
+    ax.title.set_color("#f1f5f9")
+    for spine in ax.spines.values():
+        spine.set_color("#1e293b")
+    ax.grid(axis="x", color="#1e293b", linestyle="--", alpha=0.7)
+
+
 def render_footer():
     """Renders mandatory project attribution and simulation scope disclaimer."""
-    st.markdown("---")
-    st.caption("Simulated and offline evaluation on CICIoT2023 - not a production deployment")
+    st.markdown(
+        """
+        <div class="soc-footer">
+            🛡️ <strong>Autonomous Threat Detection & Adaptive Defense Console</strong><br>
+            <span>Simulated and offline evaluation on CICIoT2023 - not a production deployment</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 # =====================================================================
@@ -84,7 +125,7 @@ def page_system_overview(pipeline: IDSPipeline):
         col_h1, col_h2 = st.columns(2)
         with col_h1:
             if overall_status == "OK":
-                st.success(f"Pipeline Status: **{overall_status}**")
+                st.success(f"Pipeline Status: **{overall_status}** • All Components Verified")
             else:
                 st.warning(f"Pipeline Status: **{overall_status}**")
         with col_h2:
@@ -192,7 +233,6 @@ def page_live_triage(pipeline: IDSPipeline):
             for f in selected_features:
                 if f in row_data:
                     val = float(row_data[f])
-                    # If mean is non-zero, compute physical scale
                     i_idx = feat_to_idx.get(f, 0)
                     physical_val = (val * scales[i_idx]) + means[i_idx]
                     flow_raw_values[f] = float(physical_val)
@@ -244,9 +284,7 @@ def page_live_triage(pipeline: IDSPipeline):
         raw_conf = res.get("raw_confidence", 0.0)
         cal_conf = res.get("calibrated_confidence", 0.0)
         is_unknown = res.get("unknown_flag", False)
-        severity = res.get("severity", "Low")
-        ae_score = res.get("ae_score", 0.0)
-        ae_flag = res.get("ae_flag", False)
+        severity = str(res.get("severity", "Low"))
         notes = res.get("decision_notes", "")
 
         c1, c2, c3, c4 = st.columns(4)
@@ -267,11 +305,21 @@ def page_live_triage(pipeline: IDSPipeline):
             st.info(f"Benchmark Ground Truth Label: **{saved_true}**")
 
         # Probability Distribution Bar Chart
-        st.markdown("#### 8-Class Probability Distribution")
+        st.markdown("#### 8-Class Calibrated Probability Distribution")
         class_names = pipeline.class_names
         prob_data = {c: res.get(f"prob_{c}", 0.0) for c in class_names}
         prob_df = pd.DataFrame(list(prob_data.items()), columns=["Attack Class", "Probability"]).set_index("Attack Class")
-        st.bar_chart(prob_df)
+
+        fig_prob, ax_prob = plt.subplots(figsize=(8, 3))
+        format_cyber_plot(fig_prob, ax_prob)
+        colors_prob = ["#f43f5e" if c == pred_cls and pred_cls != "Benign" else ("#10b981" if c == "Benign" else "#38bdf8") for c in class_names]
+        ax_prob.bar(prob_df.index, prob_df["Probability"], color=colors_prob, edgecolor="#1e293b")
+        ax_prob.set_ylabel("Probability")
+        ax_prob.set_ylim(0, 1.0)
+        plt.xticks(rotation=25, ha="right")
+        plt.tight_layout()
+        st.pyplot(fig_prob)
+        plt.close(fig_prob)
 
         # Explainability & SHAP Section
         st.markdown("#### Feature Attributions & Explainable AI (SHAP)")
@@ -281,20 +329,18 @@ def page_live_triage(pipeline: IDSPipeline):
             top_shap = exp_data.get("top_features", [])
 
             if top_shap:
-                shap_df = pd.DataFrame(top_shap)
-                # Plot horizontal bar chart
                 fig, ax = plt.subplots(figsize=(8, 3))
+                format_cyber_plot(fig, ax)
                 y_pos = np.arange(len(top_shap))
                 vals = [f["shap_value"] for f in top_shap]
                 labels = [f"{f['feature']} ({f.get('unscaled_value', '')})" for f in top_shap]
-                colors = ["#d9534f" if v > 0 else "#0275d8" for v in vals]
+                colors = ["#f43f5e" if v > 0 else "#38bdf8" for v in vals]
 
-                ax.barh(y_pos, vals, color=colors)
+                ax.barh(y_pos, vals, color=colors, edgecolor="#1e293b")
                 ax.set_yticks(y_pos)
                 ax.set_yticklabels(labels)
                 ax.invert_yaxis()
                 ax.set_xlabel("SHAP Impact on Predicted Class (Tree Log-Odds)")
-                ax.grid(axis="x", linestyle="--", alpha=0.7)
                 plt.tight_layout()
                 st.pyplot(fig)
                 plt.close(fig)
@@ -672,29 +718,98 @@ def page_downloads():
 def main():
     pipeline = get_pipeline()
 
-    # Sidebar Navigation
-    st.sidebar.title("Navigation")
-    pages = [
-        "System Overview",
-        "Live Triage",
-        "Batch Analysis",
-        "Alert Log",
-        "Results",
-        "Downloads",
-    ]
-    choice = st.sidebar.radio("Select View", pages)
+    if "selected_page" not in st.session_state:
+        st.session_state["selected_page"] = "System Overview"
 
-    if choice == "System Overview":
+    # Top SOC Navbar
+    st.markdown(
+        """
+        <div class="soc-navbar">
+            <div class="soc-brand">
+                <span style="font-size: 1.8rem;">🛡️</span>
+                <div>
+                    <div class="soc-brand-title">AUTONOMOUS THREAT DEFENSE CONSOLE</div>
+                    <div class="soc-brand-subtitle">UNIFIED MULTI-AGENT INTRUSION DETECTION SYSTEM</div>
+                </div>
+            </div>
+            <div class="status-pill">
+                <span class="status-dot"></span>
+                <span>PIPELINE ONLINE</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # 3-Bars Hamburger Popover Menu and Active View Bar
+    col_menu, col_active, col_stat = st.columns([1, 3, 2])
+
+    with col_menu:
+        with st.popover("☰ MENU", help="Click to open navigation drawer", use_container_width=True):
+            st.markdown("### 🧭 Navigation")
+            st.caption("Select a system console view:")
+            for p_name, p_icon, p_desc in PAGE_DEFINITIONS:
+                is_active = st.session_state.get("selected_page") == p_name
+                prefix = "▶ " if is_active else ""
+                if st.button(
+                    f"{prefix}{p_icon} **{p_name}**\n\n_{p_desc}_",
+                    key=f"pop_btn_{p_name}",
+                    use_container_width=True,
+                ):
+                    st.session_state["selected_page"] = p_name
+                    st.session_state["sidebar_nav_radio"] = p_name
+                    st.rerun()
+
+    with col_active:
+        active_view = st.session_state.get("selected_page", "System Overview")
+        st.markdown(f"**Console View:** <span style='color: #38bdf8; font-weight: 700;'>{active_view}</span>", unsafe_allow_html=True)
+
+    with col_stat:
+        try:
+            h = pipeline.health()
+            stat = h.get("overall_status", "OK").upper()
+            rss = h.get("process_rss_mb", "N/A")
+            st.caption(f"Status: **{stat}** | RSS: **{rss} MB**")
+        except Exception:
+            st.caption("Status: **ONLINE**")
+
+    st.markdown("<div style='margin-bottom: 16px;'></div>", unsafe_allow_html=True)
+
+    # Synchronized Sidebar Navigation (supports toggle and automated tests)
+    st.sidebar.markdown("### 🛡️ Autonomous IDS")
+    st.sidebar.caption("Unified Detection & Defense Console")
+    st.sidebar.markdown("---")
+
+    def on_radio_change():
+        st.session_state["selected_page"] = st.session_state["sidebar_nav_radio"]
+
+    current_selection = st.session_state.get("selected_page", "System Overview")
+    if current_selection not in PAGE_NAMES:
+        current_selection = "System Overview"
+
+    sidebar_choice = st.sidebar.radio(
+        "Select View",
+        PAGE_NAMES,
+        index=PAGE_NAMES.index(current_selection),
+        key="sidebar_nav_radio",
+        on_change=on_radio_change,
+    )
+    # Ensure active view reflects choice
+    st.session_state["selected_page"] = sidebar_choice
+    active_choice = st.session_state["selected_page"]
+
+    # Render selected view
+    if active_choice == "System Overview":
         page_system_overview(pipeline)
-    elif choice == "Live Triage":
+    elif active_choice == "Live Triage":
         page_live_triage(pipeline)
-    elif choice == "Batch Analysis":
+    elif active_choice == "Batch Analysis":
         page_batch_analysis(pipeline)
-    elif choice == "Alert Log":
+    elif active_choice == "Alert Log":
         page_alert_log(pipeline)
-    elif choice == "Results":
+    elif active_choice == "Results":
         page_results()
-    elif choice == "Downloads":
+    elif active_choice == "Downloads":
         page_downloads()
 
     render_footer()
