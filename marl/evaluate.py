@@ -26,6 +26,7 @@ import argparse
 import collections
 import json
 import logging
+import os
 import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -301,7 +302,7 @@ def main():
             "notifications_per_episode": eval_res["notifications_per_episode"],
             "truncated": truncated,
             "episodes_evaluated": len(eval_res["episode_returns"]),
-            "checkpoint": str(ckpt_p),
+            "checkpoint": os.path.relpath(ckpt_p, PROJECT_ROOT).replace("\\", "/"),
             "eval_details": eval_res,
         }
 

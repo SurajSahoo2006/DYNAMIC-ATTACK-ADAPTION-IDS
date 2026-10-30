@@ -26,7 +26,7 @@
   "notifications_per_episode": 0.0,
   "truncated": false,
   "episodes_evaluated": 500,
-  "checkpoint": "D:\\IROP MODEL\\DYNAMIC-ATTACK-ADAPTION-IDS\\models\\marl\\mappo_availability-first_seed42_best.pt",
+  "checkpoint": "models/marl/mappo_availability-first_seed42_best.pt",
   "eval_details": {
     "num_episodes": 500,
     "mean_return": -36.325,

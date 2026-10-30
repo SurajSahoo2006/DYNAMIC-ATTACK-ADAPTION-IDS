@@ -12,6 +12,7 @@ Prints a comparison table and saves to marl/results/reward_settings_comparison.j
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any, Dict
 
@@ -55,6 +56,15 @@ def main():
             ben_pct = data.get("benign_disrupted_pct")
             trunc = data.get("truncated", False)
 
+            raw_checkpoint_path = data.get("checkpoint")
+            if raw_checkpoint_path:
+                try:
+                    checkpoint_path = os.path.relpath(raw_checkpoint_path, PROJECT_ROOT).replace("\\", "/")
+                except Exception:
+                    checkpoint_path = os.path.relpath(raw_checkpoint_path).replace("\\", "/")
+            else:
+                checkpoint_path = None
+
             comparison[setting] = {
                 "setting": setting,
                 "aggregate_return": round(float(agg_ret), 4) if agg_ret is not None else None,
@@ -62,7 +72,7 @@ def main():
                 "benign_disrupted_pct": round(float(ben_pct), 2) if ben_pct is not None else None,
                 "truncated": bool(trunc),
                 "episodes_evaluated": data.get("episodes_evaluated"),
-                "checkpoint": data.get("checkpoint"),
+                "checkpoint": checkpoint_path,
             }
 
             agg_str = f"{agg_ret:>8.2f}" if agg_ret is not None else "null"

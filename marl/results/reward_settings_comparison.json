@@ -15,7 +15,7 @@
     "benign_disrupted_pct": 100.0,
     "truncated": false,
     "episodes_evaluated": 500,
-    "checkpoint": "D:\\IROP MODEL\\DYNAMIC-ATTACK-ADAPTION-IDS\\models\\marl\\mappo_security-first_seed42_best.pt"
+    "checkpoint": "models/marl/mappo_security-first_seed42_best.pt"
   },
   "availability_first": {
     "setting": "availability_first",
@@ -24,6 +24,6 @@
     "benign_disrupted_pct": 4.27,
     "truncated": false,
     "episodes_evaluated": 500,
-    "checkpoint": "D:\\IROP MODEL\\DYNAMIC-ATTACK-ADAPTION-IDS\\models\\marl\\mappo_availability-first_seed42_best.pt"
+    "checkpoint": "models/marl/mappo_availability-first_seed42_best.pt"
   }
 }
