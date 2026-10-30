@@ -50,6 +50,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from alerts.alert_logger import ForensicAlertLogger
 from alerts.verify_log import verify_alert_log
+from calibration.fit import IsotonicCalibrator, TemperatureScaler
 from config import ENCODER_8_PATH, get_flow_severity
 from ids_system.pipeline import IDSPipeline
 from predict import get_or_load_model
@@ -167,6 +168,8 @@ def run_parity_tests(n_samples: int = 500, seed: int = 42) -> Dict[str, Any]:
     # P2: Pipeline Calibrated Confidence == Calibration Code Output
     # -------------------------------------------------------------
     calib_path = PROJECT_ROOT / "calibration" / "models" / "chosen_calibrator.joblib"
+    sys.modules["__main__"].IsotonicCalibrator = IsotonicCalibrator
+    sys.modules["__main__"].TemperatureScaler = TemperatureScaler
     calibrator = joblib.load(calib_path)
     P_cal_direct = calibrator.predict_proba(probs_predict)
     cal_conf_direct = np.max(P_cal_direct, axis=1).astype(np.float32)

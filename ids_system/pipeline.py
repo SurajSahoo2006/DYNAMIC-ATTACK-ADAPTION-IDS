@@ -219,6 +219,8 @@ class IDSPipeline:
             calib_path = PROJECT_ROOT / "calibration" / "models" / "chosen_calibrator.joblib"
             if not calib_path.exists():
                 raise FileNotFoundError(f"Calibrator missing at {calib_path}")
+            sys.modules["__main__"].IsotonicCalibrator = IsotonicCalibrator
+            sys.modules["__main__"].TemperatureScaler = TemperatureScaler
             self._calibrator = joblib.load(calib_path)
         return self._calibrator
 

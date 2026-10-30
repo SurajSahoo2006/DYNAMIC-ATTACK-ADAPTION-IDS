@@ -373,10 +373,10 @@ def check_requirements_completeness() -> List[str]:
     standard_or_local = {
         "sys", "os", "json", "time", "logging", "argparse", "hashlib", "pathlib", "typing",
         "shutil", "datetime", "re", "warnings", "collections", "ast", "glob", "math",
-        "models", "ingest", "preprocess", "xai", "adversarial", "alerts", "orchestrator", "ids_system",
+        "models", "ingest", "preprocess", "xai", "adversarial", "alerts", "orchestrator", "ids_system", "app",
         "config", "predict", "tools", "__future__", "dataclasses", "gc", "uuid", "experiments",
         "run_phase3_llm", "scapy", "concurrent", "marl", "export", "dashboard", "config_marl",
-        "io", "base64", "tempfile", "urllib", "subprocess", "drift", "federated", "copy", "zeroday", "edge", "calibration", "platform", "threading",
+        "io", "base64", "tempfile", "urllib", "subprocess", "drift", "federated", "copy", "zeroday", "edge", "calibration", "platform", "threading", "importlib",
     }
 
     missing = []
@@ -1087,6 +1087,45 @@ def check_phase13_pipeline() -> Tuple[List[str], List[str]]:
     return errors, warnings
 
 
+
+
+def check_frontend() -> Tuple[List[str], List[str]]:
+    r"""
+    CHECK 18 - frontend_check:
+    FAIL on numeric metric literals in app/*.py (regex like \d+\.\d{2,}%? outside comments
+    and an allow-list of layout constants inside the checker) or on direct model imports.
+    """
+    errors = []
+    warnings = []
+
+    app_dir = PROJECT_ROOT / "app"
+    if not app_dir.exists():
+        errors.append("app/ directory is missing.")
+        return errors, warnings
+
+    banned_imports = ["joblib.load", "xgboost", "torch.load", "sklearn"]
+    allowed_numbers = {"0.7"}
+
+    for py_file in app_dir.glob("*.py"):
+        text = py_file.read_text(encoding="utf-8")
+
+        # 1. Direct model imports check
+        for b in banned_imports:
+            if b in text:
+                errors.append(f"Forbidden direct model import/usage '{b}' detected in app/{py_file.name}")
+
+        # 2. Numeric metric literals check
+        lines = text.splitlines()
+        for i, line in enumerate(lines):
+            line_no_comment = line.split("#")[0]
+            matches = re.findall(r"\b\d+\.\d{2,}%?", line_no_comment)
+            for m in matches:
+                if m not in allowed_numbers:
+                    errors.append(f"Hardcoded numeric metric literal '{m}' found in app/{py_file.name}:{i+1}")
+
+    return errors, warnings
+
+
 def main():
     print("=" * 76)
     print("  PHASE 4 & 5 REPORT & CODEBASE CONSISTENCY AUDITOR")
@@ -1313,6 +1352,20 @@ def main():
         print("  [WARN] Phase 13 pipeline check completed with warnings.")
     else:
         print("  [PASS] Phase 13 unified pipeline artifacts and parity tests verified.")
+
+    print("\n[18] Auditing Phase 14 frontend code (frontend_check) ...")
+    f_errs, f_warns = check_frontend()
+    if f_errs:
+        all_errors.extend(f_errs)
+        for e in f_errs:
+            print(f"  [ERROR] {e}")
+    elif f_warns:
+        all_warnings.extend(f_warns)
+        for w in f_warns:
+            print(f"  {w}")
+        print("  [WARN] Phase 14 frontend check completed with warnings.")
+    else:
+        print("  [PASS] Phase 14 frontend verified (no hardcoded metric literals or direct model imports).")
 
     print("\n" + "=" * 76)
     if not all_errors:

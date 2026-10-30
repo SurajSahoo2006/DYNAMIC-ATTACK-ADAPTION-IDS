@@ -302,9 +302,9 @@ python reports/generate_phase12_report.py
 
 ### Phase 13: Unified pipeline
 
-The consolidated \IDSPipeline\ unifies all subsystems from Phases 1 through 12 into a single production architecture covering feature scaling, raw B2 ensemble inference, isotonic calibration, autoencoder anomaly scoring, decision fusion, SHAP local attributions, LLM incident briefings, greedy MARL tactical response, and cryptographic forensic audit logging.
+The consolidated `IDSPipeline` unifies all subsystems from Phases 1 through 12 into a single production architecture covering feature scaling, raw B2 ensemble inference, isotonic calibration, autoencoder anomaly scoring, decision fusion, SHAP local attributions, LLM incident briefings, greedy MARL tactical response, and cryptographic forensic audit logging.
 
-\\ash
+```bash
 # 1. Audit Component Health (Scaler, Ensemble, Calibrator, Autoencoder, SHAP, LLM, MARL, Alerts):
 python -m ids_system.cli health
 
@@ -319,6 +319,22 @@ python ids_system/run_integration.py
 
 # 5. Generate Phase 13 Summary Report:
 python reports/generate_phase13_report.py
-\
+```
+
 > **Note on Trained Models**:
-> Large model weight checkpoints (\models/*.joblib\, \models/*.pt\, \zeroday/models/*.pt\, \models/marl/*.pt\) are generated locally by the Phase 1–3, Phase 5, Phase 10, and Phase 12 training scripts and are not stored in git version control.
+> Large model weight checkpoints (`models/*.joblib`, `models/*.pt`, `zeroday/models/*.pt`, `models/marl/*.pt`) are generated locally by the Phase 1–3, Phase 5, Phase 10, and Phase 12 training scripts and are not stored in git version control.
+
+
+---
+
+### Phase 14: Frontend
+
+Launch the interactive Streamlit operator console integrating the unified `IDSPipeline`:
+
+```bash
+pip install -r requirements.txt
+streamlit run app/streamlit_app.py
+```
+
+> **Note on Static Dashboard**:
+> `dashboard/dashboard.html` remains available as the static offline view.
