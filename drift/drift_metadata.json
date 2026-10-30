@@ -1,0 +1,13 @@
+{
+  "n_windows": 5,
+  "drift_window": 2,
+  "drift_description": "DDoS flow_duration x8, IAT x6 in window 2",
+  "rows_per_window": [
+    5259,
+    5259,
+    5258,
+    5258,
+    5258
+  ],
+  "drifted_rows_in_window_2": 2272
+}

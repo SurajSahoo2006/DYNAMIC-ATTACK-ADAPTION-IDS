@@ -1,0 +1,45 @@
+{
+  "windows": [
+    {
+      "window_id": 0,
+      "n_samples": 5259,
+      "accuracy": 0.9502,
+      "drift_detected": false,
+      "first_drift_index": null
+    },
+    {
+      "window_id": 1,
+      "n_samples": 5259,
+      "accuracy": 0.9549,
+      "drift_detected": false,
+      "first_drift_index": null
+    },
+    {
+      "window_id": 2,
+      "n_samples": 5258,
+      "accuracy": 0.9496,
+      "drift_detected": false,
+      "first_drift_index": null
+    },
+    {
+      "window_id": 3,
+      "n_samples": 5258,
+      "accuracy": 0.9502,
+      "drift_detected": false,
+      "first_drift_index": null
+    },
+    {
+      "window_id": 4,
+      "n_samples": 5258,
+      "accuracy": 0.9542,
+      "drift_detected": false,
+      "first_drift_index": null
+    }
+  ],
+  "drift_injected_window": 2,
+  "detector": "PageHinkley",
+  "detector_params": {
+    "min_instances": 30,
+    "threshold": 50.0
+  }
+}

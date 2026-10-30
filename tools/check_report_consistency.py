@@ -376,7 +376,7 @@ def check_requirements_completeness() -> List[str]:
         "models", "ingest", "preprocess", "xai", "adversarial", "alerts", "orchestrator",
         "config", "predict", "tools", "__future__", "dataclasses", "gc", "uuid", "experiments",
         "run_phase3_llm", "scapy", "concurrent", "marl", "export", "dashboard", "config_marl",
-        "io", "base64", "tempfile", "urllib", "subprocess",
+        "io", "base64", "tempfile", "urllib", "subprocess", "drift",
     }
 
     missing = []
@@ -481,6 +481,50 @@ def check_reward_settings_coverage() -> Tuple[List[str], List[str]]:
                     warnings.append(f"WARN reward_settings: Setting '{s}' has truncated=true")
     except Exception as e:
         errors.append(f"Error parsing marl/results/reward_settings_comparison.json: {e}")
+
+    return errors, warnings
+
+
+def check_phase8_drift() -> Tuple[List[str], List[str]]:
+    """
+    CHECK 11 — phase8_drift_check:
+    Open drift/drift_detection_results.json, confirm "drift_injected_window" exists.
+    Open drift/retrain_results.json, confirm "accuracy_delta" exists and is float.
+    FAIL only if either file missing.
+    WARN if accuracy_delta == 0.0 exactly.
+    """
+    errors = []
+    warnings = []
+    det_path = PROJECT_ROOT / "drift" / "drift_detection_results.json"
+    retrain_path = PROJECT_ROOT / "drift" / "retrain_results.json"
+
+    if not det_path.exists():
+        errors.append("drift/drift_detection_results.json is missing.")
+    else:
+        try:
+            with open(det_path, "r", encoding="utf-8") as f:
+                det_data = json.load(f)
+            if "drift_injected_window" not in det_data:
+                errors.append("'drift_injected_window' missing from drift/drift_detection_results.json")
+        except Exception as e:
+            errors.append(f"Error reading drift/drift_detection_results.json: {e}")
+
+    if not retrain_path.exists():
+        errors.append("drift/retrain_results.json is missing.")
+    else:
+        try:
+            with open(retrain_path, "r", encoding="utf-8") as f:
+                retrain_data = json.load(f)
+            if "accuracy_delta" not in retrain_data:
+                errors.append("'accuracy_delta' missing from drift/retrain_results.json")
+            else:
+                val = retrain_data["accuracy_delta"]
+                if not isinstance(val, (int, float)):
+                    errors.append(f"'accuracy_delta' in drift/retrain_results.json is not a float: {type(val)}")
+                elif float(val) == 0.0:
+                    warnings.append("WARN phase8_drift: accuracy_delta is exactly 0.0")
+        except Exception as e:
+            errors.append(f"Error reading drift/retrain_results.json: {e}")
 
     return errors, warnings
 
@@ -613,6 +657,20 @@ def main():
         print("  [WARN] Settings present with truncated=true.")
     else:
         print("  [PASS] All 3 reward settings present with truncated=false.")
+
+    print("\n[11] Auditing Phase 8 concept drift and retraining artifacts (phase8_drift_check) ...")
+    d_errs, d_warns = check_phase8_drift()
+    if d_errs:
+        all_errors.extend(d_errs)
+        for e in d_errs:
+            print(f"  [ERROR] {e}")
+    elif d_warns:
+        all_warnings.extend(d_warns)
+        for w in d_warns:
+            print(f"  {w}")
+        print("  [WARN] Phase 8 drift check completed with warnings.")
+    else:
+        print("  [PASS] Phase 8 drift detection and retraining artifacts verified.")
 
     print("\n" + "=" * 76)
     if not all_errors:
