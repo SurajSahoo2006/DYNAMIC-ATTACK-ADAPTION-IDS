@@ -1,0 +1,47 @@
+feature,rfe_rank,selected,rf_importance
+flow_duration,1,True,0.03604997434709573
+Header_Length,1,True,0.07414380335686555
+Protocol Type,1,True,0.08134411627582121
+fin_flag_number,1,True,0.027856108715299182
+syn_count,1,True,0.05050791706844711
+ack_count,1,True,0.03765033818771324
+syn_flag_number,1,True,0.01990789506871181
+urg_count,1,True,0.04531730584909759
+rst_count,1,True,0.04728574772266262
+ICMP,1,True,0.03142139082786658
+Tot size,1,True,0.04788493752547463
+IAT,1,True,0.22451979544899092
+AVG,1,True,0.05584296639306441
+Max,1,True,0.04317259573787889
+Min,1,True,0.03165812142138955
+Tot sum,1,True,0.03670401017557762
+Magnitue,1,True,0.05482232957843071
+Covariance,1,True,0.029481476494073216
+Variance,1,True,0.024429169805539528
+Srate,2,False,
+Rate,3,False,
+Weight,4,False,
+HTTP,5,False,
+psh_flag_number,6,False,
+Std,7,False,
+fin_count,8,False,
+Radius,9,False,
+Number,10,False,
+UDP,11,False,
+Duration,12,False,
+ack_flag_number,13,False,
+TCP,14,False,
+rst_flag_number,15,False,
+HTTPS,16,False,
+SSH,17,False,
+LLC,18,False,
+IPv,19,False,
+ARP,20,False,
+DNS,21,False,
+DHCP,22,False,
+IRC,23,False,
+SMTP,24,False,
+Telnet,25,False,
+cwr_flag_number,26,False,
+ece_flag_number,27,False,
+Drate,28,False,
