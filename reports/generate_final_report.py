@@ -147,7 +147,7 @@ def main():
         "5. **Offline ELK Compatibility**: Alert schemas are ECS-compliant and verified via ndjson exports; live ELK container clusters were out of scope for local 8 GB hardware.",
         "",
         "## 8. Reproducibility",
-        "- Reviewers can verify and reproduce all pipeline stages, model metrics, and artifact generations using the unified master runner [`reproduce.py`](file:///D:/IROP%20MODEL/DYNAMIC-ATTACK-ADAPTION-IDS/reproduce.py).",
+        "- Reviewers can verify and reproduce all pipeline stages, model metrics, and artifact generations using the unified master runner [`reproduce.py`](reproduce.py).",
         "",
     ])
 
