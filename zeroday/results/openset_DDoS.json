@@ -1,0 +1,46 @@
+{
+  "class_name": "DDoS",
+  "n_test": 11338,
+  "flagged_unknown_by_ae": {
+    "x": 2885,
+    "n": 11338,
+    "percentage": 25.45,
+    "ci_lower": 24.65,
+    "ci_upper": 26.26,
+    "formatted": "2885 of 11338 (25.45% [24.65%, 26.26%])"
+  },
+  "flagged_unknown_by_confidence": {
+    "x": 3401,
+    "n": 11338,
+    "percentage": 30.0,
+    "ci_lower": 29.16,
+    "ci_upper": 30.85,
+    "formatted": "3401 of 11338 (30.00% [29.16%, 30.85%])"
+  },
+  "flagged_unknown_either": {
+    "x": 5507,
+    "n": 11338,
+    "percentage": 48.57,
+    "ci_lower": 47.65,
+    "ci_upper": 49.49,
+    "formatted": "5507 of 11338 (48.57% [47.65%, 49.49%])"
+  },
+  "silently_predicted_benign": {
+    "x": 3,
+    "n": 11338,
+    "percentage": 0.03,
+    "ci_lower": 0.01,
+    "ci_upper": 0.08,
+    "formatted": "3 of 11338 (0.03% [0.01%, 0.08%])"
+  },
+  "silently_predicted_other_attack": {
+    "x": 5828,
+    "n": 11338,
+    "percentage": 51.4,
+    "ci_lower": 50.48,
+    "ci_upper": 52.32,
+    "formatted": "5828 of 11338 (51.40% [50.48%, 52.32%])"
+  },
+  "elapsed_seconds": 4.01,
+  "truncated": false
+}

@@ -1,0 +1,46 @@
+{
+  "class_name": "BruteForce",
+  "n_test": 358,
+  "flagged_unknown_by_ae": {
+    "x": 22,
+    "n": 358,
+    "percentage": 6.15,
+    "ci_lower": 4.09,
+    "ci_upper": 9.13,
+    "formatted": "22 of 358 (6.15% [4.09%, 9.13%])"
+  },
+  "flagged_unknown_by_confidence": {
+    "x": 301,
+    "n": 358,
+    "percentage": 84.08,
+    "ci_lower": 79.93,
+    "ci_upper": 87.5,
+    "formatted": "301 of 358 (84.08% [79.93%, 87.50%])"
+  },
+  "flagged_unknown_either": {
+    "x": 308,
+    "n": 358,
+    "percentage": 86.03,
+    "ci_lower": 82.06,
+    "ci_upper": 89.24,
+    "formatted": "308 of 358 (86.03% [82.06%, 89.24%])"
+  },
+  "silently_predicted_benign": {
+    "x": 5,
+    "n": 358,
+    "percentage": 1.4,
+    "ci_lower": 0.6,
+    "ci_upper": 3.23,
+    "formatted": "5 of 358 (1.40% [0.60%, 3.23%])"
+  },
+  "silently_predicted_other_attack": {
+    "x": 45,
+    "n": 358,
+    "percentage": 12.57,
+    "ci_lower": 9.53,
+    "ci_upper": 16.41,
+    "formatted": "45 of 358 (12.57% [9.53%, 16.41%])"
+  },
+  "elapsed_seconds": 3.81,
+  "truncated": false
+}

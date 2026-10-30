@@ -1,0 +1,46 @@
+{
+  "class_name": "Mirai",
+  "n_test": 2960,
+  "flagged_unknown_by_ae": {
+    "x": 1001,
+    "n": 2960,
+    "percentage": 33.82,
+    "ci_lower": 32.14,
+    "ci_upper": 35.54,
+    "formatted": "1001 of 2960 (33.82% [32.14%, 35.54%])"
+  },
+  "flagged_unknown_by_confidence": {
+    "x": 2777,
+    "n": 2960,
+    "percentage": 93.82,
+    "ci_lower": 92.89,
+    "ci_upper": 94.63,
+    "formatted": "2777 of 2960 (93.82% [92.89%, 94.63%])"
+  },
+  "flagged_unknown_either": {
+    "x": 2828,
+    "n": 2960,
+    "percentage": 95.54,
+    "ci_lower": 94.74,
+    "ci_upper": 96.23,
+    "formatted": "2828 of 2960 (95.54% [94.74%, 96.23%])"
+  },
+  "silently_predicted_benign": {
+    "x": 0,
+    "n": 2960,
+    "percentage": 0.0,
+    "ci_lower": 0.0,
+    "ci_upper": 0.13,
+    "formatted": "0 of 2960 (0.00% [0.00%, 0.13%])"
+  },
+  "silently_predicted_other_attack": {
+    "x": 132,
+    "n": 2960,
+    "percentage": 4.46,
+    "ci_lower": 3.77,
+    "ci_upper": 5.26,
+    "formatted": "132 of 2960 (4.46% [3.77%, 5.26%])"
+  },
+  "elapsed_seconds": 3.61,
+  "truncated": false
+}

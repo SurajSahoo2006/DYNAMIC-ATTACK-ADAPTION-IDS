@@ -1,0 +1,8 @@
+{
+  "epochs_run": 40,
+  "best_val_loss": 0.412054,
+  "threshold": 0.998414,
+  "n_train_benign": 3998,
+  "n_val_benign": 4996,
+  "seed": 42
+}

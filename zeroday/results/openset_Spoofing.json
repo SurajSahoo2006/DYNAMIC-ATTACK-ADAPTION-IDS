@@ -1,0 +1,46 @@
+{
+  "class_name": "Spoofing",
+  "n_test": 1991,
+  "flagged_unknown_by_ae": {
+    "x": 346,
+    "n": 1991,
+    "percentage": 17.38,
+    "ci_lower": 15.78,
+    "ci_upper": 19.11,
+    "formatted": "346 of 1991 (17.38% [15.78%, 19.11%])"
+  },
+  "flagged_unknown_by_confidence": {
+    "x": 1430,
+    "n": 1991,
+    "percentage": 71.82,
+    "ci_lower": 69.81,
+    "ci_upper": 73.76,
+    "formatted": "1430 of 1991 (71.82% [69.81%, 73.76%])"
+  },
+  "flagged_unknown_either": {
+    "x": 1496,
+    "n": 1991,
+    "percentage": 75.14,
+    "ci_lower": 73.19,
+    "ci_upper": 76.99,
+    "formatted": "1496 of 1991 (75.14% [73.19%, 76.99%])"
+  },
+  "silently_predicted_benign": {
+    "x": 199,
+    "n": 1991,
+    "percentage": 9.99,
+    "ci_lower": 8.75,
+    "ci_upper": 11.39,
+    "formatted": "199 of 1991 (9.99% [8.75%, 11.39%])"
+  },
+  "silently_predicted_other_attack": {
+    "x": 296,
+    "n": 1991,
+    "percentage": 14.87,
+    "ci_lower": 13.37,
+    "ci_upper": 16.5,
+    "formatted": "296 of 1991 (14.87% [13.37%, 16.50%])"
+  },
+  "elapsed_seconds": 3.45,
+  "truncated": false
+}

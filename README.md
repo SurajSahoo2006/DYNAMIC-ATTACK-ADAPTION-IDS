@@ -227,3 +227,20 @@ Run the Phase 5 pipeline stages in sequence. All commands execute locally in the
 | **4C** | Cryptographic Alert Logging | **COMPLETE** | Flat ELK-ready schema, SHA-256 hash chaining, 100% verified tamper detection |
 | **5A** | MARL Tactical Defense (MAPPO) | **COMPLETE** | 3 cooperative agents (Triage, Containment, Escalation); paired diff +21.63 [20.39, 22.85] vs best non-learned baseline (severity_rule_budget_aware) (**better**) |
 | **5B** | Autonomous SOC Dashboard & ECS Export | **COMPLETE** | Elastic Common Schema ndjson export, 3-test cryptographic log verification, standalone Base64 HTML dashboard |
+
+---
+
+### Phase 10: Zero-day detection
+
+Run the Phase 10 zero-day detection pipeline:
+
+```bash
+# 1. Train Benign-Only PyTorch Autoencoder:
+python zeroday/train_autoencoder.py
+
+# 2. Run Open-Set Evaluation (Known Control & Leave-One-Class-Out):
+python zeroday/evaluate_openset.py --resume
+
+# 3. Generate Programmatic Phase 10 Summary Report:
+python reports/generate_phase10_report.py
+```

@@ -1,0 +1,46 @@
+{
+  "class_name": "Web-based",
+  "n_test": 672,
+  "flagged_unknown_by_ae": {
+    "x": 42,
+    "n": 672,
+    "percentage": 6.25,
+    "ci_lower": 4.66,
+    "ci_upper": 8.34,
+    "formatted": "42 of 672 (6.25% [4.66%, 8.34%])"
+  },
+  "flagged_unknown_by_confidence": {
+    "x": 335,
+    "n": 672,
+    "percentage": 49.85,
+    "ci_lower": 46.08,
+    "ci_upper": 53.62,
+    "formatted": "335 of 672 (49.85% [46.08%, 53.62%])"
+  },
+  "flagged_unknown_either": {
+    "x": 368,
+    "n": 672,
+    "percentage": 54.76,
+    "ci_lower": 50.98,
+    "ci_upper": 58.49,
+    "formatted": "368 of 672 (54.76% [50.98%, 58.49%])"
+  },
+  "silently_predicted_benign": {
+    "x": 0,
+    "n": 672,
+    "percentage": 0.0,
+    "ci_lower": 0.0,
+    "ci_upper": 0.57,
+    "formatted": "0 of 672 (0.00% [0.00%, 0.57%])"
+  },
+  "silently_predicted_other_attack": {
+    "x": 304,
+    "n": 672,
+    "percentage": 45.24,
+    "ci_lower": 41.51,
+    "ci_upper": 49.02,
+    "formatted": "304 of 672 (45.24% [41.51%, 49.02%])"
+  },
+  "elapsed_seconds": 3.27,
+  "truncated": false
+}

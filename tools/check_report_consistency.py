@@ -376,7 +376,7 @@ def check_requirements_completeness() -> List[str]:
         "models", "ingest", "preprocess", "xai", "adversarial", "alerts", "orchestrator",
         "config", "predict", "tools", "__future__", "dataclasses", "gc", "uuid", "experiments",
         "run_phase3_llm", "scapy", "concurrent", "marl", "export", "dashboard", "config_marl",
-        "io", "base64", "tempfile", "urllib", "subprocess", "drift", "federated", "copy",
+        "io", "base64", "tempfile", "urllib", "subprocess", "drift", "federated", "copy", "zeroday",
     }
 
     missing = []
@@ -566,6 +566,65 @@ def check_phase9_federated() -> Tuple[List[str], List[str]]:
     return errors, warnings
 
 
+def check_phase10_zeroday() -> Tuple[List[str], List[str]]:
+    """
+    CHECK 13 — phase10_zeroday_check:
+    - FAIL if zeroday/results/openset_summary.json or ae_training.json is missing.
+    - FAIL if the threshold in ae_training.json is not a float.
+    - WARN if any class is marked truncated.
+    - Recompute percentages in phase10_summary.md from the JSON counts
+      (same tolerance as the existing percent check).
+    """
+    errors = []
+    warnings = []
+    ae_path = PROJECT_ROOT / "zeroday" / "results" / "ae_training.json"
+    openset_path = PROJECT_ROOT / "zeroday" / "results" / "openset_summary.json"
+    p10_md_path = REPORTS_DIR / "phase10_summary.md"
+
+    if not ae_path.exists():
+        errors.append("zeroday/results/ae_training.json is missing.")
+    else:
+        try:
+            with open(ae_path, "r", encoding="utf-8") as f:
+                ae_data = json.load(f)
+            thresh = ae_data.get("threshold")
+            if not isinstance(thresh, (int, float)):
+                errors.append(f"Threshold in zeroday/results/ae_training.json is not a float: {type(thresh)}")
+        except Exception as e:
+            errors.append(f"Error reading zeroday/results/ae_training.json: {e}")
+
+    if not openset_path.exists():
+        errors.append("zeroday/results/openset_summary.json is missing.")
+    else:
+        try:
+            with open(openset_path, "r", encoding="utf-8") as f:
+                openset_data = json.load(f)
+
+            trunc_list = openset_data.get("truncated_classes", [])
+            if trunc_list:
+                warnings.append(f"WARN phase10_zeroday: Classes marked truncated: {trunc_list}")
+
+            leave_one_out = openset_data.get("leave_one_class_out", {})
+            for cname, cdata in leave_one_out.items():
+                if isinstance(cdata, dict) and cdata.get("truncated") is True:
+                    warnings.append(f"WARN phase10_zeroday: Class '{cname}' has truncated=True")
+        except Exception as e:
+            errors.append(f"Error reading zeroday/results/openset_summary.json: {e}")
+
+    if p10_md_path.exists():
+        try:
+            md_text = p10_md_path.read_text(encoding="utf-8")
+            frac_errs = check_fraction_percentages(md_text, "phase10_summary.md")
+            if frac_errs:
+                errors.extend(frac_errs)
+        except Exception as e:
+            errors.append(f"Error reading reports/phase10_summary.md: {e}")
+    else:
+        errors.append("reports/phase10_summary.md is missing.")
+
+    return errors, warnings
+
+
 def main():
     print("=" * 76)
     print("  PHASE 4 & 5 REPORT & CODEBASE CONSISTENCY AUDITOR")
@@ -722,6 +781,20 @@ def main():
         print("  [WARN] Phase 9 federated check completed with warnings.")
     else:
         print("  [PASS] Phase 9 federated learning artifacts verified.")
+
+    print("\n[13] Auditing Phase 10 zero-day detection artifacts (phase10_zeroday_check) ...")
+    z_errs, z_warns = check_phase10_zeroday()
+    if z_errs:
+        all_errors.extend(z_errs)
+        for e in z_errs:
+            print(f"  [ERROR] {e}")
+    elif z_warns:
+        all_warnings.extend(z_warns)
+        for w in z_warns:
+            print(f"  {w}")
+        print("  [WARN] Phase 10 zero-day check completed with warnings.")
+    else:
+        print("  [PASS] Phase 10 zero-day detection artifacts verified.")
 
     print("\n" + "=" * 76)
     if not all_errors:

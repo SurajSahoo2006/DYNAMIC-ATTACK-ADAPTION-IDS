@@ -1,0 +1,46 @@
+{
+  "class_name": "Recon",
+  "n_test": 4002,
+  "flagged_unknown_by_ae": {
+    "x": 263,
+    "n": 4002,
+    "percentage": 6.57,
+    "ci_lower": 5.84,
+    "ci_upper": 7.38,
+    "formatted": "263 of 4002 (6.57% [5.84%, 7.38%])"
+  },
+  "flagged_unknown_by_confidence": {
+    "x": 3211,
+    "n": 4002,
+    "percentage": 80.23,
+    "ci_lower": 78.97,
+    "ci_upper": 81.44,
+    "formatted": "3211 of 4002 (80.23% [78.97%, 81.44%])"
+  },
+  "flagged_unknown_either": {
+    "x": 3246,
+    "n": 4002,
+    "percentage": 81.11,
+    "ci_lower": 79.87,
+    "ci_upper": 82.29,
+    "formatted": "3246 of 4002 (81.11% [79.87%, 82.29%])"
+  },
+  "silently_predicted_benign": {
+    "x": 281,
+    "n": 4002,
+    "percentage": 7.02,
+    "ci_lower": 6.27,
+    "ci_upper": 7.86,
+    "formatted": "281 of 4002 (7.02% [6.27%, 7.86%])"
+  },
+  "silently_predicted_other_attack": {
+    "x": 475,
+    "n": 4002,
+    "percentage": 11.87,
+    "ci_lower": 10.9,
+    "ci_upper": 12.91,
+    "formatted": "475 of 4002 (11.87% [10.90%, 12.91%])"
+  },
+  "elapsed_seconds": 3.04,
+  "truncated": false
+}
