@@ -13,6 +13,20 @@
 
 ---
 
+## Quick Start
+1. Set `CIC_DATA_RAW_DIR` to your CICIoT2023 CSV folder.
+2. Run `python run_phase1_2.py` (Phases 1-2: data pipeline + features).
+3. Run `python run_phase3_ensemble.py` (Phase 3: ensemble training).
+4. Run `python run_phase3_llm.py` (Phase 3: LLM — requires Ollama + `ollama pull llama3.2:3b`).
+5. Run `python adversarial/run_phase4_adversarial.py --stage fgsm` (Phase 4: SHAP + adversarial).
+6. Run `python marl/mappo.py --reward_setting balanced` (Phase 5: MARL).
+7. Run `python package_model.py` (Phase 6: packaging).
+8. Run `python reproduce.py` to verify all artifacts.
+9. Run `python export_database.py` to export CSV splits for submission.
+10. Open `dashboard/dashboard.html` in a browser.
+
+---
+
 ## Architecture Overview
 
 ```
