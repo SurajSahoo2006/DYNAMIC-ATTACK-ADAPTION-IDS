@@ -1,0 +1,93 @@
+{
+  "variant": "v4_float32",
+  "category": "V4",
+  "description": "Baseline Ensemble with float32 input cast",
+  "environment": {
+    "cpu_model": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",
+    "machine": "AMD64",
+    "logical_cores": 8,
+    "physical_cores": 4,
+    "ram_gb": 7.79,
+    "python_version": "3.13.1",
+    "library_versions": {
+      "scikit-learn": "1.9.1",
+      "xgboost": "3.4.1",
+      "joblib": "1.6.0",
+      "numpy": "2.5.3",
+      "pandas": "3.0.6",
+      "torch": "2.15.0+cpu",
+      "psutil": "7.2.2"
+    }
+  },
+  "size_mb_uncompressed": 204.84,
+  "size_mb_compressed": 41.37,
+  "latency_per_flow_ms": {
+    "median_ms": 13.46,
+    "p95_ms": 29.454,
+    "min_ms": 13.064,
+    "max_ms": 13.68,
+    "range_ms": [
+      13.064,
+      13.68
+    ],
+    "runs": [
+      {
+        "run": 1,
+        "median_ms": 13.593,
+        "p95_ms": 30.763,
+        "min_ms": 12.586,
+        "max_ms": 40.19
+      },
+      {
+        "run": 2,
+        "median_ms": 13.68,
+        "p95_ms": 28.182,
+        "min_ms": 12.129,
+        "max_ms": 35.736
+      },
+      {
+        "run": 3,
+        "median_ms": 13.154,
+        "p95_ms": 30.018,
+        "min_ms": 12.462,
+        "max_ms": 34.626
+      },
+      {
+        "run": 4,
+        "median_ms": 13.064,
+        "p95_ms": 29.454,
+        "min_ms": 12.466,
+        "max_ms": 32.585
+      },
+      {
+        "run": 5,
+        "median_ms": 13.46,
+        "p95_ms": 28.428,
+        "min_ms": 12.155,
+        "max_ms": 33.337
+      }
+    ]
+  },
+  "throughput_fps": {
+    "median_fps": 12761.91,
+    "min_fps": 8007.92,
+    "max_fps": 13372.18,
+    "range_fps": [
+      8007.92,
+      13372.18
+    ],
+    "runs": [
+      12761.91,
+      11604.31,
+      8007.92,
+      13282.03,
+      13372.18
+    ]
+  },
+  "peak_memory_delta_mb": 0.0,
+  "validation_accuracy": 0.9645,
+  "validation_macro_f1": 0.8116,
+  "prediction_differences_count": 0,
+  "prediction_differences_total": 106766,
+  "prediction_difference_rate": 0.0
+}

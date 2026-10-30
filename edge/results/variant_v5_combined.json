@@ -1,0 +1,94 @@
+{
+  "variant": "v5_combined",
+  "category": "V5",
+  "description": "Combined Best (v1_rf_100 + v2_xgb_125)",
+  "environment": {
+    "cpu_model": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",
+    "machine": "AMD64",
+    "logical_cores": 8,
+    "physical_cores": 4,
+    "ram_gb": 7.79,
+    "python_version": "3.13.1",
+    "library_versions": {
+      "scikit-learn": "1.9.1",
+      "xgboost": "3.4.1",
+      "joblib": "1.6.0",
+      "numpy": "2.5.3",
+      "pandas": "3.0.6",
+      "torch": "2.15.0+cpu",
+      "psutil": "7.2.2"
+    }
+  },
+  "size_mb_uncompressed": 104.77,
+  "size_mb_compressed": 21.19,
+  "latency_per_flow_ms": {
+    "median_ms": 7.205,
+    "p95_ms": 16.487,
+    "min_ms": 6.906,
+    "max_ms": 7.466,
+    "range_ms": [
+      6.906,
+      7.466
+    ],
+    "runs": [
+      {
+        "run": 1,
+        "median_ms": 7.205,
+        "p95_ms": 16.616,
+        "min_ms": 6.437,
+        "max_ms": 20.82
+      },
+      {
+        "run": 2,
+        "median_ms": 7.466,
+        "p95_ms": 17.712,
+        "min_ms": 6.475,
+        "max_ms": 21.719
+      },
+      {
+        "run": 3,
+        "median_ms": 7.243,
+        "p95_ms": 16.487,
+        "min_ms": 6.556,
+        "max_ms": 19.185
+      },
+      {
+        "run": 4,
+        "median_ms": 7.182,
+        "p95_ms": 15.54,
+        "min_ms": 6.538,
+        "max_ms": 22.923
+      },
+      {
+        "run": 5,
+        "median_ms": 6.906,
+        "p95_ms": 16.149,
+        "min_ms": 6.207,
+        "max_ms": 17.919
+      }
+    ]
+  },
+  "throughput_fps": {
+    "median_fps": 22861.38,
+    "min_fps": 17082.31,
+    "max_fps": 26307.0,
+    "range_fps": [
+      17082.31,
+      26307.0
+    ],
+    "runs": [
+      17082.31,
+      22861.38,
+      25703.11,
+      26307.0,
+      22265.37
+    ]
+  },
+  "peak_memory_delta_mb": 0.0,
+  "validation_accuracy": 0.9631,
+  "validation_macro_f1": 0.8046,
+  "selected_rf_variant": "v1_rf_100",
+  "selected_xgb_variant": "v2_xgb_125",
+  "selected_rf_val_macro_f1": 0.8109,
+  "selected_xgb_val_macro_f1": 0.8049
+}

@@ -1,0 +1,92 @@
+{
+  "variant": "v1_rf_100",
+  "category": "V1",
+  "description": "RF truncated to 100 trees + Baseline XGBoost",
+  "environment": {
+    "cpu_model": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",
+    "machine": "AMD64",
+    "logical_cores": 8,
+    "physical_cores": 4,
+    "ram_gb": 7.79,
+    "python_version": "3.13.1",
+    "library_versions": {
+      "scikit-learn": "1.9.1",
+      "xgboost": "3.4.1",
+      "joblib": "1.6.0",
+      "numpy": "2.5.3",
+      "pandas": "3.0.6",
+      "torch": "2.15.0+cpu",
+      "psutil": "7.2.2"
+    }
+  },
+  "size_mb_uncompressed": 107.11,
+  "size_mb_compressed": 22.0,
+  "latency_per_flow_ms": {
+    "median_ms": 6.927,
+    "p95_ms": 15.094,
+    "min_ms": 6.747,
+    "max_ms": 8.67,
+    "range_ms": [
+      6.747,
+      8.67
+    ],
+    "runs": [
+      {
+        "run": 1,
+        "median_ms": 6.747,
+        "p95_ms": 13.978,
+        "min_ms": 5.112,
+        "max_ms": 43.567
+      },
+      {
+        "run": 2,
+        "median_ms": 7.017,
+        "p95_ms": 15.52,
+        "min_ms": 5.97,
+        "max_ms": 47.156
+      },
+      {
+        "run": 3,
+        "median_ms": 6.909,
+        "p95_ms": 15.094,
+        "min_ms": 6.027,
+        "max_ms": 55.587
+      },
+      {
+        "run": 4,
+        "median_ms": 6.927,
+        "p95_ms": 14.71,
+        "min_ms": 5.919,
+        "max_ms": 19.842
+      },
+      {
+        "run": 5,
+        "median_ms": 8.67,
+        "p95_ms": 16.602,
+        "min_ms": 6.509,
+        "max_ms": 62.177
+      }
+    ]
+  },
+  "throughput_fps": {
+    "median_fps": 13660.21,
+    "min_fps": 11264.8,
+    "max_fps": 17636.93,
+    "range_fps": [
+      11264.8,
+      17636.93
+    ],
+    "runs": [
+      11994.75,
+      13660.21,
+      11264.8,
+      17636.93,
+      17270.65
+    ]
+  },
+  "peak_memory_delta_mb": 0.0,
+  "validation_accuracy": 0.9646,
+  "validation_macro_f1": 0.8109,
+  "rf_trees": 100,
+  "xgb_rounds": 250
+}

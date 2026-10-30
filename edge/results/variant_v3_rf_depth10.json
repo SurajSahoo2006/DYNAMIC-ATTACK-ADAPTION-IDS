@@ -1,0 +1,93 @@
+{
+  "variant": "v3_rf_depth10",
+  "category": "V3",
+  "description": "RF retrained max_depth=10 (200 trees) + Baseline XGBoost",
+  "environment": {
+    "cpu_model": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",
+    "machine": "AMD64",
+    "logical_cores": 8,
+    "physical_cores": 4,
+    "ram_gb": 7.79,
+    "python_version": "3.13.1",
+    "library_versions": {
+      "scikit-learn": "1.9.1",
+      "xgboost": "3.4.1",
+      "joblib": "1.6.0",
+      "numpy": "2.5.3",
+      "pandas": "3.0.6",
+      "torch": "2.15.0+cpu",
+      "psutil": "7.2.2"
+    }
+  },
+  "size_mb_uncompressed": 21.81,
+  "size_mb_compressed": 6.88,
+  "latency_per_flow_ms": {
+    "median_ms": 13.587,
+    "p95_ms": 28.619,
+    "min_ms": 13.11,
+    "max_ms": 17.875,
+    "range_ms": [
+      13.11,
+      17.875
+    ],
+    "runs": [
+      {
+        "run": 1,
+        "median_ms": 17.875,
+        "p95_ms": 28.534,
+        "min_ms": 12.195,
+        "max_ms": 44.597
+      },
+      {
+        "run": 2,
+        "median_ms": 13.587,
+        "p95_ms": 29.442,
+        "min_ms": 12.381,
+        "max_ms": 33.671
+      },
+      {
+        "run": 3,
+        "median_ms": 13.11,
+        "p95_ms": 28.462,
+        "min_ms": 11.893,
+        "max_ms": 36.36
+      },
+      {
+        "run": 4,
+        "median_ms": 13.726,
+        "p95_ms": 28.619,
+        "min_ms": 12.597,
+        "max_ms": 37.789
+      },
+      {
+        "run": 5,
+        "median_ms": 13.479,
+        "p95_ms": 29.662,
+        "min_ms": 12.38,
+        "max_ms": 34.899
+      }
+    ]
+  },
+  "throughput_fps": {
+    "median_fps": 15456.33,
+    "min_fps": 11068.86,
+    "max_fps": 16459.14,
+    "range_fps": [
+      11068.86,
+      16459.14
+    ],
+    "runs": [
+      15456.33,
+      11068.86,
+      11415.59,
+      16459.14,
+      16284.71
+    ]
+  },
+  "peak_memory_delta_mb": 0.0039,
+  "validation_accuracy": 0.9588,
+  "validation_macro_f1": 0.7863,
+  "rf_trees": 200,
+  "rf_max_depth": 10,
+  "xgb_rounds": 250
+}

@@ -244,3 +244,22 @@ python zeroday/evaluate_openset.py --resume
 # 3. Generate Programmatic Phase 10 Summary Report:
 python reports/generate_phase10_report.py
 ```
+
+---
+
+### Phase 11: Edge compression
+
+Run the Phase 11 edge compression and single-thread latency benchmark:
+
+ash
+# 1. Benchmark Baseline Footprint and Latency:
+python edge/benchmark.py
+
+# 2. Evaluate Compression Variants (V1-V5):
+python edge/compress.py --resume
+
+# 3. Final Single-Pass Test Set Evaluation:
+python edge/evaluate_test.py
+
+# 4. Generate Phase 11 Summary Report:
+python reports/generate_phase11_report.py

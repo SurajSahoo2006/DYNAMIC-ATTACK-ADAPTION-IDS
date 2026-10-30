@@ -1,0 +1,81 @@
+{
+  "chosen_variant_name": "v1_rf_25",
+  "chosen_variant_selection_reason": "Smallest compressed size (6.84 MB) with validation macro F1 (0.8087) within 1.0% of baseline (0.8116)",
+  "test_evaluations": {
+    "baseline": {
+      "name": "Baseline (B2 Ensemble)",
+      "size_mb_uncompressed": 204.84,
+      "size_mb_compressed": 41.55,
+      "latency_p95_ms": 27.825,
+      "throughput_fps": 13402.44,
+      "test_accuracy": 0.9542,
+      "test_accuracy_wilson_ci": [
+        0.9516,
+        0.9566
+      ],
+      "test_macro_f1": 0.8728
+    },
+    "chosen_variant": {
+      "name": "v1_rf_25",
+      "size_mb_uncompressed": 30.49,
+      "size_mb_compressed": 6.84,
+      "latency_p95_ms": 6.884,
+      "throughput_fps": 25314.85,
+      "test_accuracy": 0.9538,
+      "test_accuracy_wilson_ci": [
+        0.9512,
+        0.9563
+      ],
+      "test_macro_f1": 0.8707,
+      "paired_accuracy_diff_vs_baseline": {
+        "mean_diff": -0.00035,
+        "ci_lower": -0.00126,
+        "ci_upper": 0.00061
+      }
+    },
+    "v5_combined": {
+      "name": "v5_combined",
+      "size_mb_uncompressed": 104.77,
+      "size_mb_compressed": 21.19,
+      "latency_p95_ms": 16.487,
+      "throughput_fps": 22861.38,
+      "test_accuracy": 0.9521,
+      "test_accuracy_wilson_ci": [
+        0.9495,
+        0.9546
+      ],
+      "test_macro_f1": 0.8667,
+      "paired_accuracy_diff_vs_baseline": {
+        "mean_diff": -0.00205,
+        "ci_lower": -0.00289,
+        "ci_upper": -0.0011
+      }
+    }
+  },
+  "rare_34class_f1": [
+    {
+      "class_name": "Uploading_Attack",
+      "class_index": 31,
+      "support": 34,
+      "baseline_f1": 0.4598,
+      "chosen_f1": 0.4396,
+      "f1_difference": -0.0202
+    },
+    {
+      "class_name": "Recon-PingSweep",
+      "class_index": 28,
+      "support": 59,
+      "baseline_f1": 0.5631,
+      "chosen_f1": 0.5631,
+      "f1_difference": 0.0
+    },
+    {
+      "class_name": "Backdoor_Malware",
+      "class_index": 0,
+      "support": 95,
+      "baseline_f1": 0.5701,
+      "chosen_f1": 0.5728,
+      "f1_difference": 0.0027
+    }
+  ]
+}

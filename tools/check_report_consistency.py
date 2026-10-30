@@ -376,7 +376,7 @@ def check_requirements_completeness() -> List[str]:
         "models", "ingest", "preprocess", "xai", "adversarial", "alerts", "orchestrator",
         "config", "predict", "tools", "__future__", "dataclasses", "gc", "uuid", "experiments",
         "run_phase3_llm", "scapy", "concurrent", "marl", "export", "dashboard", "config_marl",
-        "io", "base64", "tempfile", "urllib", "subprocess", "drift", "federated", "copy", "zeroday",
+        "io", "base64", "tempfile", "urllib", "subprocess", "drift", "federated", "copy", "zeroday", "edge", "platform",
     }
 
     missing = []
@@ -630,6 +630,95 @@ def check_phase10_zeroday() -> Tuple[List[str], List[str]]:
     return errors, warnings
 
 
+def check_phase11_edge() -> Tuple[List[str], List[str]]:
+    """
+    CHECK 14 - phase11_edge_check:
+    - FAIL if edge/results/baseline.json or edge/results/final_comparison.json is missing.
+    - FAIL if any latency value is not positive in baseline.json, final_comparison.json, or variant JSONs.
+    - WARN if the chosen variant is identical to the baseline.
+    - Recompute percentages in phase11_summary.md from JSON (within 0.15% tolerance).
+    """
+    errors = []
+    warnings = []
+    edge_dir = PROJECT_ROOT / "edge" / "results"
+    base_path = edge_dir / "baseline.json"
+    final_path = edge_dir / "final_comparison.json"
+    p11_md_path = REPORTS_DIR / "phase11_summary.md"
+
+    if not base_path.exists():
+        errors.append("edge/results/baseline.json is missing.")
+        return errors, warnings
+    if not final_path.exists():
+        errors.append("edge/results/final_comparison.json is missing.")
+        return errors, warnings
+
+    base_data = {}
+    try:
+        with open(base_path, "r", encoding="utf-8") as f:
+            base_data = json.load(f)
+        lat_base = base_data.get("latency_per_flow_ms", {})
+        for k in ["median_ms", "p95_ms", "min_ms", "max_ms"]:
+            val = lat_base.get(k, 0)
+            if not isinstance(val, (int, float)) or val <= 0:
+                errors.append(f"baseline.json latency '{k}' is not positive: {val}")
+    except Exception as e:
+        errors.append(f"Error reading edge/results/baseline.json: {e}")
+
+    final_data = {}
+    try:
+        with open(final_path, "r", encoding="utf-8") as f:
+            final_data = json.load(f)
+        chosen_variant = final_data.get("chosen_variant_name")
+        if chosen_variant in ["baseline", "Baseline (B2 Ensemble)"]:
+            warnings.append(f"WARN phase11_edge: Chosen variant is identical to baseline ('{chosen_variant}').")
+
+        test_evals = final_data.get("test_evaluations", {})
+        for name, ev in test_evals.items():
+            lat = ev.get("latency_p95_ms", 0)
+            if not isinstance(lat, (int, float)) or lat <= 0:
+                errors.append(f"final_comparison.json variant '{name}' latency_p95_ms is not positive: {lat}")
+    except Exception as e:
+        errors.append(f"Error reading edge/results/final_comparison.json: {e}")
+
+    # Check all variant files
+    for vf in edge_dir.glob("variant_*.json"):
+        try:
+            with open(vf, "r", encoding="utf-8") as f:
+                vdata = json.load(f)
+            lat_v = vdata.get("latency_per_flow_ms", {})
+            for k in ["median_ms", "p95_ms", "min_ms", "max_ms"]:
+                val = lat_v.get(k, 0)
+                if not isinstance(val, (int, float)) or val <= 0:
+                    errors.append(f"{vf.name} latency '{k}' is not positive: {val}")
+        except Exception as e:
+            errors.append(f"Error reading {vf.name}: {e}")
+
+    # Recompute percentages in phase11_summary.md from JSON
+    if not p11_md_path.exists():
+        errors.append("reports/phase11_summary.md is missing.")
+    else:
+        try:
+            md_text = p11_md_path.read_text(encoding="utf-8")
+            if "latency_per_flow_ms" in base_data and "chosen_variant" in final_data.get("test_evaluations", {}):
+                lat_p95_base = base_data["latency_per_flow_ms"]["p95_ms"]
+                lat_p95_chosen = final_data["test_evaluations"]["chosen_variant"]["latency_p95_ms"]
+                expected_p95_drop = ((lat_p95_base - lat_p95_chosen) / lat_p95_base) * 100.0
+
+                m_p95 = re.search(r"p95 latency reduced from [\d\.]+ ms to [\d\.]+ ms \(([\d\.]+)% reduction\)", md_text)
+                if m_p95:
+                    quoted_p95_drop = float(m_p95.group(1))
+                    if abs(quoted_p95_drop - expected_p95_drop) > 0.15:
+                        errors.append(f"phase11_summary.md p95 latency reduction {quoted_p95_drop}% does not match JSON recomputed {expected_p95_drop:.2f}%")
+
+            frac_errs = check_fraction_percentages(md_text, "phase11_summary.md")
+            if frac_errs:
+                errors.extend(frac_errs)
+        except Exception as e:
+            errors.append(f"Error verifying reports/phase11_summary.md: {e}")
+
+    return errors, warnings
+
+
 def main():
     print("=" * 76)
     print("  PHASE 4 & 5 REPORT & CODEBASE CONSISTENCY AUDITOR")
@@ -800,6 +889,20 @@ def main():
         print("  [WARN] Phase 10 zero-day check completed with warnings.")
     else:
         print("  [PASS] Phase 10 zero-day detection artifacts verified.")
+
+    print("\n[14] Auditing Phase 11 edge compression and latency artifacts (phase11_edge_check) ...")
+    e_errs, e_warns = check_phase11_edge()
+    if e_errs:
+        all_errors.extend(e_errs)
+        for e in e_errs:
+            print(f"  [ERROR] {e}")
+    elif e_warns:
+        all_warnings.extend(e_warns)
+        for w in e_warns:
+            print(f"  {w}")
+        print("  [WARN] Phase 11 edge check completed with warnings.")
+    else:
+        print("  [PASS] Phase 11 edge compression and latency artifacts verified.")
 
     print("\n" + "=" * 76)
     if not all_errors:
