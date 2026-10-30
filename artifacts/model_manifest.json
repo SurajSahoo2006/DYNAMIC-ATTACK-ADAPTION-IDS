@@ -1,0 +1,45 @@
+{
+  "project": "Dynamic Attack Adaptation IDS",
+  "dataset": "CICIoT2023",
+  "phase1_2": {
+    "n_features_selected": 19,
+    "feature_list": [
+      "flow_duration",
+      "Header_Length",
+      "Protocol Type",
+      "fin_flag_number",
+      "syn_count",
+      "ack_count",
+      "syn_flag_number",
+      "urg_count",
+      "rst_count",
+      "ICMP",
+      "Tot size",
+      "IAT",
+      "AVG",
+      "Max",
+      "Min",
+      "Tot sum",
+      "Magnitue",
+      "Covariance",
+      "Variance"
+    ]
+  },
+  "phase3": {
+    "ensemble": "RF(0.60)+XGB(0.40)",
+    "test_acc_8class": 0.9553,
+    "test_acc_34class": 0.9319,
+    "macro_f1_34class": 0.854
+  },
+  "phase4": {
+    "shap_top_feature": "IAT",
+    "fgsm_attack_success_rate": 0.5037
+  },
+  "phase5": {
+    "mappo_aggregate_return_balanced": -7.6688,
+    "attacks_contained_pct": 96.98,
+    "benign_disrupted_pct": 8.08
+  },
+  "generated_at": "2026-10-30T02:03:10.476488+00:00",
+  "missing_artifacts": []
+}

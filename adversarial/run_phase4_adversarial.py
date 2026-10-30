@@ -49,7 +49,8 @@ from art.attacks.evasion import FastGradientMethod, HopSkipJump, ZooAttack
 from art.estimators.classification import BlackBoxClassifierNeuralNetwork, PyTorchClassifier
 
 import sys
-sys.path.insert(0, str(Path(__file__).parent.parent))
+PROJECT_ROOT = Path(__file__).parent.parent.resolve()
+sys.path.insert(0, str(PROJECT_ROOT))
 from config import (
     ARTIFACTS_DIR,
     ENCODER_8_PATH,
@@ -105,20 +106,52 @@ def format_count_and_ci(k: int, n: int) -> str:
     return f"{k:>3}/{n:<3} ({pct:>5.1f}% [{ci_l * 100:>4.1f}%, {ci_u * 100:>4.1f}%])"
 
 
-def sample_stratified_subset(df: pd.DataFrame, n_samples: int = 500, seed: int = RANDOM_SEED) -> pd.DataFrame:
-    """Samples stratified flows ensuring small classes are represented."""
+def sample_stratified_subset(
+    df: pd.DataFrame,
+    n_samples: int = 2000,
+    min_benign: int = 200,
+    seed: int = RANDOM_SEED,
+) -> pd.DataFrame:
+    """
+    Samples stratified flows ensuring:
+      - Total flows sampled: min(n_samples, available test rows)
+      - Benign flows: min(min_benign, available benign test rows)
+    """
     rng = np.random.default_rng(seed)
-    class_counts = df["label_8"].value_counts()
-    total = len(df)
-    indices = []
-    for label, count in class_counts.items():
-        quota = max(5, int(round((count / total) * n_samples)))
-        sub = df[df["label_8"] == label]
-        chosen = rng.choice(sub.index, size=min(len(sub), quota), replace=False)
-        indices.extend(chosen.tolist())
-    if len(indices) > n_samples:
-        indices = rng.choice(indices, size=n_samples, replace=False).tolist()
-    return df.loc[indices].copy()
+    total_available = len(df)
+    n_target = min(n_samples, total_available)
+
+    benign_sub = df[df["label_8"] == 0]
+    attack_sub = df[df["label_8"] != 0]
+
+    if n_target >= min_benign:
+        n_benign_target = min(min_benign, len(benign_sub))
+    else:
+        n_benign_target = max(5, int(round((len(benign_sub) / total_available) * n_target)))
+
+    n_attack_target = min(n_target - n_benign_target, len(attack_sub))
+    chosen_benign = rng.choice(benign_sub.index, size=n_benign_target, replace=False).tolist()
+
+    attack_class_counts = attack_sub["label_8"].value_counts()
+    attack_total = len(attack_sub)
+    chosen_attacks = []
+
+    for label, count in attack_class_counts.items():
+        quota = max(5, int(round((count / attack_total) * n_attack_target)))
+        sub = attack_sub[attack_sub["label_8"] == label]
+        c = rng.choice(sub.index, size=min(len(sub), quota), replace=False)
+        chosen_attacks.extend(c.tolist())
+
+    if len(chosen_attacks) > n_attack_target:
+        chosen_attacks = rng.choice(chosen_attacks, size=n_attack_target, replace=False).tolist()
+    elif len(chosen_attacks) < n_attack_target:
+        remaining_indices = list(set(attack_sub.index) - set(chosen_attacks))
+        needed = n_attack_target - len(chosen_attacks)
+        chosen_attacks.extend(rng.choice(remaining_indices, size=min(len(remaining_indices), needed), replace=False).tolist())
+
+    all_indices = chosen_benign + chosen_attacks
+    rng.shuffle(all_indices)
+    return df.loc[all_indices].copy()
 
 
 def get_fast_ensemble_predictor(ensemble) -> Callable[[np.ndarray], np.ndarray]:
@@ -165,9 +198,9 @@ def load_shared_environment():
 # ======================================================================
 # STAGE 1: FGSM White-Box Surrogate Transfer & Random Noise Control
 # ======================================================================
-def run_stage_fgsm(fgsm_samples: int = 500) -> Dict[str, Any]:
+def run_stage_fgsm(fgsm_samples: int = 2000) -> Dict[str, Any]:
     print("\n" + "=" * 80)
-    print("  STAGE 1: FGSM TRANSFER & RANDOM NOISE CONTROL (500 flows)")
+    print(f"  STAGE 1: FGSM TRANSFER & RANDOM NOISE CONTROL ({fgsm_samples} flows)")
     print("=" * 80)
     t_start = time.time()
     _, class_names, selected_features, _, _, enforcer, df_test, ensemble = load_shared_environment()
@@ -303,7 +336,14 @@ def run_stage_fgsm(fgsm_samples: int = 500) -> Dict[str, Any]:
         adv_records.to_parquet(adv_records_path, index=True)
         print(f"  [SAVE] Adversarial sample flows saved --> {adv_records_path.name}")
 
+    ADV_RESULTS_DIR = PROJECT_ROOT / "adversarial" / "results"
+    ADV_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
     out_data = {
+        "pool_info": {
+            "total_flows": len(df_fgsm),
+            "benign_flows": int((df_fgsm["label_8"] == 0).sum()),
+        },
         "zero_attack_control": {
             "samples": len(df_fgsm),
             "max_numerical_drift": diff_zero,
@@ -316,10 +356,11 @@ def run_stage_fgsm(fgsm_samples: int = 500) -> Dict[str, Any]:
         "runtime_sec": round(time.time() - t_start, 2),
     }
 
-    out_file = REPORTS_DIR / "adversarial_fgsm.json"
-    with open(out_file, "w", encoding="utf-8") as f:
+    out_file_adv = ADV_RESULTS_DIR / "fgsm_results.json"
+    with open(out_file_adv, "w", encoding="utf-8") as f:
         json.dump(out_data, f, indent=2)
-    print(f"  [STAGE DONE] FGSM & Zero-Attack saved --> {out_file.name} ({out_data['runtime_sec']:.2f}s)")
+
+    print(f"  [STAGE DONE] FGSM & Zero-Attack saved --> {out_file_adv} ({out_data['runtime_sec']:.2f}s)")
     return out_data
 
 
@@ -1003,7 +1044,7 @@ if __name__ == "__main__":
         choices=["fgsm", "hsj", "zoo", "defense", "combine", "all"],
         help="Stage to execute: fgsm | hsj | zoo | defense | combine | all",
     )
-    parser.add_argument("--fgsm-samples", type=int, default=500, help="Test flows for FGSM transfer")
+    parser.add_argument("--fgsm-samples", type=int, default=2000, help="Test flows for FGSM transfer")
     parser.add_argument("--hsj-samples", type=int, default=100, help="Test flows for HopSkipJump (both budgets on same set)")
     parser.add_argument("--zoo-samples", type=int, default=40, help="Test flows for ZOO")
     parser.add_argument("--defense-samples", type=int, default=500, help="Test flows for defense matrix")

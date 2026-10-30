@@ -1,0 +1,29 @@
+{
+  "balanced": {
+    "setting": "balanced",
+    "aggregate_return": -7.6688,
+    "attacks_contained_pct": 96.98,
+    "benign_disrupted_pct": 8.08,
+    "truncated": false,
+    "episodes_evaluated": 500,
+    "checkpoint": "models/marl/mappo_balanced_seed42_best.pt"
+  },
+  "security_first": {
+    "setting": "security_first",
+    "aggregate_return": -38.8031,
+    "attacks_contained_pct": 100.0,
+    "benign_disrupted_pct": 100.0,
+    "truncated": false,
+    "episodes_evaluated": 500,
+    "checkpoint": "D:\\IROP MODEL\\DYNAMIC-ATTACK-ADAPTION-IDS\\models\\marl\\mappo_security-first_seed42_best.pt"
+  },
+  "availability_first": {
+    "setting": "availability_first",
+    "aggregate_return": -36.325,
+    "attacks_contained_pct": 77.99,
+    "benign_disrupted_pct": 4.27,
+    "truncated": false,
+    "episodes_evaluated": 500,
+    "checkpoint": "D:\\IROP MODEL\\DYNAMIC-ATTACK-ADAPTION-IDS\\models\\marl\\mappo_availability-first_seed42_best.pt"
+  }
+}
