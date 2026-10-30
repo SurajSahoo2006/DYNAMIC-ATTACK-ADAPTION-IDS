@@ -1081,6 +1081,15 @@ def check_phase13_pipeline() -> Tuple[List[str], List[str]]:
             if rate_str not in p13_text:
                 errors.append(f"Class '{cname}' UNKNOWN rate {rate_str} not found in reports/phase13_summary.md")
 
+        # 4. Check full_benign_evaluation and latency_breakdown in integration_report.json
+        full_benign = data.get("full_benign_evaluation")
+        if not full_benign or "rate_pct" not in full_benign or "split" not in full_benign:
+            errors.append("full_benign_evaluation measurement missing from ids_system/results/integration_report.json")
+
+        lat_break = data.get("latency_breakdown")
+        if not lat_break or "stages" not in lat_break or "dominating_stage" not in lat_break or "shap_explain_on_demand" not in lat_break:
+            errors.append("latency_breakdown measurement missing from ids_system/results/integration_report.json")
+
     except Exception as e:
         errors.append(f"Error checking Phase 13 pipeline consistency: {e}")
 
