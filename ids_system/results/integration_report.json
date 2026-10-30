@@ -1,0 +1,233 @@
+{
+  "timestamp_utc": "2026-10-30 12:21:25",
+  "health": {
+    "overall_status": "ok",
+    "process_rss_mb": 367.96,
+    "components": {
+      "scaler": {
+        "status": "ok",
+        "file": "artifacts/standard_scaler.pkl",
+        "phase_script": "models/train_phase2.py"
+      },
+      "selected_features": {
+        "status": "ok",
+        "file": "artifacts/selected_features.json",
+        "phase_script": "models/feature_selection.py"
+      },
+      "b2_ensemble": {
+        "status": "ok",
+        "file": "models/rf_8class_b2.joblib",
+        "phase_script": "models/wire_b2_models.py"
+      },
+      "calibrator": {
+        "status": "ok",
+        "file": "calibration/models/chosen_calibrator.joblib",
+        "phase_script": "calibration/fit.py"
+      },
+      "autoencoder": {
+        "status": "ok",
+        "file": "zeroday/models/autoencoder.pt",
+        "phase_script": "zeroday/train_autoencoder.py"
+      },
+      "shap_explainer": {
+        "status": "ok",
+        "file": "models/xgb_8class_b2.joblib",
+        "phase_script": "xai/shap_explain.py"
+      },
+      "llm_orchestrator": {
+        "status": "ok",
+        "file": "orchestrator/llm_orchestrator.py",
+        "phase_script": "orchestrator/llm_orchestrator.py",
+        "ollama_reachable": true
+      },
+      "marl_policy": {
+        "status": "ok",
+        "file": "models/marl/mappo_balanced_seed42_best.pt",
+        "phase_script": "marl/train.py"
+      },
+      "marl_cache": {
+        "status": "ok",
+        "file": "data/processed/marl_cache_test.parquet",
+        "phase_script": "marl/build_cache.py"
+      },
+      "alert_logger": {
+        "status": "ok",
+        "file": "logs/alerts_live.jsonl",
+        "phase_script": "alerts/alert_logger.py"
+      }
+    }
+  },
+  "parity_tests": {
+    "P1": {
+      "name": "Pipeline Raw Probabilities == predict.py Output",
+      "status": "passed",
+      "max_diff": 0.0,
+      "tolerance": 1e-06,
+      "n_samples": 500
+    },
+    "P2": {
+      "name": "Pipeline Calibrated Confidence == Calibration Code Output",
+      "status": "passed",
+      "max_diff": 0.0,
+      "tolerance": 1e-06,
+      "n_samples": 500
+    },
+    "P3": {
+      "name": "Pipeline AE Score == Phase 10 AE Scoring Output",
+      "status": "passed",
+      "max_diff": 0.0,
+      "tolerance": 1e-06,
+      "n_samples": 500
+    },
+    "P4": {
+      "name": "Severity == Phase 3 Deterministic Severity Table",
+      "status": "passed",
+      "matched_count": 500,
+      "total_count": 500
+    },
+    "P5": {
+      "name": "Pipeline SHAP Top-5 Feature Names == xai/shap_explain.py Output (20 rows)",
+      "status": "passed",
+      "tested_rows": 20,
+      "mismatches": 0
+    },
+    "P6": {
+      "name": "Forensic Alert Logger Pass on Chain & Rejection on Tampered Copy",
+      "status": "passed",
+      "clean_log_valid": true,
+      "tampered_copy_rejected": true
+    },
+    "P7": {
+      "name": "analyze_batch Rejects Missing Feature and Names Missing Column",
+      "status": "passed",
+      "dropped_column": "flow_duration",
+      "named_in_error": true
+    }
+  },
+  "metrics_2000_test": {
+    "n_samples": 2000,
+    "accuracy": 0.955,
+    "accuracy_wilson_ci": [
+      94.5,
+      96.32
+    ],
+    "accuracy_formatted": "1910 of 2000 (95.50%) [94.50%, 96.32%]",
+    "macro_f1": 0.8701,
+    "phase11_baseline_accuracy": 0.9542,
+    "phase11_baseline_macro_f1": 0.8728,
+    "accuracy_difference_vs_phase11": 0.0008,
+    "macro_f1_difference_vs_phase11": -0.0027,
+    "accuracy_difference_explanation": "Evaluated on 2,000 stratified samples (test.parquet) versus full 26,292 test split in Phase 11."
+  },
+  "unknown_flagging_by_class": {
+    "Benign": {
+      "n_samples": 76,
+      "n_unknown": 10,
+      "rate_pct": 13.16,
+      "ci_lower": 7.31,
+      "ci_upper": 22.55,
+      "formatted": "10 of 76 (13.16%) [7.31%, 22.55%]",
+      "phase12_control_pct": 12.2,
+      "difference_vs_phase12": 0.96
+    },
+    "BruteForce": {
+      "n_samples": 27,
+      "n_unknown": 5,
+      "rate_pct": 18.52,
+      "ci_lower": 8.18,
+      "ci_upper": 36.7,
+      "formatted": "5 of 27 (18.52%) [8.18%, 36.70%]",
+      "phase12_control_pct": 22.07,
+      "difference_vs_phase12": -3.55
+    },
+    "DDoS": {
+      "n_samples": 863,
+      "n_unknown": 391,
+      "rate_pct": 45.31,
+      "ci_lower": 42.01,
+      "ci_upper": 48.64,
+      "formatted": "391 of 863 (45.31%) [42.01%, 48.64%]",
+      "phase12_control_pct": 0.02,
+      "difference_vs_phase12": 45.29
+    },
+    "DoS": {
+      "n_samples": 302,
+      "n_unknown": 104,
+      "rate_pct": 34.44,
+      "ci_lower": 29.3,
+      "ci_upper": 39.96,
+      "formatted": "104 of 302 (34.44%) [29.30%, 39.96%]",
+      "phase12_control_pct": 0.1,
+      "difference_vs_phase12": 34.34
+    },
+    "Mirai": {
+      "n_samples": 225,
+      "n_unknown": 162,
+      "rate_pct": 72.0,
+      "ci_lower": 65.8,
+      "ci_upper": 77.46,
+      "formatted": "162 of 225 (72.00%) [65.80%, 77.46%]",
+      "phase12_control_pct": 0.0,
+      "difference_vs_phase12": 72.0
+    },
+    "Recon": {
+      "n_samples": 304,
+      "n_unknown": 77,
+      "rate_pct": 25.33,
+      "ci_lower": 20.77,
+      "ci_upper": 30.5,
+      "formatted": "77 of 304 (25.33%) [20.77%, 30.50%]",
+      "phase12_control_pct": 7.35,
+      "difference_vs_phase12": 17.98
+    },
+    "Spoofing": {
+      "n_samples": 152,
+      "n_unknown": 43,
+      "rate_pct": 28.29,
+      "ci_lower": 21.73,
+      "ci_upper": 35.92,
+      "formatted": "43 of 152 (28.29%) [21.73%, 35.92%]",
+      "phase12_control_pct": 8.59,
+      "difference_vs_phase12": 19.7
+    },
+    "Web-based": {
+      "n_samples": 51,
+      "n_unknown": 10,
+      "rate_pct": 19.61,
+      "ci_lower": 11.02,
+      "ci_upper": 32.46,
+      "formatted": "10 of 51 (19.61%) [11.02%, 32.46%]",
+      "phase12_control_pct": 23.81,
+      "difference_vs_phase12": -4.2
+    }
+  },
+  "performance": {
+    "throughput_fps": 4631.59,
+    "latency_p50_ms": 107.439,
+    "latency_p95_ms": 124.594,
+    "rss_before_mb": 367.96,
+    "peak_rss_mb": 724.86,
+    "execution_threads": 1
+  },
+  "marl_response_500_flows": {
+    "n_flows": 500,
+    "triage_action_shares": {
+      "accept_verdict": 1.0
+    },
+    "containment_action_shares": {
+      "isolate": 0.224,
+      "none": 0.722,
+      "rate_limit": 0.054
+    },
+    "escalation_action_shares": {
+      "notify_analyst": 0.144,
+      "none": 0.856
+    }
+  },
+  "forensic_alert_logging_200_flows": {
+    "n_logged": 200,
+    "verification_status": "PASS",
+    "lines_verified": 200,
+    "tail_hash": "21e852c4e852fc56bdc753c0f734bca68084f4772fd444c282b8d163583b9594"
+  }
+}

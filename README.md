@@ -296,3 +296,29 @@ python reports/generate_phase12_report.py
 
 > **Note on Baseline B2 8-Class Test Accuracy**:
 > The 8-class test accuracy recorded in `models/ensemble_weights_8class_b2.json` telemetry is 0.9536 (produced during model wiring in `models/wire_b2_models.py`), whereas the evaluation via the unchanged prediction path (`calibration/measure.py` running `predict_probabilities` on `test.parquet`) yields 0.9542. The exact factor accounting for this 0.0006 discrepancy is cause not determined.
+
+
+---
+
+### Phase 13: Unified pipeline
+
+The consolidated \IDSPipeline\ unifies all subsystems from Phases 1 through 12 into a single production architecture covering feature scaling, raw B2 ensemble inference, isotonic calibration, autoencoder anomaly scoring, decision fusion, SHAP local attributions, LLM incident briefings, greedy MARL tactical response, and cryptographic forensic audit logging.
+
+\\ash
+# 1. Audit Component Health (Scaler, Ensemble, Calibrator, Autoencoder, SHAP, LLM, MARL, Alerts):
+python -m ids_system.cli health
+
+# 2. Run Parity Self-Test (P1-P7 on 200 Held-Out Test Rows):
+python -m ids_system.cli selftest
+
+# 3. Analyze Telemetry Batch with Tactical Defense and Logging:
+python -m ids_system.cli analyze --csv your_flows.csv --out out.jsonl --respond
+
+# 4. Run Full Integration Suite and Benchmarking (2,000 Rows):
+python ids_system/run_integration.py
+
+# 5. Generate Phase 13 Summary Report:
+python reports/generate_phase13_report.py
+\
+> **Note on Trained Models**:
+> Large model weight checkpoints (\models/*.joblib\, \models/*.pt\, \zeroday/models/*.pt\, \models/marl/*.pt\) are generated locally by the Phase 1–3, Phase 5, Phase 10, and Phase 12 training scripts and are not stored in git version control.
