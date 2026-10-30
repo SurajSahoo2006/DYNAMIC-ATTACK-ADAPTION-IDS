@@ -1,0 +1,96 @@
+{
+  "class_name": "DDoS",
+  "class_idx": 2,
+  "truncated": false,
+  "elapsed_sec": 2.34,
+  "validation_budget": {
+    "budget_benign_fpr": 0.1,
+    "tau_raw": 0.3721,
+    "tau_calibrated": 0.4897,
+    "val_benign_fpr_raw": 0.1001,
+    "val_benign_fpr_calibrated": 0.1001
+  },
+  "heldout_test_evaluation": {
+    "n_samples": 11338,
+    "raw": {
+      "flagged_unknown": {
+        "x": 1360,
+        "n": 11338,
+        "percentage": 12.0,
+        "ci_lower": 11.41,
+        "ci_upper": 12.61,
+        "formatted": "1360 of 11338 (12.00%) [11.41%, 12.61%]"
+      },
+      "silently_benign": {
+        "x": 28,
+        "n": 11338,
+        "percentage": 0.25,
+        "ci_lower": 0.17,
+        "ci_upper": 0.36,
+        "formatted": "28 of 11338 (0.25%) [0.17%, 0.36%]"
+      },
+      "silently_other_attack": {
+        "x": 9950,
+        "n": 11338,
+        "percentage": 87.76,
+        "ci_lower": 87.14,
+        "ci_upper": 88.35,
+        "formatted": "9950 of 11338 (87.76%) [87.14%, 88.35%]"
+      }
+    },
+    "calibrated": {
+      "flagged_unknown": {
+        "x": 1764,
+        "n": 11338,
+        "percentage": 15.56,
+        "ci_lower": 14.9,
+        "ci_upper": 16.24,
+        "formatted": "1764 of 11338 (15.56%) [14.90%, 16.24%]"
+      },
+      "silently_benign": {
+        "x": 2,
+        "n": 11338,
+        "percentage": 0.02,
+        "ci_lower": 0.0,
+        "ci_upper": 0.06,
+        "formatted": "2 of 11338 (0.02%) [0.00%, 0.06%]"
+      },
+      "silently_other_attack": {
+        "x": 9572,
+        "n": 11338,
+        "percentage": 84.42,
+        "ci_lower": 83.74,
+        "ci_upper": 85.08,
+        "formatted": "9572 of 11338 (84.42%) [83.74%, 85.08%]"
+      }
+    },
+    "paired_difference": {
+      "point_diff": 3.56,
+      "ci_lower": 3.06,
+      "ci_upper": 4.04,
+      "formatted": "+3.56% [+3.06%, +4.04%]",
+      "significant_gain": true,
+      "significant_loss": false,
+      "about_the_same": false
+    }
+  },
+  "test_benign_fpr": {
+    "n_samples": 1000,
+    "raw": {
+      "x": 95,
+      "n": 1000,
+      "percentage": 9.5,
+      "ci_lower": 7.83,
+      "ci_upper": 11.48,
+      "formatted": "95 of 1000 (9.50%) [7.83%, 11.48%]"
+    },
+    "calibrated": {
+      "x": 93,
+      "n": 1000,
+      "percentage": 9.3,
+      "ci_lower": 7.65,
+      "ci_upper": 11.26,
+      "formatted": "93 of 1000 (9.30%) [7.65%, 11.26%]"
+    }
+  }
+}

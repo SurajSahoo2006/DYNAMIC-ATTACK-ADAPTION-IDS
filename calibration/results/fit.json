@@ -1,0 +1,314 @@
+{
+  "split_protocol": {
+    "validation_rows": 106766,
+    "calib_half_rows": 53383,
+    "select_half_rows": 53383,
+    "seed": 42,
+    "stratified": true
+  },
+  "select_half_comparison": {
+    "raw": {
+      "ece": 0.0187,
+      "brier_score": 0.0488,
+      "nll": 0.1045
+    },
+    "temperature_scaling": {
+      "T": 0.6564,
+      "ece": 0.0062,
+      "brier_score": 0.0465,
+      "nll": 0.093
+    },
+    "isotonic_regression": {
+      "ece": 0.0048,
+      "brier_score": 0.0401,
+      "nll": 0.0897
+    }
+  },
+  "chosen_method": "isotonic_regression",
+  "selection_reason": "Isotonic Regression achieved lower select-half NLL (0.0897 vs 0.0930)",
+  "final_model_parameters": {
+    "num_classes": 8
+  },
+  "full_validation_calibrated_metrics": {
+    "n_samples": 106766,
+    "accuracy": 0.9714,
+    "ece": 0.0053,
+    "ece_ci": [
+      0.0048,
+      0.0062
+    ],
+    "brier_score": 0.0397,
+    "brier_score_ci": [
+      0.0386,
+      0.041
+    ],
+    "nll": 0.0763,
+    "nll_ci": [
+      0.0741,
+      0.0783
+    ],
+    "reliability_table": [
+      {
+        "bin_idx": 0,
+        "bin_lower": 0.0,
+        "bin_upper": 0.0667,
+        "bin_count": 0,
+        "bin_confidence": 0.0,
+        "bin_accuracy": 0.0
+      },
+      {
+        "bin_idx": 1,
+        "bin_lower": 0.0667,
+        "bin_upper": 0.1333,
+        "bin_count": 0,
+        "bin_confidence": 0.0,
+        "bin_accuracy": 0.0
+      },
+      {
+        "bin_idx": 2,
+        "bin_lower": 0.1333,
+        "bin_upper": 0.2,
+        "bin_count": 0,
+        "bin_confidence": 0.0,
+        "bin_accuracy": 0.0
+      },
+      {
+        "bin_idx": 3,
+        "bin_lower": 0.2,
+        "bin_upper": 0.2667,
+        "bin_count": 0,
+        "bin_confidence": 0.0,
+        "bin_accuracy": 0.0
+      },
+      {
+        "bin_idx": 4,
+        "bin_lower": 0.2667,
+        "bin_upper": 0.3333,
+        "bin_count": 21,
+        "bin_confidence": 0.3153,
+        "bin_accuracy": 0.1905
+      },
+      {
+        "bin_idx": 5,
+        "bin_lower": 0.3333,
+        "bin_upper": 0.4,
+        "bin_count": 381,
+        "bin_confidence": 0.3729,
+        "bin_accuracy": 0.3937
+      },
+      {
+        "bin_idx": 6,
+        "bin_lower": 0.4,
+        "bin_upper": 0.4667,
+        "bin_count": 956,
+        "bin_confidence": 0.4359,
+        "bin_accuracy": 0.3944
+      },
+      {
+        "bin_idx": 7,
+        "bin_lower": 0.4667,
+        "bin_upper": 0.5333,
+        "bin_count": 1190,
+        "bin_confidence": 0.4998,
+        "bin_accuracy": 0.4958
+      },
+      {
+        "bin_idx": 8,
+        "bin_lower": 0.5333,
+        "bin_upper": 0.6,
+        "bin_count": 1157,
+        "bin_confidence": 0.5661,
+        "bin_accuracy": 0.6033
+      },
+      {
+        "bin_idx": 9,
+        "bin_lower": 0.6,
+        "bin_upper": 0.6667,
+        "bin_count": 1082,
+        "bin_confidence": 0.6334,
+        "bin_accuracy": 0.6312
+      },
+      {
+        "bin_idx": 10,
+        "bin_lower": 0.6667,
+        "bin_upper": 0.7333,
+        "bin_count": 1119,
+        "bin_confidence": 0.7004,
+        "bin_accuracy": 0.7256
+      },
+      {
+        "bin_idx": 11,
+        "bin_lower": 0.7333,
+        "bin_upper": 0.8,
+        "bin_count": 1244,
+        "bin_confidence": 0.767,
+        "bin_accuracy": 0.832
+      },
+      {
+        "bin_idx": 12,
+        "bin_lower": 0.8,
+        "bin_upper": 0.8667,
+        "bin_count": 1483,
+        "bin_confidence": 0.8327,
+        "bin_accuracy": 0.915
+      },
+      {
+        "bin_idx": 13,
+        "bin_lower": 0.8667,
+        "bin_upper": 0.9333,
+        "bin_count": 1856,
+        "bin_confidence": 0.9023,
+        "bin_accuracy": 0.9569
+      },
+      {
+        "bin_idx": 14,
+        "bin_lower": 0.9333,
+        "bin_upper": 1.0,
+        "bin_count": 96277,
+        "bin_confidence": 0.9981,
+        "bin_accuracy": 0.9995
+      }
+    ]
+  },
+  "test_calibrated_metrics": {
+    "n_samples": 26292,
+    "accuracy": 0.9576,
+    "ece": 0.0087,
+    "ece_ci": [
+      0.0076,
+      0.0109
+    ],
+    "brier_score": 0.0586,
+    "brier_score_ci": [
+      0.0559,
+      0.0617
+    ],
+    "nll": 0.1231,
+    "nll_ci": [
+      0.1155,
+      0.131
+    ],
+    "reliability_table": [
+      {
+        "bin_idx": 0,
+        "bin_lower": 0.0,
+        "bin_upper": 0.0667,
+        "bin_count": 0,
+        "bin_confidence": 0.0,
+        "bin_accuracy": 0.0
+      },
+      {
+        "bin_idx": 1,
+        "bin_lower": 0.0667,
+        "bin_upper": 0.1333,
+        "bin_count": 0,
+        "bin_confidence": 0.0,
+        "bin_accuracy": 0.0
+      },
+      {
+        "bin_idx": 2,
+        "bin_lower": 0.1333,
+        "bin_upper": 0.2,
+        "bin_count": 0,
+        "bin_confidence": 0.0,
+        "bin_accuracy": 0.0
+      },
+      {
+        "bin_idx": 3,
+        "bin_lower": 0.2,
+        "bin_upper": 0.2667,
+        "bin_count": 0,
+        "bin_confidence": 0.0,
+        "bin_accuracy": 0.0
+      },
+      {
+        "bin_idx": 4,
+        "bin_lower": 0.2667,
+        "bin_upper": 0.3333,
+        "bin_count": 14,
+        "bin_confidence": 0.3196,
+        "bin_accuracy": 0.2857
+      },
+      {
+        "bin_idx": 5,
+        "bin_lower": 0.3333,
+        "bin_upper": 0.4,
+        "bin_count": 143,
+        "bin_confidence": 0.3755,
+        "bin_accuracy": 0.4266
+      },
+      {
+        "bin_idx": 6,
+        "bin_lower": 0.4,
+        "bin_upper": 0.4667,
+        "bin_count": 325,
+        "bin_confidence": 0.4356,
+        "bin_accuracy": 0.3631
+      },
+      {
+        "bin_idx": 7,
+        "bin_lower": 0.4667,
+        "bin_upper": 0.5333,
+        "bin_count": 429,
+        "bin_confidence": 0.4988,
+        "bin_accuracy": 0.4079
+      },
+      {
+        "bin_idx": 8,
+        "bin_lower": 0.5333,
+        "bin_upper": 0.6,
+        "bin_count": 353,
+        "bin_confidence": 0.5661,
+        "bin_accuracy": 0.5326
+      },
+      {
+        "bin_idx": 9,
+        "bin_lower": 0.6,
+        "bin_upper": 0.6667,
+        "bin_count": 344,
+        "bin_confidence": 0.6323,
+        "bin_accuracy": 0.6192
+      },
+      {
+        "bin_idx": 10,
+        "bin_lower": 0.6667,
+        "bin_upper": 0.7333,
+        "bin_count": 325,
+        "bin_confidence": 0.698,
+        "bin_accuracy": 0.6985
+      },
+      {
+        "bin_idx": 11,
+        "bin_lower": 0.7333,
+        "bin_upper": 0.8,
+        "bin_count": 428,
+        "bin_confidence": 0.7687,
+        "bin_accuracy": 0.8084
+      },
+      {
+        "bin_idx": 12,
+        "bin_lower": 0.8,
+        "bin_upper": 0.8667,
+        "bin_count": 506,
+        "bin_confidence": 0.8317,
+        "bin_accuracy": 0.917
+      },
+      {
+        "bin_idx": 13,
+        "bin_lower": 0.8667,
+        "bin_upper": 0.9333,
+        "bin_count": 651,
+        "bin_confidence": 0.9028,
+        "bin_accuracy": 0.957
+      },
+      {
+        "bin_idx": 14,
+        "bin_lower": 0.9333,
+        "bin_upper": 1.0,
+        "bin_count": 22774,
+        "bin_confidence": 0.9973,
+        "bin_accuracy": 0.9993
+      }
+    ]
+  }
+}

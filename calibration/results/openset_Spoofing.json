@@ -1,0 +1,96 @@
+{
+  "class_name": "Spoofing",
+  "class_idx": 6,
+  "truncated": false,
+  "elapsed_sec": 1.84,
+  "validation_budget": {
+    "budget_benign_fpr": 0.1,
+    "tau_raw": 0.4199,
+    "tau_calibrated": 0.609,
+    "val_benign_fpr_raw": 0.1001,
+    "val_benign_fpr_calibrated": 0.1001
+  },
+  "heldout_test_evaluation": {
+    "n_samples": 1991,
+    "raw": {
+      "flagged_unknown": {
+        "x": 666,
+        "n": 1991,
+        "percentage": 33.45,
+        "ci_lower": 31.41,
+        "ci_upper": 35.55,
+        "formatted": "666 of 1991 (33.45%) [31.41%, 35.55%]"
+      },
+      "silently_benign": {
+        "x": 405,
+        "n": 1991,
+        "percentage": 20.34,
+        "ci_lower": 18.63,
+        "ci_upper": 22.17,
+        "formatted": "405 of 1991 (20.34%) [18.63%, 22.17%]"
+      },
+      "silently_other_attack": {
+        "x": 920,
+        "n": 1991,
+        "percentage": 46.21,
+        "ci_lower": 44.03,
+        "ci_upper": 48.4,
+        "formatted": "920 of 1991 (46.21%) [44.03%, 48.40%]"
+      }
+    },
+    "calibrated": {
+      "flagged_unknown": {
+        "x": 614,
+        "n": 1991,
+        "percentage": 30.84,
+        "ci_lower": 28.85,
+        "ci_upper": 32.9,
+        "formatted": "614 of 1991 (30.84%) [28.85%, 32.90%]"
+      },
+      "silently_benign": {
+        "x": 544,
+        "n": 1991,
+        "percentage": 27.32,
+        "ci_lower": 25.41,
+        "ci_upper": 29.32,
+        "formatted": "544 of 1991 (27.32%) [25.41%, 29.32%]"
+      },
+      "silently_other_attack": {
+        "x": 833,
+        "n": 1991,
+        "percentage": 41.84,
+        "ci_lower": 39.69,
+        "ci_upper": 44.02,
+        "formatted": "833 of 1991 (41.84%) [39.69%, 44.02%]"
+      }
+    },
+    "paired_difference": {
+      "point_diff": -2.61,
+      "ci_lower": -5.13,
+      "ci_upper": -0.3,
+      "formatted": "-2.61% [-5.13%, -0.30%]",
+      "significant_gain": false,
+      "significant_loss": true,
+      "about_the_same": false
+    }
+  },
+  "test_benign_fpr": {
+    "n_samples": 1000,
+    "raw": {
+      "x": 98,
+      "n": 1000,
+      "percentage": 9.8,
+      "ci_lower": 8.11,
+      "ci_upper": 11.8,
+      "formatted": "98 of 1000 (9.80%) [8.11%, 11.80%]"
+    },
+    "calibrated": {
+      "x": 111,
+      "n": 1000,
+      "percentage": 11.1,
+      "ci_lower": 9.3,
+      "ci_upper": 13.2,
+      "formatted": "111 of 1000 (11.10%) [9.30%, 13.20%]"
+    }
+  }
+}

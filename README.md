@@ -263,3 +263,28 @@ python edge/evaluate_test.py
 
 # 4. Generate Phase 11 Summary Report:
 python reports/generate_phase11_report.py
+```
+
+---
+
+### Phase 12: Probability calibration and selective prediction
+
+Evaluates probability calibration (ECE, Brier score, NLL), selective prediction risk-coverage curves (AURC), and open-set unknown attack detection under a matched 10% Benign false-positive budget.
+
+```bash
+# 1. Measure Raw Probability Quality:
+python calibration/measure.py
+
+# 2. Fit Calibrators on Validation Set (Temperature Scaling vs Isotonic Regression):
+python calibration/fit.py
+
+# 3. Selective Prediction and Risk-Coverage Analysis:
+python calibration/selective.py
+
+# 4. Open-Set Evaluation at Matched 10% Benign False-Positive Budget:
+python calibration/openset_calibrated.py --resume
+
+# 5. Generate Phase 12 Summary Report:
+python reports/generate_phase12_report.py
+```
+

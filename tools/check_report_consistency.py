@@ -376,7 +376,7 @@ def check_requirements_completeness() -> List[str]:
         "models", "ingest", "preprocess", "xai", "adversarial", "alerts", "orchestrator",
         "config", "predict", "tools", "__future__", "dataclasses", "gc", "uuid", "experiments",
         "run_phase3_llm", "scapy", "concurrent", "marl", "export", "dashboard", "config_marl",
-        "io", "base64", "tempfile", "urllib", "subprocess", "drift", "federated", "copy", "zeroday", "edge", "platform", "threading",
+        "io", "base64", "tempfile", "urllib", "subprocess", "drift", "federated", "copy", "zeroday", "edge", "calibration", "platform", "threading",
     }
 
     missing = []
@@ -908,6 +908,122 @@ def check_ensemble_labels_accuracy() -> Tuple[List[str], List[str]]:
     return errors, warnings
 
 
+def check_phase12_calibration() -> Tuple[List[str], List[str]]:
+    """
+    CHECK 16 - phase12_calibration_check:
+    FAIL if raw_metrics.json, fit.json, selective.json is missing or any ECE is not
+    a float in [0,1]; WARN if a class is truncated; recompute percentages in
+    phase12_summary.md from JSON counts.
+    """
+    errors = []
+    warnings = []
+
+    calib_dir = PROJECT_ROOT / "calibration" / "results"
+    raw_path = calib_dir / "raw_metrics.json"
+    fit_path = calib_dir / "fit.json"
+    sel_path = calib_dir / "selective.json"
+    p12_md_path = REPORTS_DIR / "phase12_summary.md"
+
+    # 1. File existence checks
+    if not raw_path.exists():
+        errors.append("calibration/results/raw_metrics.json is missing.")
+    if not fit_path.exists():
+        errors.append("calibration/results/fit.json is missing.")
+    if not sel_path.exists():
+        errors.append("calibration/results/selective.json is missing.")
+
+    if errors:
+        return errors, warnings
+
+    # 2. Check raw_metrics.json
+    try:
+        with open(raw_path, "r", encoding="utf-8") as f:
+            raw_data = json.load(f)
+        for split in ["validation", "test"]:
+            if split not in raw_data:
+                errors.append(f"raw_metrics.json is missing '{split}' split.")
+            else:
+                ece = raw_data[split].get("ece")
+                if ece is None or not isinstance(ece, (int, float)) or not (0.0 <= ece <= 1.0):
+                    errors.append(f"raw_metrics.json {split}.ece is not a float in [0, 1]: {ece}")
+    except Exception as e:
+        errors.append(f"Error reading raw_metrics.json: {e}")
+
+    # 3. Check fit.json
+    try:
+        with open(fit_path, "r", encoding="utf-8") as f:
+            fit_data = json.load(f)
+
+        sel_comp = fit_data.get("select_half_comparison", {})
+        for mname, mstats in sel_comp.items():
+            ece = mstats.get("ece")
+            if ece is None or not isinstance(ece, (int, float)) or not (0.0 <= ece <= 1.0):
+                errors.append(f"fit.json select_half_comparison.{mname}.ece is not a float in [0, 1]: {ece}")
+
+        for fkey in ["full_validation_calibrated_metrics", "test_calibrated_metrics"]:
+            if fkey not in fit_data:
+                errors.append(f"fit.json is missing '{fkey}'.")
+            else:
+                ece = fit_data[fkey].get("ece")
+                if ece is None or not isinstance(ece, (int, float)) or not (0.0 <= ece <= 1.0):
+                    errors.append(f"fit.json {fkey}.ece is not a float in [0, 1]: {ece}")
+    except Exception as e:
+        errors.append(f"Error reading fit.json: {e}")
+
+    # 4. Check selective.json
+    try:
+        with open(sel_path, "r", encoding="utf-8") as f:
+            sel_data = json.load(f)
+        for branch in ["raw", "calibrated"]:
+            if branch not in sel_data:
+                errors.append(f"selective.json is missing '{branch}' branch.")
+            else:
+                aurc_info = sel_data[branch].get("aurc", {})
+                aurc_val = aurc_info.get("aurc")
+                if aurc_val is None or not isinstance(aurc_val, (int, float)) or aurc_val < 0.0:
+                    errors.append(f"selective.json {branch}.aurc is not valid: {aurc_val}")
+    except Exception as e:
+        errors.append(f"Error reading selective.json: {e}")
+
+    # 5. Check truncation across held-out classes in openset_calibrated_summary.json and openset_*.json
+    sum_path = calib_dir / "openset_calibrated_summary.json"
+    if sum_path.exists():
+        try:
+            with open(sum_path, "r", encoding="utf-8") as f:
+                sum_data = json.load(f)
+            for cname, cdata in sum_data.get("leave_one_out", {}).items():
+                if cdata.get("truncated") is True:
+                    warnings.append(f"WARN phase12_calibration: Class '{cname}' was marked as truncated.")
+        except Exception as e:
+            errors.append(f"Error reading openset_calibrated_summary.json: {e}")
+
+    for cf in calib_dir.glob("openset_*.json"):
+        if cf.name == "openset_calibrated_summary.json":
+            continue
+        try:
+            with open(cf, "r", encoding="utf-8") as f:
+                cdata = json.load(f)
+            if cdata.get("truncated") is True:
+                cname = cdata.get("class_name", cf.stem.replace("openset_", ""))
+                warnings.append(f"WARN phase12_calibration: Class '{cname}' in {cf.name} was marked as truncated.")
+        except Exception as e:
+            errors.append(f"Error reading {cf.name}: {e}")
+
+    # 6. Check reports/phase12_summary.md and recompute percentages
+    if not p12_md_path.exists():
+        errors.append("reports/phase12_summary.md is missing.")
+    else:
+        try:
+            p12_text = p12_md_path.read_text(encoding="utf-8")
+            frac_errs = check_fraction_percentages(p12_text, "phase12_summary.md")
+            if frac_errs:
+                errors.extend(frac_errs)
+        except Exception as e:
+            errors.append(f"Error verifying reports/phase12_summary.md: {e}")
+
+    return errors, warnings
+
+
 def main():
     print("=" * 76)
     print("  PHASE 4 & 5 REPORT & CODEBASE CONSISTENCY AUDITOR")
@@ -1106,6 +1222,20 @@ def main():
         print("  [WARN] Ensemble label accuracy check completed with warnings.")
     else:
         print("  [PASS] All ensemble labels and accuracies match underlying JSON artifacts.")
+
+    print("\n[16] Auditing Phase 12 probability calibration artifacts (phase12_calibration_check) ...")
+    c_errs, c_warns = check_phase12_calibration()
+    if c_errs:
+        all_errors.extend(c_errs)
+        for e in c_errs:
+            print(f"  [ERROR] {e}")
+    elif c_warns:
+        all_warnings.extend(c_warns)
+        for w in c_warns:
+            print(f"  {w}")
+        print("  [WARN] Phase 12 calibration check completed with warnings.")
+    else:
+        print("  [PASS] Phase 12 calibration artifacts and report verified.")
 
     print("\n" + "=" * 76)
     if not all_errors:
