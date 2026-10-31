@@ -336,5 +336,10 @@ pip install -r requirements.txt
 streamlit run app/streamlit_app.py
 ```
 
+On Windows, launch the dashboard directly using the batch launcher:
+`at
+launch_dashboard.bat
+`
+
 > **Note on Static Dashboard**:
 > `dashboard/dashboard.html` remains available as the static offline view.
